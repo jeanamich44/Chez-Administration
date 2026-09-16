@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------- */
+:root {
+  --bg-primary: #0a0818;
+  --bg-card: #120f26;
+  --bg-card-hover: #191436;
+  --accent: #10b981;
+  --accent-glow: rgba(16, 185, 129, 0.25);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+}
+
+/* ---------------------------------------------------- */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+/* ---------------------------------------------------- */
+input, select, textarea {
+  user-select: auto;
+}
+
+/* ---------------------------------------------------- */
+.glass-panel {
+  background: rgba(18, 15, 38, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+}
+
+.glow-hover:hover {
+  box-shadow: 0 0 20px var(--accent-glow);
+}

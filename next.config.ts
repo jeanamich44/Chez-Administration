@@ -1,17 +1,17 @@
 import type { NextConfig } from "next";
 
-// ----------------------------------------------------
 const nextConfig: NextConfig = {
-  reactStrictMode: true,
+  productionBrowserSourceMaps: false,
+  poweredByHeader: false,
+  compress: true,
   async rewrites() {
-    const backendUrl = process.env.API_URL || "https://api.chezrheyy.xyz";
     return [
       {
         source: "/api/proxy/:path*",
-        destination: `${backendUrl}/:path*`
-      }
+        destination: `${process.env.API_URL || "https://api.chezrheyy.xyz"}/api/generate-docs/:path*`,
+      },
     ];
-  }
+  },
 };
 
 export default nextConfig;

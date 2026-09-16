@@ -8,6 +8,7 @@ import CustomDatePicker from "@/components/_shared/CustomDatePicker";
 import CustomTimePicker from "@/components/_shared/CustomTimePicker";
 import DocumentPreviewViewer from "@/components/_shared/DocumentPreviewViewer";
 import { useToast } from "@/components/NotificationToast";
+import { BRAND_CATALOG } from "@/data/brands";
 
 interface DynamicFormViewProps {
   category: "facture" | "justificatif" | "assurance";
@@ -151,6 +152,11 @@ export default function DynamicFormView({ category, slug, onBack }: DynamicFormV
   /* ===================================================================== */
 
   const backLabel = category === "facture" ? "Retour aux factures" : category === "assurance" ? "Retour aux assurances" : "Retour aux justificatifs";
+  const brand = BRAND_CATALOG[slug] || {};
+  const logo = meta.logo || brand.logo;
+  const headerBg = meta.headerBg || brand.headerBg || "bg-white border-white/20";
+  const logoClass = meta.logoClass || brand.logoClass || "";
+  const title = meta.title || brand.name || slug.toUpperCase();
 
   return (
     <main className="min-h-screen pt-6 pb-12 px-4 max-w-5xl mx-auto fade-in">
@@ -158,11 +164,18 @@ export default function DynamicFormView({ category, slug, onBack }: DynamicFormV
         <ArrowLeft size={14} /> {backLabel}
       </button>
 
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-4xl font-black italic text-white tracking-tight mb-1">
-          {(meta.title || slug).toUpperCase()}
-        </h1>
-        {meta.subtitle && <p className="text-white/50 text-xs font-medium uppercase tracking-wider">{meta.subtitle}</p>}
+      <div className="flex items-center gap-4 mb-8">
+        {logo && (
+          <div className={`px-5 py-3.5 border rounded-2xl backdrop-blur-md flex items-center justify-center overflow-hidden shrink-0 shadow-lg ${headerBg}`}>
+            <img src={logo} alt="" className={`h-8 sm:h-10 w-auto max-w-[140px] object-contain ${logoClass}`} />
+          </div>
+        )}
+        <div>
+          <h1 className="text-2xl sm:text-4xl font-black italic text-white tracking-tight">
+            {title}
+          </h1>
+          {meta.subtitle && <p className="text-white/50 text-xs font-medium uppercase tracking-wider mt-0.5">{meta.subtitle}</p>}
+        </div>
       </div>
 
       <div className="space-y-6">

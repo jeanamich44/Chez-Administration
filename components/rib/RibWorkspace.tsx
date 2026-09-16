@@ -297,8 +297,8 @@ export default function RibWorkspace({ slug, onBack }: RibWorkspaceProps) {
 
       <div className="glass p-6 md:p-8 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-6">
-          <div className={`w-16 h-16 rounded-xl flex items-center justify-center p-2 ${bank?.headerBg || 'bg-white/10'}`}>
-            <img src={bank?.logo} alt={bank?.name} className="max-w-full max-h-full object-contain" />
+          <div className={`px-5 py-3.5 border rounded-2xl backdrop-blur-md flex items-center justify-center overflow-hidden shrink-0 shadow-lg ${bank?.headerBg || 'bg-white/10 border-white/20'}`}>
+            <img src={bank?.logo} alt={bank?.name} className={`h-8 sm:h-10 w-auto max-w-[140px] object-contain ${bank?.logoClass || ''}`} />
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-black italic uppercase tracking-tight text-white">

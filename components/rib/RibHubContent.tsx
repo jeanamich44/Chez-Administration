@@ -19,7 +19,7 @@ export default function RibHubContent({ onNavigate, onBack }: RibHubContentProps
         {onBack && (
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-white/70 hover:text-white transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="font-bold text-sm tracking-wider uppercase">Documents</span>
@@ -71,40 +71,36 @@ export default function RibHubContent({ onNavigate, onBack }: RibHubContentProps
 
 function BankCard({ bank, onNavigate }: { bank: BankInfo; onNavigate: (slug: string) => void }) {
   return (
-    <div className="glass flex flex-col relative overflow-hidden transition-transform hover:scale-[1.02]">
+    <div
+      onClick={() => onNavigate(bank.slug)}
+      className="glass p-4 md:p-6 flex flex-col items-start relative overflow-hidden transition-all duration-300 hover:border-primary/50 cursor-pointer group rounded-3xl"
+    >
       {bank.badge && (
-        <div className="absolute top-3 right-3 z-10 bg-black/50 backdrop-blur-md border border-white/10 px-2 py-1 rounded text-[10px] font-bold text-white uppercase tracking-wider">
+        <div className="absolute top-6 right-6 z-10 bg-black/60 backdrop-blur-md border border-white/10 px-2.5 py-1 rounded-full text-[10px] font-black text-white uppercase tracking-wider">
           {bank.badge}
         </div>
       )}
       
-      <div className={`h-24 ${bank.headerBg} relative flex items-center justify-center p-4`}>
-        <div className="relative w-full h-full max-h-12 flex items-center justify-center">
-          <img
-            src={bank.logo}
-            alt={bank.name}
-            className={`max-h-full max-w-[80%] object-contain ${bank.logoClass || ''}`}
-          />
-        </div>
+      <div className={`w-full h-32 border rounded-2xl p-4 flex items-center justify-center relative overflow-hidden backdrop-blur-md shadow-xl mb-6 transition-all duration-300 ${bank.headerBg}`}>
+        <img
+          src={bank.logo}
+          alt={bank.name}
+          className={`h-20 md:h-22 w-auto max-w-[92%] max-h-[85%] object-contain filter drop-shadow-lg ${bank.logoClass || ''}`}
+        />
       </div>
       
-      <div className="p-4 md:p-6 flex flex-col flex-grow justify-between gap-4">
-        <div>
-          <h3 className="font-black italic uppercase tracking-tight text-white text-lg mb-2">
-            {bank.name}
-          </h3>
-          <p className="text-white/70 text-sm whitespace-pre-line leading-relaxed">
-            {bank.description}
-          </p>
-        </div>
+      <div className="relative z-10 w-full flex flex-col flex-grow">
+        <h3 className="text-2xl font-black italic mb-3 text-white tracking-tight">
+          {bank.name}
+        </h3>
+        <p className="text-xs text-white/60 mb-6 font-medium whitespace-pre-line leading-relaxed">
+          {bank.description}
+        </p>
         
-        <button
-          onClick={() => onNavigate(bank.slug)}
-          className="flex items-center gap-2 text-primary hover:text-white transition-colors group mt-2"
-        >
-          <span className="font-bold text-xs uppercase tracking-widest">Générer le RIB</span>
+        <div className="mt-auto flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary group-hover:gap-5 transition-all">
+          <span>Générer le RIB</span>
           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-        </button>
+        </div>
       </div>
     </div>
   );

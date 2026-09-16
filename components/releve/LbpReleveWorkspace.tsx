@@ -112,13 +112,23 @@ export default function LbpReleveWorkspace({ onBack }: LbpReleveWorkspaceProps) 
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500 pb-20">
-      <div className="flex items-center justify-between mb-8">
-        <button onClick={onBack} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm font-bold uppercase">
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={onBack} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm font-bold uppercase cursor-pointer">
           <ArrowLeft className="w-4 h-4" /> Retour
         </button>
         <div className="flex bg-white/5 rounded-xl p-1 border border-white/10">
-          <button onClick={() => setMode('facile')} className={`px-4 py-2 rounded-lg text-sm font-bold uppercase transition-colors ${mode === 'facile' ? 'bg-primary text-slate-950' : 'text-white/70 hover:text-white'}`}>Facile</button>
-          <button onClick={() => setMode('custom')} className={`px-4 py-2 rounded-lg text-sm font-bold uppercase transition-colors ${mode === 'custom' ? 'bg-primary text-slate-950' : 'text-white/70 hover:text-white'}`}>Personnalisé</button>
+          <button onClick={() => setMode('facile')} className={`px-4 py-2 rounded-lg text-sm font-bold uppercase transition-colors cursor-pointer ${mode === 'facile' ? 'bg-primary text-slate-950' : 'text-white/70 hover:text-white'}`}>Facile</button>
+          <button onClick={() => setMode('custom')} className={`px-4 py-2 rounded-lg text-sm font-bold uppercase transition-colors cursor-pointer ${mode === 'custom' ? 'bg-primary text-slate-950' : 'text-white/70 hover:text-white'}`}>Personnalisé</button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4 mb-8">
+        <div className="px-5 py-3.5 border rounded-2xl backdrop-blur-md flex items-center justify-center overflow-hidden shrink-0 shadow-lg bg-gradient-to-br from-blue-900/40 to-slate-950/80 border-blue-500/30">
+          <img src="/logos/lbp.svg" alt="La Banque Postale" className="h-8 sm:h-10 w-auto max-w-[140px] object-contain scale-125" />
+        </div>
+        <div>
+          <h1 className="text-2xl sm:text-4xl font-black italic text-white tracking-tight">RELEVÉ DE COMPTE</h1>
+          <p className="text-white/50 text-xs font-medium uppercase tracking-wider mt-0.5">La Banque Postale · Relevé officiel</p>
         </div>
       </div>
 

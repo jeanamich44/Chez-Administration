@@ -9,24 +9,195 @@ export interface BankInfo {
   category: BankCategory;
   description: string;
   badge?: string;
+  isAvailable?: boolean;
 }
 
 export const BANKS: BankInfo[] = [
-  { slug: 'lbp', name: 'La Banque Postale', logo: '/logos/lbp.svg', headerBg: 'bg-gradient-to-r from-blue-900/80 to-sky-800/80', category: 'physique', description: '• RIB La Banque Postale\n• CCP classique ou CNE\n• Format PDF', badge: 'FR' },
-  { slug: 'ca', name: 'Crédit Agricole', logo: '/logos/ca.svg', headerBg: 'bg-gradient-to-r from-green-900/80 to-emerald-800/80', category: 'physique', description: '• RIB Crédit Agricole\n• Toutes caisses régionales\n• Format PDF', badge: 'FR' },
-  { slug: 'sg', name: 'Société Générale', logo: '/logos/sg.svg', headerBg: 'bg-gradient-to-r from-red-900/80 to-rose-800/80', category: 'physique', description: '• RIB Société Générale\n• Compte courant SG\n• Format PDF', badge: 'FR' },
-  { slug: 'cm', name: 'Crédit Mutuel', logo: '/logos/cm.svg', headerBg: 'bg-gradient-to-r from-blue-900/80 to-blue-700/80', category: 'physique', description: '• RIB Crédit Mutuel\n• Fédérations régionales\n• Format PDF', badge: 'FR' },
-  { slug: 'cic', name: 'CIC', logo: '/logos/cic.svg', headerBg: 'bg-gradient-to-r from-red-900/80 to-red-700/80', category: 'physique', description: '• RIB CIC Banque\n• Toutes régions\n• Format PDF', badge: 'FR' },
-  { slug: 'bnp', name: 'BNP Paribas', logo: '/logos/bnp.svg', headerBg: 'bg-gradient-to-r from-green-900/80 to-teal-800/80', category: 'physique', description: '• RIB BNP Paribas\n• Compte courant\n• Format PDF', badge: 'FR' },
-  { slug: 'ce', name: 'Caisse d\'Épargne', logo: '/logos/ce.svg', headerBg: 'bg-gradient-to-r from-red-900/80 to-pink-800/80', category: 'physique', description: '• RIB Caisse d\'Épargne\n• BPCE / Écureuil\n• Format PDF', badge: 'FR' },
-  { slug: 'bp', name: 'Banque Populaire', logo: '/logos/bp.svg', headerBg: 'bg-gradient-to-r from-blue-900/80 to-indigo-800/80', category: 'physique', description: '• RIB Banque Populaire\n• Réseau BPCE\n• Format PDF', badge: 'FR' },
-  { slug: 'lcl', name: 'LCL', logo: '/logos/lcl.svg', headerBg: 'bg-gradient-to-r from-yellow-900/80 to-amber-700/80', category: 'physique', description: '• RIB LCL Le Crédit Lyonnais\n• Compte courant\n• Format PDF', badge: 'FR' },
-  { slug: 'helios', name: 'Helios', logo: '/logos/helios.svg', headerBg: 'bg-gradient-to-r from-emerald-900/80 to-green-700/80', category: 'neobanque', description: '• RIB Helios Banque Verte\n• Compte éco-responsable\n• Format PDF', badge: 'FR' },
-  { slug: 'noelse', name: 'Noelse', logo: '/logos/noelse.svg', headerBg: 'bg-gradient-to-r from-purple-900/80 to-violet-700/80', category: 'neobanque', description: '• RIB Noelse\n• Néobanque française\n• Format PDF', badge: 'FR' },
-  { slug: 'revolut', name: 'Revolut', logo: '/logos/revolut.svg', headerBg: 'bg-gradient-to-r from-slate-800/80 to-gray-600/80', category: 'neobanque', description: '• RIB Revolut\n• Compte multi-devises\n• Format PDF', badge: 'EU' },
-  { slug: 'qonto', name: 'Qonto', logo: '/logos/qonto.svg', headerBg: 'bg-gradient-to-r from-purple-900/80 to-fuchsia-700/80', category: 'neobanque', description: '• RIB Qonto\n• Compte professionnel\n• Format PDF', badge: 'EU' },
-  { slug: 'bforbank', name: 'BforBank', logo: '/logos/bforbank.svg', headerBg: 'bg-gradient-to-r from-pink-900/80 to-rose-700/80', category: 'neobanque', description: '• RIB BforBank\n• Banque en ligne CA\n• Format PDF', badge: 'FR' },
-  { slug: 'boursobank', name: 'BoursoBank', logo: '/logos/boursobank.svg', headerBg: 'bg-gradient-to-r from-sky-900/80 to-cyan-700/80', category: 'neobanque', description: '• RIB BoursoBank\n• Ex-Boursorama Banque\n• Format PDF', badge: 'FR' },
-  { slug: 'sumup', name: 'SumUp', logo: '/logos/sumup.svg', headerBg: 'bg-gradient-to-r from-blue-900/80 to-sky-700/80', category: 'neobanque', description: '• RIB SumUp\n• Compte professionnel\n• Format PDF', badge: 'EU' },
-  { slug: 'mypos', name: 'myPOS', logo: '/logos/mypos.svg', headerBg: 'bg-gradient-to-r from-teal-900/80 to-emerald-700/80', category: 'neobanque', description: '• RIB myPOS\n• Compte marchand\n• Format PDF', badge: 'EU' },
+  {
+    slug: "lbp",
+    name: "La Banque Postale",
+    badge: "FR",
+    description: "• Générateur de RIB La Banque Postale\n• Format PDF / Preview Gratuite\n• 11 Champs à remplir",
+    logo: "/logos/lbp.svg",
+    logoClass: "scale-130 md:scale-145 -translate-x-2.5 md:-translate-x-3",
+    headerBg: "bg-gradient-to-br from-blue-900/40 to-slate-950/80 border-blue-500/30",
+    category: "physique",
+    isAvailable: true
+  },
+  {
+    slug: "ca",
+    name: "Crédit Agricole",
+    badge: "FR",
+    description: "• Générateur de RIB Crédit Agricole\n• Format PDF / Preview Gratuite\n• 15 Champs à remplir",
+    logo: "/logos/ca.svg",
+    logoClass: "scale-110 md:scale-120",
+    headerBg: "bg-gradient-to-br from-emerald-900/40 to-slate-950/80 border-emerald-500/30",
+    category: "physique",
+    isAvailable: true
+  },
+  {
+    slug: "sg",
+    name: "Société Générale",
+    badge: "FR",
+    description: "• Générateur de RIB Société Générale\n• Format PDF / Preview Gratuite\n• 10 Champs à remplir",
+    logo: "/logos/sg.svg",
+    logoClass: "scale-100 md:scale-110",
+    headerBg: "bg-gradient-to-br from-red-900/40 to-slate-950/80 border-red-500/30",
+    category: "physique",
+    isAvailable: true
+  },
+  {
+    slug: "cm",
+    name: "Crédit Mutuel",
+    badge: "FR",
+    description: "• Générateur de RIB Crédit Mutuel\n• Format PDF / Preview Gratuite\n• 11 Champs à remplir",
+    logo: "/logos/cm.svg",
+    logoClass: "scale-115 md:scale-125",
+    headerBg: "bg-gradient-to-br from-rose-900/40 to-slate-950/80 border-rose-500/30",
+    category: "physique",
+    isAvailable: true
+  },
+  {
+    slug: "cic",
+    name: "CIC",
+    badge: "FR",
+    description: "• Générateur de RIB CIC\n• Format PDF / Preview Gratuite\n• 11 Champs à remplir",
+    logo: "/logos/cic.svg",
+    logoClass: "scale-150 md:scale-175",
+    headerBg: "bg-gradient-to-br from-cyan-900/40 to-slate-950/80 border-cyan-500/30",
+    category: "physique",
+    isAvailable: true
+  },
+  {
+    slug: "bnp",
+    name: "BNP Paribas",
+    badge: "FR",
+    description: "• Générateur de RIB BNP Paribas\n• Format PDF / Preview Gratuite\n• 10 Champs à remplir",
+    logo: "/logos/bnp.svg",
+    logoClass: "scale-135 md:scale-150",
+    headerBg: "bg-gradient-to-br from-emerald-950/40 to-slate-950/80 border-emerald-500/30",
+    category: "physique",
+    isAvailable: true
+  },
+  {
+    slug: "ce",
+    name: "Caisse d'Épargne",
+    badge: "FR",
+    description: "• Générateur de RIB Caisse d'Épargne\n• Format PDF / Preview Gratuite\n• 10 Champs à remplir",
+    logo: "/logos/caisse_depargne.svg",
+    logoClass: "scale-120 md:scale-135",
+    headerBg: "bg-gradient-to-br from-red-950/40 to-slate-950/80 border-red-500/30",
+    category: "physique",
+    isAvailable: true
+  },
+  {
+    slug: "bp",
+    name: "Banque Populaire",
+    badge: "FR",
+    description: "• Générateur de RIB Banque Populaire\n• Format PDF / Preview Gratuite\n• 10 Champs à remplir",
+    logo: "/logos/banque_populaire.svg",
+    logoClass: "scale-90 md:scale-105",
+    headerBg: "bg-gradient-to-br from-cyan-950/40 to-slate-950/80 border-cyan-500/30",
+    category: "physique",
+    isAvailable: true
+  },
+  {
+    slug: "lcl",
+    name: "LCL",
+    badge: "FR",
+    description: "• Générateur de RIB LCL\n• Format PDF / Preview Gratuite\n• 8 Champs à remplir",
+    logo: "/logos/lcl.svg",
+    logoClass: "scale-135 md:scale-150",
+    headerBg: "bg-gradient-to-br from-blue-950/40 to-slate-950/80 border-blue-500/30",
+    category: "physique",
+    isAvailable: true
+  },
+  {
+    slug: "helios",
+    name: "Helios",
+    badge: "FR",
+    description: "• Générateur de RIB Helios\n• Format PDF / Preview Gratuite\n• 9 Champs à remplir",
+    logo: "/logos/helios.svg",
+    logoClass: "scale-110",
+    headerBg: "bg-gradient-to-br from-cyan-900/40 to-slate-950/80 border-cyan-500/30",
+    category: "neobanque",
+    isAvailable: true
+  },
+  {
+    slug: "noelse",
+    name: "Noelse",
+    badge: "FR",
+    description: "• Générateur de RIB Noelse\n• Format PDF / Preview Gratuite\n• 7 Champs à remplir",
+    logo: "/logos/noelse.svg",
+    logoClass: "brightness-0 invert scale-130 md:scale-145",
+    headerBg: "bg-gradient-to-br from-indigo-950/40 to-slate-950/80 border-indigo-500/30",
+    category: "neobanque",
+    isAvailable: true
+  },
+  {
+    slug: "revolut",
+    name: "Revolut",
+    badge: "EU",
+    description: "• Générateur de RIB Revolut\n• Format PDF / Preview Gratuite\n• 8 Champs à remplir",
+    logo: "/logos/revolut.svg",
+    logoClass: "brightness-0 invert scale-110 md:scale-120",
+    headerBg: "bg-gradient-to-br from-purple-900/40 to-slate-950/80 border-purple-500/30",
+    category: "neobanque",
+    isAvailable: true
+  },
+  {
+    slug: "qonto",
+    name: "Qonto",
+    badge: "FR",
+    description: "• Générateur de RIB Qonto\n• Format PDF / Preview Gratuite\n• 9 Champs à remplir",
+    logo: "/logos/qonto.svg",
+    logoClass: "brightness-0 invert scale-130 md:scale-140",
+    headerBg: "bg-gradient-to-br from-violet-900/40 to-slate-950/80 border-violet-500/30",
+    category: "neobanque",
+    isAvailable: true
+  },
+  {
+    slug: "bfb",
+    name: "BforBank",
+    badge: "FR",
+    description: "• Générateur de RIB BforBank\n• Format PDF / Preview Gratuite\n• 8 Champs à remplir",
+    logo: "/logos/bfb.svg",
+    logoClass: "brightness-0 invert scale-75 md:scale-85",
+    headerBg: "bg-gradient-to-br from-blue-800/30 to-slate-950/80 border-blue-400/30",
+    category: "neobanque",
+    isAvailable: true
+  },
+  {
+    slug: "boursobank",
+    name: "BoursoBank",
+    badge: "FR",
+    description: "• Générateur de RIB BoursoBank\n• Format PDF / Preview Gratuite\n• 9 Champs à remplir",
+    logo: "/logos/boursobank.svg",
+    logoClass: "scale-135 md:scale-155",
+    headerBg: "bg-gradient-to-br from-pink-950/40 to-slate-950/80 border-pink-500/30",
+    category: "neobanque",
+    isAvailable: true
+  },
+  {
+    slug: "sumup",
+    name: "SumUp",
+    badge: "EU",
+    description: "• Générateur de RIB SumUp\n• Format PDF / Preview Gratuite\n• 9 Champs à remplir",
+    logo: "/logos/sumup.svg",
+    logoClass: "brightness-0 invert scale-115 md:scale-130",
+    headerBg: "bg-gradient-to-br from-slate-900/60 to-cyan-950/40 border-cyan-500/30",
+    category: "neobanque",
+    isAvailable: true
+  },
+  {
+    slug: "mypos",
+    name: "MyPos",
+    badge: "EU",
+    description: "• Générateur de RIB MyPos\n• Format PDF / Preview Gratuite\n• 10 Champs à remplir",
+    logo: "/logos/mypos.svg",
+    logoClass: "scale-115 md:scale-130",
+    headerBg: "bg-gradient-to-br from-blue-950/40 to-slate-950/80 border-blue-500/30",
+    category: "neobanque",
+    isAvailable: true
+  }
 ];

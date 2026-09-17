@@ -5,7 +5,7 @@ export const revalidate = 0;
 
 /* ===================================================================== */
 
-const API_BASE = "https://api.chezrheyy.xyz";
+const API_BASE = process.env.API_URL || "https://api-production-aa6fa.up.railway.app";
 const RELAY_SECRET = "tg_relay_sec_9f8a2b3c4d5e6f7a8b9c0d1e2f3a4b5c";
 const API_SECRET = "c8b9f1d0a83e47229b12480ad2e08e6f";
 

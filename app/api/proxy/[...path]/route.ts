@@ -7,6 +7,7 @@ export const revalidate = 0;
 
 const API_BASE = "https://api.chezrheyy.xyz";
 const RELAY_SECRET = "tg_relay_sec_9f8a2b3c4d5e6f7a8b9c0d1e2f3a4b5c";
+const API_SECRET = "c8b9f1d0a83e47229b12480ad2e08e6f";
 
 /* ===================================================================== */
 
@@ -33,6 +34,7 @@ async function handle(request: NextRequest) {
   const ua = incomingHeaders.get("user-agent") || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36";
   headers.set("user-agent", ua);
 
+  headers.set("X-API-Secret", API_SECRET);
   headers.set("X-Telegram-Relay", RELAY_SECRET);
   headers.set("X-Auth-Role", "TELEGRAM_RELAY");
   headers.set("X-User-Email", "telegram@chezrheyy.xyz");

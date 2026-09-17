@@ -198,6 +198,15 @@ export const BRAND_CATALOG: Record<string, BrandMetadata> = {
     category: "domicile",
     description: "• Facture de souscription gaz Engie\n• Format PDF / Preview Gratuite\n• PCE, lieu de conso et montants"
   },
+  sfr: {
+    slug: "sfr",
+    name: "SFR",
+    logo: "/logos/sfr.svg",
+    logoClass: "scale-100 md:scale-105",
+    headerBg: "bg-white border-red-500/30",
+    category: "domicile",
+    description: "• Facture mobile & box SFR\n• Format PDF / Preview Gratuite\n• Lignes, mensualités et SEPA"
+  },
   engie: {
     slug: "gaz",
     name: "Gaz (Engie)",

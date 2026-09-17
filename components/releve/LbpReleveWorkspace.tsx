@@ -1,50 +1,50 @@
-"use client";
+﻿"use client";
 
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Calendar, User, Wallet, Sparkles, RefreshCw, Eye, Download, Building2 } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { ArrowLeft, Calendar, User, Wallet, Sparkles, RefreshCw, Eye, Download, Building2 } from "lucide-react";
+import { useToast } from "@/components/NotificationToast";
+import DocumentPreviewViewer from "@/components/_shared/DocumentPreviewViewer";
+
+/* ===================================================================== */
 
 interface LbpReleveWorkspaceProps {
   onBack: () => void;
 }
 
 export default function LbpReleveWorkspace({ onBack }: LbpReleveWorkspaceProps) {
-  const [mode, setMode] = useState<'facile' | 'custom'>('facile');
+  const toast = useToast();
+  const [mode, setMode] = useState<"facile" | "custom">("facile");
   const [duree, setDuree] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [pricing, setPricing] = useState({ 1: 10, 3: 25, 6: 45, 12: 70 });
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     moisDebut: new Date().getMonth() + 1,
     anneeDebut: new Date().getFullYear(),
-    numeroReleve: '1',
-    civilite: 'M',
-    nom: '',
-    prenom: '',
-    adresse: '',
-    cp: '',
-    ville: '',
-    identifiant: '',
-    iban: '',
-    profil: 'normal',
-    richesse: 'moyen',
-    soldeInitial: '1500',
-    employeur: '',
-    salaireNet: '2000',
-    jourSalaire: '1',
-    loyer: '600'
+    numeroReleve: "1",
+    civilite: "M",
+    nom: "",
+    prenom: "",
+    adresse: "",
+    cp: "",
+    ville: "",
+    identifiant: "",
+    iban: "",
+    profil: "normal",
+    richesse: "moyen",
+    soldeInitial: "1500",
+    employeur: "",
+    salaireNet: "2000",
+    jourSalaire: "1",
+    loyer: "600",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    fetch('/api/proxy/generate-docs/releve/pricing')
-      .then(r => r.json())
-      .then(d => setPricing(d))
-      .catch(() => {});
-  }, []);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     if (errors[e.target.name]) {
-      setErrors(prev => ({ ...prev, [e.target.name]: '' }));
+      setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
     }
   };
 
@@ -56,202 +56,402 @@ export default function LbpReleveWorkspace({ onBack }: LbpReleveWorkspaceProps) 
         const res = await fetch(`https://geo.api.gouv.fr/communes?codePostal=${cp}`);
         const data = await res.json();
         if (data && data.length > 0) {
-          setForm(prev => ({ ...prev, ville: data[0].nom }));
+          setForm((prev) => ({ ...prev, ville: data[0].nom }));
         }
-      } catch (err) {}
+      } catch {}
     }
   };
 
   const generateAutoIds = () => {
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
       identifiant: Math.floor(1000000000 + Math.random() * 9000000000).toString(),
-      iban: 'FR76' + Math.floor(10000000000000000000000 + Math.random() * 9000000000000000000000).toString()
+      iban: "FR76" + Math.floor(10000000000000000000000 + Math.random() * 9000000000000000000000).toString(),
     }));
+    toast.info("Identifiants et IBAN générés");
+  };
+
+  const handleFillExample = () => {
+    setForm({
+      moisDebut: new Date().getMonth() + 1,
+      anneeDebut: new Date().getFullYear(),
+      numeroReleve: "1",
+      civilite: "M",
+      nom: "BERNARD",
+      prenom: "Thomas",
+      adresse: "8 Boulevard Voltaire",
+      cp: "75011",
+      ville: "Paris",
+      identifiant: "3892019482",
+      iban: "FR7620041010050500013M02606",
+      profil: "normal",
+      richesse: "moyen",
+      soldeInitial: "2450.80",
+      employeur: "AIRBUS FRANCE",
+      salaireNet: "2600",
+      jourSalaire: "28",
+      loyer: "720",
+    });
+    toast.info("Exemple de relevé bancaire chargé");
   };
 
   const validateAll = () => {
     const newErrors: Record<string, string> = {};
-    if (!form.nom) newErrors.nom = 'Nom requis';
-    if (!form.prenom) newErrors.prenom = 'Prénom requis';
-    if (!form.identifiant) newErrors.identifiant = 'Identifiant requis';
-    if (!form.iban) newErrors.iban = 'IBAN requis';
+    if (!form.nom) newErrors.nom = "Requis";
+    if (!form.prenom) newErrors.prenom = "Requis";
+    if (!form.identifiant) newErrors.identifiant = "Requis";
+    if (!form.iban) newErrors.iban = "Requis";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleAction = async (action: 'preview' | 'generate') => {
-    if (!validateAll()) return;
+  const handlePreview = async () => {
+    if (!validateAll()) {
+      toast.error("Veuillez remplir les champs obligatoires");
+      return;
+    }
+    setIsPreviewing(true);
+    try {
+      const res = await fetch("/api/proxy/generate-docs/releve/lbp/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, duree, mode }),
+      });
+      if (!res.ok) throw new Error("Erreur lors de la prévisualisation");
+      const blob = await res.blob();
+      setPreviewUrl(URL.createObjectURL(blob));
+      toast.success("Aperçu généré !");
+    } catch (err: any) {
+      toast.error(err.message || "Erreur de prévisualisation");
+    } finally {
+      setIsPreviewing(false);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!validateAll()) {
+      toast.error("Veuillez remplir les champs obligatoires");
+      return;
+    }
     setLoading(true);
     try {
-      const endpoint = `/api/proxy/generate-docs/releve/lbp/${action}`;
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, duree, mode })
+      const res = await fetch("/api/proxy/generate-docs/releve/lbp/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, duree, mode }),
       });
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Releve_LBP_${form.nom}_${action}.pdf`;
-        a.click();
-        if (window.Telegram?.WebApp?.HapticFeedback) {
-          window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-        }
-      }
-    } catch (err) {
-      if (window.Telegram?.WebApp?.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
-      }
+      if (!res.ok) throw new Error("Erreur de génération");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Releve_LBP_${form.nom}_${duree}mois.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Relevé de compte généré !");
+    } catch (err: any) {
+      toast.error(err.message || "Erreur de génération du relevé");
     } finally {
       setLoading(false);
     }
   };
 
+  const inputClass = (err?: string) =>
+    `w-full h-10 bg-white/[0.04] border ${
+      err ? "border-rose-500/80" : "border-white/10"
+    } focus:border-primary/80 rounded-xl px-3 text-xs text-white transition-colors outline-none placeholder:text-white/20`;
+
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500 pb-20">
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={onBack} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm font-bold uppercase cursor-pointer">
-          <ArrowLeft className="w-4 h-4" /> Retour
+    <div className="space-y-4 pb-32 fade-in">
+      <div className="flex items-center justify-between pt-1">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-white/50 hover:text-white transition-colors"
+        >
+          <ArrowLeft size={14} /> Retour relevés
         </button>
-        <div className="flex bg-white/5 rounded-xl p-1 border border-white/10">
-          <button onClick={() => setMode('facile')} className={`px-4 py-2 rounded-lg text-sm font-bold uppercase transition-colors cursor-pointer ${mode === 'facile' ? 'bg-primary text-slate-950' : 'text-white/70 hover:text-white'}`}>Facile</button>
-          <button onClick={() => setMode('custom')} className={`px-4 py-2 rounded-lg text-sm font-bold uppercase transition-colors cursor-pointer ${mode === 'custom' ? 'bg-primary text-slate-950' : 'text-white/70 hover:text-white'}`}>Personnalisé</button>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleFillExample}
+            title="Remplir exemple"
+            className="p-2 rounded-xl bg-white/[0.04] border border-white/10 text-white/70 hover:text-primary transition-colors"
+          >
+            <Sparkles size={13} className="text-amber-400" />
+          </button>
+          <div className="flex items-center gap-1 bg-white/[0.04] border border-white/10 p-0.5 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setMode("facile")}
+              className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                mode === "facile" ? "bg-primary text-slate-950" : "text-white/50"
+              }`}
+            >
+              Facile
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("custom")}
+              className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                mode === "custom" ? "bg-primary text-slate-950" : "text-white/50"
+              }`}
+            >
+              Avancé
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 mb-8">
-        <div className="px-5 py-3.5 border rounded-2xl backdrop-blur-md flex items-center justify-center overflow-hidden shrink-0 shadow-lg bg-gradient-to-br from-blue-900/40 to-slate-950/80 border-blue-500/30">
-          <img src="/logos/lbp.svg" alt="La Banque Postale" className="h-8 sm:h-10 w-auto max-w-[140px] object-contain scale-125" />
+      <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-3.5 border border-white/[0.06] space-y-3">
+        <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+          <Calendar size={15} className="text-primary" />
+          <h3 className="text-xs font-black uppercase tracking-wider text-white">
+            1. Période du relevé
+          </h3>
         </div>
-        <div>
-          <h1 className="text-2xl sm:text-4xl font-black italic text-white tracking-tight">RELEVÉ DE COMPTE</h1>
-          <p className="text-white/50 text-xs font-medium uppercase tracking-wider mt-0.5">La Banque Postale · Relevé officiel</p>
-        </div>
-      </div>
 
-      <div className="glass p-6 md:p-8 space-y-6 rounded-2xl border border-white/10">
-        <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-          <Calendar className="w-6 h-6 text-primary" />
-          <h2 className="text-xl font-black italic uppercase tracking-tight text-white">1. Durée & Tarif</h2>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-1.5">
           {[1, 3, 6, 12].map((m) => (
-            <button key={m} onClick={() => setDuree(m)} className={`p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-colors ${duree === m ? 'border-primary bg-primary/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>
-              <span className="text-lg font-bold text-white">{m} Mois</span>
-              <span className="text-primary font-black">{pricing[m as keyof typeof pricing]}€</span>
+            <button
+              key={m}
+              type="button"
+              onClick={() => setDuree(m)}
+              className={`py-2 rounded-xl border text-center transition-all ${
+                duree === m
+                  ? "bg-primary/20 border-primary text-primary font-black"
+                  : "bg-white/[0.03] border-white/5 text-white/70 hover:bg-white/[0.06] text-xs font-bold"
+              }`}
+            >
+              <div className="text-xs">{m} {m > 1 ? "mois" : "mois"}</div>
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-2">Mois de début</label>
-            <input type="number" name="moisDebut" value={form.moisDebut} onChange={handleChange} min={1} max={12} className="w-full bg-white/5 border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-sm text-white" />
+
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-white/60">Mois début</label>
+            <input
+              type="number"
+              name="moisDebut"
+              value={form.moisDebut}
+              onChange={handleChange}
+              min={1}
+              max={12}
+              className={inputClass()}
+            />
           </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-2">Année de début</label>
-            <input type="number" name="anneeDebut" value={form.anneeDebut} onChange={handleChange} min={2020} max={2025} className="w-full bg-white/5 border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-sm text-white" />
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-white/60">Année début</label>
+            <input
+              type="number"
+              name="anneeDebut"
+              value={form.anneeDebut}
+              onChange={handleChange}
+              min={2020}
+              max={2026}
+              className={inputClass()}
+            />
           </div>
         </div>
       </div>
 
-      <div className="glass p-6 md:p-8 space-y-6 rounded-2xl border border-white/10">
-        <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-          <User className="w-6 h-6 text-primary" />
-          <h2 className="text-xl font-black italic uppercase tracking-tight text-white">2. Titulaire</h2>
+      <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-3.5 border border-white/[0.06] space-y-3">
+        <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+          <User size={15} className="text-primary" />
+          <h3 className="text-xs font-black uppercase tracking-wider text-white">
+            2. Titulaire du compte
+          </h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-2">Civilité</label>
-            <select name="civilite" value={form.civilite} onChange={handleChange} className="w-full bg-white/5 border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-sm text-white">
-              <option value="M">Monsieur</option>
-              <option value="MME">Madame</option>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-white/60">Civilité</label>
+            <select
+              name="civilite"
+              value={form.civilite}
+              onChange={handleChange}
+              className={`${inputClass()} appearance-none cursor-pointer`}
+            >
+              <option value="M" className="bg-[#0e111a]">Monsieur</option>
+              <option value="MME" className="bg-[#0e111a]">Madame</option>
             </select>
           </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-2">Nom</label>
-            <input type="text" name="nom" value={form.nom} onChange={handleChange} className={`w-full bg-white/5 border ${errors.nom ? 'border-rose-500/80' : 'border-white/10'} focus:border-primary rounded-xl px-4 py-3 text-sm text-white uppercase`} />
+
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-white/60">Nom *</label>
+              {errors.nom && <span className="text-rose-400 text-[9px]">{errors.nom}</span>}
+            </div>
+            <input
+              type="text"
+              name="nom"
+              value={form.nom}
+              onChange={handleChange}
+              className={inputClass(errors.nom)}
+            />
           </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-2">Prénom</label>
-            <input type="text" name="prenom" value={form.prenom} onChange={handleChange} className={`w-full bg-white/5 border ${errors.prenom ? 'border-rose-500/80' : 'border-white/10'} focus:border-primary rounded-xl px-4 py-3 text-sm text-white uppercase`} />
+
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-white/60">Prénom *</label>
+              {errors.prenom && <span className="text-rose-400 text-[9px]">{errors.prenom}</span>}
+            </div>
+            <input
+              type="text"
+              name="prenom"
+              value={form.prenom}
+              onChange={handleChange}
+              className={inputClass(errors.prenom)}
+            />
           </div>
-          <div className="md:col-span-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-2">Adresse</label>
-            <input type="text" name="adresse" value={form.adresse} onChange={handleChange} className="w-full bg-white/5 border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-sm text-white" />
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-white/60">Code Postal</label>
+            <input
+              type="text"
+              name="cp"
+              maxLength={5}
+              value={form.cp}
+              onChange={handleCpChange}
+              className={inputClass()}
+            />
           </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-2">Code Postal</label>
-            <input type="text" name="cp" value={form.cp} onChange={handleCpChange} className="w-full bg-white/5 border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-sm text-white" />
+
+          <div className="space-y-1 col-span-2">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-white/60">Adresse</label>
+            <input
+              type="text"
+              name="adresse"
+              value={form.adresse}
+              onChange={handleChange}
+              className={inputClass()}
+            />
           </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-2">Ville</label>
-            <input type="text" name="ville" value={form.ville} onChange={handleChange} className="w-full bg-white/5 border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-sm text-white" />
+
+          <div className="space-y-1 col-span-2">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-white/60">Ville</label>
+            <input
+              type="text"
+              name="ville"
+              value={form.ville}
+              onChange={handleChange}
+              className={inputClass()}
+            />
           </div>
         </div>
       </div>
 
-      <div className="glass p-6 md:p-8 space-y-6 rounded-2xl border border-white/10">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
-          <div className="flex items-center gap-3">
-            <Building2 className="w-6 h-6 text-primary" />
-            <h2 className="text-xl font-black italic uppercase tracking-tight text-white">3. Identifiants & Comptes</h2>
+      <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-3.5 border border-white/[0.06] space-y-3">
+        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+          <div className="flex items-center gap-2">
+            <Wallet size={15} className="text-primary" />
+            <h3 className="text-xs font-black uppercase tracking-wider text-white">
+              3. Données bancaires
+            </h3>
           </div>
-          <button onClick={generateAutoIds} className="text-xs font-bold text-primary hover:text-white uppercase">Auto-générer</button>
+          <button
+            type="button"
+            onClick={generateAutoIds}
+            className="text-[9px] font-black uppercase tracking-wider text-primary hover:underline"
+          >
+            Auto Générer
+          </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-2">Identifiant</label>
-            <input type="text" name="identifiant" value={form.identifiant} onChange={handleChange} className={`w-full bg-white/5 border ${errors.identifiant ? 'border-rose-500/80' : 'border-white/10'} focus:border-primary rounded-xl px-4 py-3 text-sm text-white`} />
+
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="space-y-1 col-span-2 sm:col-span-1">
+            <div className="flex justify-between">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-white/60">Identifiant *</label>
+              {errors.identifiant && <span className="text-rose-400 text-[9px]">{errors.identifiant}</span>}
+            </div>
+            <input
+              type="text"
+              name="identifiant"
+              value={form.identifiant}
+              onChange={handleChange}
+              className={inputClass(errors.identifiant)}
+            />
           </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-2">IBAN</label>
-            <input type="text" name="iban" value={form.iban} onChange={handleChange} className={`w-full bg-white/5 border ${errors.iban ? 'border-rose-500/80' : 'border-white/10'} focus:border-primary rounded-xl px-4 py-3 text-sm text-white`} />
+
+          <div className="space-y-1 col-span-2 sm:col-span-1">
+            <div className="flex justify-between">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-white/60">IBAN *</label>
+              {errors.iban && <span className="text-rose-400 text-[9px]">{errors.iban}</span>}
+            </div>
+            <input
+              type="text"
+              name="iban"
+              value={form.iban}
+              onChange={handleChange}
+              className={inputClass(errors.iban)}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-white/60">Solde Initial (€)</label>
+            <input
+              type="text"
+              name="soldeInitial"
+              value={form.soldeInitial}
+              onChange={handleChange}
+              className={inputClass()}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-white/60">Salaire (€)</label>
+            <input
+              type="text"
+              name="salaireNet"
+              value={form.salaireNet}
+              onChange={handleChange}
+              className={inputClass()}
+            />
           </div>
         </div>
       </div>
 
-      {mode === 'custom' && (
-        <div className="glass p-6 md:p-8 space-y-6 rounded-2xl border border-white/10">
-          <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-            <Wallet className="w-6 h-6 text-primary" />
-            <h2 className="text-xl font-black italic uppercase tracking-tight text-white">4. Paramètres Avancés</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-2">Profil</label>
-              <select name="profil" value={form.profil} onChange={handleChange} className="w-full bg-white/5 border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-sm text-white">
-                <option value="normal">Normal</option>
-                <option value="fonctionnaire">Fonctionnaire</option>
-                <option value="independant">Indépendant</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-2">Niveau de richesse</label>
-              <select name="richesse" value={form.richesse} onChange={handleChange} className="w-full bg-white/5 border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-sm text-white">
-                <option value="pauvre">Faible</option>
-                <option value="moyen">Moyen</option>
-                <option value="riche">Élevé</option>
-              </select>
-            </div>
-          </div>
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#080b14]/95 backdrop-blur-2xl border-t border-white/10 px-4 py-2.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
+        <div className="max-w-md mx-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handlePreview}
+            disabled={isPreviewing}
+            className="flex-1 h-11 rounded-xl bg-white/10 border border-white/15 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-white/15 disabled:opacity-50 transition-all"
+          >
+            {isPreviewing ? <RefreshCw size={14} className="animate-spin" /> : <Eye size={14} />}
+            <span>Aperçu</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={loading}
+            className="flex-[1.5] h-11 rounded-xl bg-primary text-slate-950 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-lg shadow-primary/25 hover:bg-primary/90 disabled:opacity-50 transition-all"
+          >
+            {loading ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
+            <span>Générer PDF</span>
+          </button>
         </div>
+      </div>
+
+      {previewUrl && (
+        <DocumentPreviewViewer
+          imageUrl={previewUrl}
+          title={`Aperçu Relevé LBP - ${form.nom || "COMPTE"}`}
+          onClose={() => {
+            URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+          }}
+          onAction={handleGenerate}
+          isActionLoading={loading}
+          actionLabel="Télécharger le relevé"
+        />
       )}
-
-      <div className="flex gap-4">
-        <button onClick={() => setForm(prev => ({ ...prev, nom: '', prenom: '' }))} className="flex-1 bg-white/5 border border-white/10 text-xs font-bold uppercase py-3 rounded-xl hover:bg-white/10 transition-colors">
-          Effacer
-        </button>
-        <button onClick={() => handleAction('preview')} disabled={loading} className="flex-1 bg-white/5 border border-white/10 text-xs font-bold uppercase py-3 rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2">
-          <Eye className="w-4 h-4" /> Aperçu
-        </button>
-        <button onClick={() => handleAction('generate')} disabled={loading} className="flex-[2] bg-primary text-slate-950 font-black text-xs uppercase tracking-widest py-3 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-          {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-          Générer
-        </button>
-      </div>
     </div>
   );
 }

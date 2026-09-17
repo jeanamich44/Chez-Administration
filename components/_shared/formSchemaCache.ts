@@ -62,7 +62,13 @@ export function useFormSchema(category: string, slug: string) {
     }
     setIsLoading(true);
     fetch(`/api/proxy/generate-docs/forms/${category}/${slug}`)
-      .then(r => { if (!r.ok) throw new Error('Formulaire indisponible'); return r.json(); })
+      .then(async r => {
+        if (!r.ok) {
+          const errData = await r.json().catch(() => ({}));
+          throw new Error(errData.detail || `Formulaire indisponible (${r.status})`);
+        }
+        return r.json();
+      })
       .then(data => {
         const s = data.schema || data;
         const v = data.version || 1;

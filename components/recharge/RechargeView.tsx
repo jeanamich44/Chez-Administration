@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { Wallet, ShieldCheck, Zap, ArrowRight, CheckCircle2, Copy, ExternalLink, QrCode } from "lucide-react";
@@ -11,15 +11,16 @@ interface RechargeViewProps {
   onBackToServices?: () => void;
 }
 
-const PRESET_AMOUNTS = [
-  { value: 5, label: "5 €", bonus: "" },
-  { value: 10, label: "10 €", bonus: "" },
-  { value: 25, label: "25 €", bonus: "+2 € offerts" },
-  { value: 50, label: "50 €", bonus: "+5 € offerts" },
-  { value: 100, label: "100 €", bonus: "+15 € offerts" },
-];
 
 const PAYMENT_METHODS = [
+  {
+    id: "card",
+    name: "Carte Bancaire / Apple Pay",
+    badge: "INSTANTANÉ • SÉCURISÉ",
+    icon: "💳",
+    color: "text-violet-400 border-violet-500/20 bg-violet-500/10",
+    address: "https://pay.chezrheyy.xyz",
+  },
   {
     id: "crypto_ltc",
     name: "Litecoin (LTC)",
@@ -44,14 +45,6 @@ const PAYMENT_METHODS = [
     color: "text-amber-400 border-amber-500/20 bg-amber-500/10",
     address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
   },
-  {
-    id: "card",
-    name: "Carte Bancaire / Apple Pay",
-    badge: "PAR CARTE",
-    icon: "💳",
-    color: "text-violet-400 border-violet-500/20 bg-violet-500/10",
-    address: "https://pay.chezrheyy.xyz",
-  },
 ];
 
 /* ===================================================================== */
@@ -60,23 +53,16 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
   const { user, haptic } = useTelegram();
   const toast = useToast();
 
-  const [selectedAmount, setSelectedAmount] = useState<number>(25);
-  const [customAmount, setCustomAmount] = useState<string>("");
-  const [selectedMethod, setSelectedMethod] = useState<string>("crypto_ltc");
+  const [amount, setAmount] = useState<string>("");
+  const [selectedMethod, setSelectedMethod] = useState<string>("card");
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
 
-  const activeAmount = customAmount ? parseFloat(customAmount) || 0 : selectedAmount;
+  const activeAmount = parseFloat(amount) || 0;
   const currentMethod = PAYMENT_METHODS.find((m) => m.id === selectedMethod) || PAYMENT_METHODS[0];
 
-  const handleSelectAmount = (val: number) => {
-    haptic("selection");
-    setSelectedAmount(val);
-    setCustomAmount("");
-  };
-
-  const handleCustomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/[^0-9]/g, "");
-    setCustomAmount(val);
+    setAmount(val);
   };
 
   const handleCopy = (text: string) => {
@@ -126,46 +112,22 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
         </div>
       </div>
 
-      <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-4 border border-white/[0.06] space-y-3">
+      <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-4 border border-white/[0.06] space-y-2">
         <label className="text-[10px] font-black uppercase tracking-widest text-white/50 block">
-          1. Choisissez le montant
+          1. Montant à recharger
         </label>
-
-        <div className="grid grid-cols-3 gap-2">
-          {PRESET_AMOUNTS.map((item) => {
-            const isSelected = !customAmount && selectedAmount === item.value;
-            return (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => handleSelectAmount(item.value)}
-                className={`p-2.5 rounded-xl border flex flex-col items-center justify-center transition-all ${
-                  isSelected
-                    ? "bg-primary/15 border-primary text-primary shadow-sm"
-                    : "bg-white/[0.03] border-white/5 text-white hover:bg-white/[0.06]"
-                }`}
-              >
-                <span className="text-sm font-black italic">{item.label}</span>
-                {item.bonus && (
-                  <span className="text-[8px] font-bold text-amber-300 mt-0.5 leading-none">
-                    {item.bonus}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          <div className="relative">
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder="Autre €"
-              value={customAmount}
-              onChange={handleCustomChange}
-              className={`w-full h-full min-h-[46px] rounded-xl px-2 text-center text-xs font-bold border transition-colors outline-none bg-white/[0.03] ${
-                customAmount ? "border-primary text-primary" : "border-white/5 text-white/70"
-              }`}
-            />
-          </div>
+        <div className="relative flex items-center">
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="0"
+            value={amount}
+            onChange={handleAmountChange}
+            className="w-full h-12 rounded-xl px-4 text-base font-black text-white bg-white/[0.03] border border-white/10 focus:border-primary/80 transition-colors outline-none placeholder:text-white/20"
+          />
+          <span className="absolute right-4 text-sm font-black text-white/40 pointer-events-none">
+            € EUR
+          </span>
         </div>
       </div>
 
@@ -215,9 +177,10 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
         <button
           type="button"
           onClick={handleProceed}
-          className="w-full h-12 rounded-2xl bg-primary text-slate-950 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.99] transition-transform"
+          disabled={activeAmount <= 0}
+          className="w-full h-12 rounded-2xl bg-primary text-slate-950 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.99] disabled:opacity-50 transition-all"
         >
-          <span>Recharger {activeAmount} €</span>
+          <span>{activeAmount > 0 ? `Recharger ${activeAmount} €` : "Saisir un montant"}</span>
           <ArrowRight size={14} />
         </button>
       </div>

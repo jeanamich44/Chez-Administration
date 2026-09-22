@@ -40,9 +40,10 @@ async function handle(request: NextRequest) {
   }
 
   const tgInitData = incomingHeaders.get("x-telegram-init-data");
-  if (tgInitData) {
-    headers.set("x-telegram-init-data", tgInitData);
+  if (!tgInitData) {
+    return new NextResponse(null, { status: 404 });
   }
+  headers.set("x-telegram-init-data", tgInitData);
 
   try {
     const fetchOptions: RequestInit = {

@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 
+/* ===================================================================== */
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 /* ===================================================================== */
 
-const API_BASE = process.env.API_URL || "https://api-production-aa6fa.up.railway.app";
-const RELAY_SECRET = "tg_relay_sec_9f8a2b3c4d5e6f7a8b9c0d1e2f3a4b5c";
-const API_SECRET = "c8b9f1d0a83e47229b12480ad2e08e6f";
+const BACKEND_URL = process.env.BACKEND_URL || process.env.API_URL || "http://localhost:8000";
+const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || "";
 
 /* ===================================================================== */
 
 async function handle(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const subPath = pathname.replace(/^\/api\/proxy\/?/, "");
-  const targetUrl = `${API_BASE}/${subPath}${request.nextUrl.search}`;
+  const targetUrl = `${BACKEND_URL}/${subPath}${request.nextUrl.search}`;
 
   let body: ArrayBuffer | undefined;
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -34,13 +35,14 @@ async function handle(request: NextRequest) {
   const ua = incomingHeaders.get("user-agent") || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36";
   headers.set("user-agent", ua);
 
-  headers.set("X-API-Secret", API_SECRET);
-  headers.set("X-Telegram-Relay", RELAY_SECRET);
-  headers.set("X-Auth-Role", "TELEGRAM_RELAY");
-  headers.set("X-User-Email", "telegram@chezrheyy.xyz");
+  if (INTERNAL_SECRET) {
+    headers.set("X-Internal-Secret", INTERNAL_SECRET);
+  }
 
   const tgInitData = incomingHeaders.get("x-telegram-init-data");
-  if (tgInitData) headers.set("x-telegram-init-data", tgInitData);
+  if (tgInitData) {
+    headers.set("x-telegram-init-data", tgInitData);
+  }
 
   try {
     const fetchOptions: RequestInit = {
@@ -66,9 +68,8 @@ async function handle(request: NextRequest) {
       headers: resHeaders,
     });
   } catch (err: any) {
-    console.error("[PROXY_ERROR]", targetUrl, err?.message || err);
     return NextResponse.json(
-      { detail: err?.message || "Erreur de connexion au serveur backend" },
+      { detail: err?.message || "Service temporairement indisponible" },
       { status: 502 }
     );
   }
@@ -91,4 +92,3 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   return handle(request);
 }
-

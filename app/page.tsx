@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, lazy, Suspense, useState } from "react";
 import { TelegramProvider, useTelegram } from "@/components/TelegramContext";
@@ -94,7 +94,7 @@ function LoadingSpinner() {
 /* ===================================================================== */
 
 function AppRouter() {
-  const { user, navigation, navigateTo, goBack, haptic } = useTelegram();
+  const { user, navigation, navigateTo, goBack, haptic, balance } = useTelegram();
   const [activeTab, setActiveTab] = useState<MainTab>("services");
 
   const handleCategoryClick = useCallback(
@@ -156,7 +156,7 @@ function AppRouter() {
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-primary/40 transition-colors"
           >
             <Wallet size={13} className="text-primary" />
-            <span className="text-xs font-black italic text-white">0,00 €</span>
+            <span className="text-xs font-black italic text-white">{balance.toFixed(2).replace(".", ",")} €</span>
           </button>
         </header>
 

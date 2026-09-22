@@ -1,7 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { Wallet, ShieldCheck, Zap, ArrowRight, CheckCircle2, Copy, ExternalLink, QrCode } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Wallet,
+  ShieldCheck,
+  Zap,
+  ArrowRight,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  QrCode,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
 import { useTelegram } from "@/components/TelegramContext";
 import { useToast } from "@/components/NotificationToast";
 
@@ -11,7 +22,6 @@ interface RechargeViewProps {
   onBackToServices?: () => void;
 }
 
-
 const PAYMENT_METHODS = [
   {
     id: "card",
@@ -19,7 +29,6 @@ const PAYMENT_METHODS = [
     badge: "INSTANTANÉ • SÉCURISÉ",
     icon: "💳",
     color: "text-violet-400 border-violet-500/20 bg-violet-500/10",
-    address: "https://pay.chezrheyy.xyz",
   },
   {
     id: "crypto_ltc",
@@ -50,15 +59,33 @@ const PAYMENT_METHODS = [
 /* ===================================================================== */
 
 export default function RechargeView({ onBackToServices }: RechargeViewProps) {
-  const { user, haptic } = useTelegram();
+  const { user, haptic, balance, refreshBalance, initData } = useTelegram();
   const toast = useToast();
 
   const [amount, setAmount] = useState<string>("");
   const [selectedMethod, setSelectedMethod] = useState<string>("card");
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
+  const [isCreatingPayment, setIsCreatingPayment] = useState<boolean>(false);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [activeCheckout, setActiveCheckout] = useState<{ checkout_id: string; payment_url: string } | null>(null);
+  const [paymentCompleted, setPaymentCompleted] = useState<boolean>(false);
+  const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const activeAmount = parseFloat(amount) || 0;
   const currentMethod = PAYMENT_METHODS.find((m) => m.id === selectedMethod) || PAYMENT_METHODS[0];
+
+  const stopPolling = () => {
+    if (pollingTimerRef.current) {
+      clearInterval(pollingTimerRef.current);
+      pollingTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
+  }, []);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/[^0-9]/g, "");
@@ -71,14 +98,115 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
     toast.success("Adresse copiée dans le presse-papier !");
   };
 
-  const handleProceed = () => {
-    if (activeAmount < 5) {
-      toast.error("Le montant minimum de recharge est de 5 €");
+  const checkPaymentStatus = async (checkoutId: string, silent = false) => {
+    if (!silent) setIsVerifying(true);
+    try {
+      const rawData = initData || (window as any).Telegram?.WebApp?.initData || "";
+      const res = await fetch(`/api/proxy/api/payments/verify/${checkoutId}`, {
+        headers: {
+          "x-telegram-init-data": rawData,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "PAID") {
+          stopPolling();
+          setPaymentCompleted(true);
+          haptic("notification");
+          await refreshBalance();
+          toast.success(`Paiement de ${data.amount} € validé avec succès !`);
+          return true;
+        }
+      }
+    } catch {
+    } finally {
+      if (!silent) setIsVerifying(false);
+    }
+    return false;
+  };
+
+  const handleProceed = async () => {
+    if (activeAmount < 1) {
+      toast.error("Le montant minimum de recharge est de 1 €");
+      return;
+    }
+    if (activeAmount > 60) {
+      toast.error("Le montant maximum de recharge est de 60 €");
       return;
     }
     haptic("impact");
-    setShowPaymentModal(true);
+
+    if (selectedMethod !== "card") {
+      setShowPaymentModal(true);
+      return;
+    }
+
+    setIsCreatingPayment(true);
+    stopPolling();
+    setPaymentCompleted(false);
+
+    try {
+      const rawData = initData || (window as any).Telegram?.WebApp?.initData || "";
+      const res = await fetch("/api/proxy/api/payments/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-telegram-init-data": rawData,
+        },
+        body: JSON.stringify({
+          amount: activeAmount,
+          bank: "bank2",
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.detail || "Erreur lors de l'initialisation du paiement");
+        setIsCreatingPayment(false);
+        return;
+      }
+
+      const data = await res.json();
+      setActiveCheckout({
+        checkout_id: data.checkout_id,
+        payment_url: data.payment_url,
+      });
+      setShowPaymentModal(true);
+
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.openLink) {
+        tg.openLink(data.payment_url);
+      } else {
+        window.open(data.payment_url, "_blank");
+      }
+
+      let attempts = 0;
+      pollingTimerRef.current = setInterval(async () => {
+        attempts++;
+        if (attempts > 80) {
+          stopPolling();
+          return;
+        }
+        const isPaid = await checkPaymentStatus(data.checkout_id, true);
+        if (isPaid) {
+          stopPolling();
+        }
+      }, 3500);
+    } catch {
+      toast.error("Connexion au serveur de paiement impossible");
+    } finally {
+      setIsCreatingPayment(false);
+    }
   };
+
+  const handleCloseModal = () => {
+    stopPolling();
+    setShowPaymentModal(false);
+    setActiveCheckout(null);
+    setPaymentCompleted(false);
+  };
+
+  /* ===================================================================== */
 
   return (
     <div className="space-y-4 pb-24 fade-in">
@@ -91,7 +219,9 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
             </div>
             <div>
               <p className="text-[10px] uppercase font-black tracking-widest text-white/40">Solde disponible</p>
-              <h2 className="text-2xl font-black italic text-white tracking-tight">0,00 €</h2>
+              <h2 className="text-2xl font-black italic text-white tracking-tight">
+                {balance.toFixed(2).replace(".", ",")} €
+              </h2>
             </div>
           </div>
           <div className="flex flex-col items-end">
@@ -177,11 +307,26 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
         <button
           type="button"
           onClick={handleProceed}
-          disabled={activeAmount <= 0}
+          disabled={activeAmount < 1 || activeAmount > 60 || isCreatingPayment}
           className="w-full h-12 rounded-2xl bg-primary text-slate-950 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.99] disabled:opacity-50 transition-all"
         >
-          <span>{activeAmount > 0 ? `Recharger ${activeAmount} €` : "Saisir un montant"}</span>
-          <ArrowRight size={14} />
+          {isCreatingPayment ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              <span>Initialisation en cours...</span>
+            </>
+          ) : (
+            <>
+              <span>
+                {activeAmount > 60
+                  ? "Montant maximum : 60 €"
+                  : activeAmount >= 1
+                  ? `Recharger ${activeAmount} €`
+                  : "Saisir un montant"}
+              </span>
+              <ArrowRight size={14} />
+            </>
+          )}
         </button>
       </div>
 
@@ -197,7 +342,7 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
               </div>
               <button
                 type="button"
-                onClick={() => setShowPaymentModal(false)}
+                onClick={handleCloseModal}
                 className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 text-xs hover:text-white"
               >
                 ✕
@@ -220,7 +365,7 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
                   </span>
                   <button
                     type="button"
-                    onClick={() => handleCopy(currentMethod.address)}
+                    onClick={() => handleCopy(currentMethod.address || "")}
                     className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white shrink-0"
                   >
                     <Copy size={14} />
@@ -230,31 +375,67 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
                   Le crédit est appliqué dès 1 confirmation blockchain sur le réseau.
                 </p>
               </div>
+            ) : paymentCompleted ? (
+              <div className="space-y-3 text-center py-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+                  <CheckCircle2 size={24} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">Paiement confirmé !</h4>
+                  <p className="text-xs text-white/60 mt-1">
+                    Votre solde a été immédiatement crédité.
+                  </p>
+                </div>
+              </div>
             ) : (
               <div className="space-y-3 text-center py-2">
+                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center gap-2">
+                  <Loader2 size={15} className="animate-spin text-primary" />
+                  <span className="text-xs text-white/80 font-medium">En attente de votre règlement...</span>
+                </div>
                 <p className="text-xs text-white/70">
-                  Cliquez ci-dessous pour ouvrir la page de paiement sécurisée par carte.
+                  La fenêtre de paiement SumUp est ouverte. Cliquez ci-dessous si vous souhaitez la rouvrir.
                 </p>
-                <a
-                  href={currentMethod.address}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full h-11 rounded-xl bg-white text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2"
-                >
-                  Ouvrir la page de paiement <ExternalLink size={14} />
-                </a>
+                {activeCheckout?.payment_url && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tg = (window as any).Telegram?.WebApp;
+                      if (tg?.openLink) {
+                        tg.openLink(activeCheckout.payment_url);
+                      } else {
+                        window.open(activeCheckout.payment_url, "_blank");
+                      }
+                    }}
+                    className="w-full h-11 rounded-xl bg-white text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-white/90 transition-colors"
+                  >
+                    Ouvrir la page de paiement <ExternalLink size={14} />
+                  </button>
+                )}
+                {activeCheckout?.checkout_id && (
+                  <button
+                    type="button"
+                    onClick={() => checkPaymentStatus(activeCheckout.checkout_id)}
+                    disabled={isVerifying}
+                    className="w-full h-10 rounded-xl bg-white/[0.06] border border-white/10 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-white/10 transition-colors disabled:opacity-50"
+                  >
+                    {isVerifying ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <RefreshCw size={13} />
+                    )}
+                    Vérifier maintenant
+                  </button>
+                )}
               </div>
             )}
 
             <button
               type="button"
-              onClick={() => {
-                setShowPaymentModal(false);
-                toast.info("Demande de paiement enregistrée");
-              }}
+              onClick={handleCloseModal}
               className="w-full h-10 rounded-xl bg-white/10 border border-white/10 text-white text-xs font-bold uppercase tracking-wider hover:bg-white/15"
             >
-              Fermer
+              {paymentCompleted ? "Terminer" : "Fermer"}
             </button>
           </div>
         </div>

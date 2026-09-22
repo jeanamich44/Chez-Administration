@@ -1,7 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useState } from "react";
-import { User, Shield, MessageSquare, Bell, Server, Trash2, CheckCircle2, Copy } from "lucide-react";
+import { User, MessageSquare, Bell, Copy } from "lucide-react";
 import { useTelegram } from "@/components/TelegramContext";
 import { useToast } from "@/components/NotificationToast";
 
@@ -10,7 +9,6 @@ import { useToast } from "@/components/NotificationToast";
 export default function SettingsView() {
   const { user, haptic } = useTelegram();
   const toast = useToast();
-  const [clearing, setClearing] = useState(false);
 
   const fullName = user
     ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Utilisateur Telegram"
@@ -23,21 +21,6 @@ export default function SettingsView() {
     haptic("notification");
     navigator.clipboard.writeText(userId);
     toast.success("ID Telegram copié !");
-  };
-
-  const handleClearCache = () => {
-    haptic("impact");
-    setClearing(true);
-    try {
-      localStorage.clear();
-      setTimeout(() => {
-        setClearing(false);
-        toast.success("Mémoire cache réinitialisée avec succès");
-      }, 400);
-    } catch {
-      setClearing(false);
-      toast.error("Impossible de vider le cache");
-    }
   };
 
   return (
@@ -104,41 +87,6 @@ export default function SettingsView() {
           </div>
           <span className="text-[10px] text-amber-400 font-bold">Rejoindre</span>
         </a>
-      </div>
-
-      <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-4 border border-white/[0.06] space-y-3">
-        <h3 className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-1">
-          Système & Infrastructure
-        </h3>
-
-        <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
-          <div className="flex items-center gap-2.5">
-            <Server size={14} className="text-emerald-400" />
-            <span className="text-xs text-white/80 font-medium">Serveur Backend Railway</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-bold">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Opérationnel</span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
-          <div className="flex items-center gap-2.5">
-            <Shield size={14} className="text-primary" />
-            <span className="text-xs text-white/80 font-medium">Version de l'application</span>
-          </div>
-          <span className="text-[10px] font-mono text-white/50">v2.5.0 (Telegram)</span>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleClearCache}
-          disabled={clearing}
-          className="w-full p-2.5 rounded-xl border border-rose-500/20 bg-rose-500/5 text-rose-400 hover:bg-rose-500/10 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
-        >
-          <Trash2 size={13} />
-          <span>{clearing ? "Nettoyage..." : "Réinitialiser le cache local"}</span>
-        </button>
       </div>
     </div>
   );

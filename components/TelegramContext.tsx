@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
+/* ===================================================================== */
+
 interface TelegramUser {
   id: number;
   first_name: string;
@@ -19,21 +21,31 @@ interface NavigationState {
 interface TelegramContextType {
   webApp: any;
   user: TelegramUser | null;
+  initData: string;
+  balance: number;
+  isLoadingBalance: boolean;
   ready: boolean;
   navigation: NavigationState;
   navigateTo: (view: NavigationState["view"], category?: string, slug?: string) => void;
   goBack: () => void;
   haptic: (type?: "impact" | "notification" | "selection") => void;
+  refreshBalance: () => Promise<void>;
 }
+
+/* ===================================================================== */
 
 const TelegramContext = createContext<TelegramContextType>({
   webApp: null,
   user: null,
+  initData: "",
+  balance: 0,
+  isLoadingBalance: false,
   ready: false,
   navigation: { view: "hub" },
   navigateTo: () => {},
   goBack: () => {},
   haptic: () => {},
+  refreshBalance: async () => {},
 });
 
 export function useTelegram() {
@@ -45,9 +57,41 @@ export function useTelegram() {
 export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const [webApp, setWebApp] = useState<any>(null);
   const [user, setUser] = useState<TelegramUser | null>(null);
+  const [initData, setInitData] = useState<string>("");
+  const [balance, setBalance] = useState<number>(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState<boolean>(false);
   const [ready, setReady] = useState(false);
   const [navigation, setNavigation] = useState<NavigationState>({ view: "hub" });
   const historyRef = useRef<NavigationState[]>([{ view: "hub" }]);
+
+  const refreshBalance = useCallback(async () => {
+    const rawData = initData || (window as any).Telegram?.WebApp?.initData || "";
+    if (!rawData) return;
+    setIsLoadingBalance(true);
+    try {
+      const res = await fetch("/api/proxy/api/me", {
+        headers: {
+          "x-telegram-init-data": rawData,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.balance === "number") {
+          setBalance(data.balance);
+        }
+        if (data.username || data.first_name) {
+          setUser((prev) => ({
+            id: data.id || prev?.id || 0,
+            first_name: data.first_name || prev?.first_name || "",
+            username: data.username || prev?.username,
+          }));
+        }
+      }
+    } catch {
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  }, [initData]);
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
@@ -58,11 +102,19 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       tg.setBackgroundColor("#060710");
       setWebApp(tg);
       setUser(tg.initDataUnsafe?.user || null);
+      const raw = tg.initData || "";
+      setInitData(raw);
       setReady(true);
     } else {
       setReady(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (initData) {
+      refreshBalance();
+    }
+  }, [initData, refreshBalance]);
 
   const updateBackButton = useCallback((nav: NavigationState) => {
     const tg = (window as any).Telegram?.WebApp;
@@ -109,7 +161,21 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <TelegramContext.Provider value={{ webApp, user, ready, navigation, navigateTo, goBack, haptic }}>
+    <TelegramContext.Provider
+      value={{
+        webApp,
+        user,
+        initData,
+        balance,
+        isLoadingBalance,
+        ready,
+        navigation,
+        navigateTo,
+        goBack,
+        haptic,
+        refreshBalance,
+      }}
+    >
       {children}
     </TelegramContext.Provider>
   );

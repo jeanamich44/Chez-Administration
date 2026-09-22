@@ -6,6 +6,7 @@ import { ToastProvider } from "@/components/NotificationToast";
 import BottomNavBar, { MainTab } from "@/components/navigation/BottomNavBar";
 import RechargeView from "@/components/recharge/RechargeView";
 import SettingsView from "@/components/settings/SettingsView";
+import AccessRestrictedView from "@/components/AccessRestrictedView";
 import { ArrowRight, Briefcase, CreditCard, FileText, Landmark, Receipt, Shield, Wallet, Sparkles } from "lucide-react";
 
 /* ===================================================================== */
@@ -94,8 +95,20 @@ function LoadingSpinner() {
 /* ===================================================================== */
 
 function AppRouter() {
-  const { user, navigation, navigateTo, goBack, haptic, balance } = useTelegram();
+  const { user, navigation, navigateTo, goBack, haptic, balance, ready, isTelegram } = useTelegram();
   const [activeTab, setActiveTab] = useState<MainTab>("services");
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-[#060810] text-white flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (!isTelegram) {
+    return <AccessRestrictedView />;
+  }
 
   const handleCategoryClick = useCallback(
     (categoryId: string) => {

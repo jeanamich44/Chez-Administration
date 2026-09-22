@@ -25,6 +25,7 @@ interface TelegramContextType {
   balance: number;
   isLoadingBalance: boolean;
   ready: boolean;
+  isTelegram: boolean;
   navigation: NavigationState;
   navigateTo: (view: NavigationState["view"], category?: string, slug?: string) => void;
   goBack: () => void;
@@ -41,6 +42,7 @@ const TelegramContext = createContext<TelegramContextType>({
   balance: 0,
   isLoadingBalance: false,
   ready: false,
+  isTelegram: false,
   navigation: { view: "hub" },
   navigateTo: () => {},
   goBack: () => {},
@@ -160,6 +162,8 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     else tg.selectionChanged();
   }, []);
 
+  const isTelegram = Boolean(initData && initData.length > 0);
+
   return (
     <TelegramContext.Provider
       value={{
@@ -169,6 +173,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         balance,
         isLoadingBalance,
         ready,
+        isTelegram,
         navigation,
         navigateTo,
         goBack,

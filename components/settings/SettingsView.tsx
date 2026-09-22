@@ -11,13 +11,14 @@ export default function SettingsView() {
   const toast = useToast();
 
   const fullName = user
-    ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Utilisateur Telegram"
-    : "Utilisateur Telegram";
-  const username = user?.username ? `@${user.username}` : "Compte vérifié";
-  const userId = user?.id ? String(user.id) : "9283741";
-  const initials = (user?.first_name?.[0] || "T").toUpperCase();
+    ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username || ""
+    : "";
+  const username = user?.username ? `@${user.username}` : "";
+  const userId = user?.id ? String(user.id) : "";
+  const initials = (user?.first_name?.[0] || user?.username?.[0] || "").toUpperCase();
 
   const handleCopyId = () => {
+    if (!userId) return;
     haptic("notification");
     navigator.clipboard.writeText(userId);
     toast.success("ID Telegram copié !");

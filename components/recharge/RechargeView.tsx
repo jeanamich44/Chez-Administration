@@ -228,9 +228,11 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-[9px] font-black tracking-wider uppercase">
               <ShieldCheck size={10} /> Compte Actif
             </span>
-            <span className="text-[9px] text-white/40 mt-1 font-medium">
-              ID: {user?.id || "9283741"}
-            </span>
+            {user?.id && (
+              <span className="text-[9px] text-white/40 mt-1 font-medium">
+                ID: {user.id}
+              </span>
+            )}
           </div>
         </div>
 

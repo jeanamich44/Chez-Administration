@@ -97,8 +97,8 @@ function AppRouter() {
   const { user, navigation, navigateTo, goBack, haptic, balance, ready, isTelegram } = useTelegram();
   const [activeTab, setActiveTab] = useState<MainTab>("services");
 
-  if (!ready || !isTelegram) {
-    return <div className="min-h-screen bg-black" />;
+  if (!ready) {
+    return <LoadingSpinner />;
   }
 
   const handleCategoryClick = useCallback(

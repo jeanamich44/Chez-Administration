@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 /* ===================================================================== */
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   /* ===================================================================== */
@@ -39,6 +39,8 @@ export function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
+
+export const middleware = proxy;
 
 /* ===================================================================== */
 

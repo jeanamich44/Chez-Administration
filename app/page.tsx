@@ -97,10 +97,6 @@ function AppRouter() {
   const { user, navigation, navigateTo, goBack, haptic, balance, ready, isTelegram } = useTelegram();
   const [activeTab, setActiveTab] = useState<MainTab>("services");
 
-  if (!ready || !isTelegram) {
-    return <div className="min-h-screen bg-black" />;
-  }
-
   const handleCategoryClick = useCallback(
     (categoryId: string) => {
       haptic("impact");
@@ -133,6 +129,12 @@ function AppRouter() {
   );
 
   const isInForm = navigation.view === "form";
+
+  /* ===================================================================== */
+
+  if (!ready || !isTelegram) {
+    return <div className="min-h-screen bg-black" />;
+  }
 
   /* ===================================================================== */
 

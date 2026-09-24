@@ -11,7 +11,6 @@ import {
   ExternalLink,
   QrCode,
   Loader2,
-  RefreshCw,
 } from "lucide-react";
 import { useTelegram } from "@/components/TelegramContext";
 import { useToast } from "@/components/NotificationToast";
@@ -66,7 +65,6 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
   const [selectedMethod, setSelectedMethod] = useState<string>("card");
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [isCreatingPayment, setIsCreatingPayment] = useState<boolean>(false);
-  const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [activeCheckout, setActiveCheckout] = useState<{ checkout_id: string; payment_url: string } | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState<boolean>(false);
   const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -98,8 +96,7 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
     toast.success("Adresse copiée dans le presse-papier !");
   };
 
-  const checkPaymentStatus = async (checkoutId: string, silent = false) => {
-    if (!silent) setIsVerifying(true);
+  const checkPaymentStatus = async (checkoutId: string) => {
     try {
       const rawData = initData || (window as any).Telegram?.WebApp?.initData || "";
       const res = await fetch(`/api/proxy/api/payments/verify/${checkoutId}`, {
@@ -119,8 +116,6 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
         }
       }
     } catch {
-    } finally {
-      if (!silent) setIsVerifying(false);
     }
     return false;
   };
@@ -187,7 +182,7 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
           stopPolling();
           return;
         }
-        const isPaid = await checkPaymentStatus(data.checkout_id, true);
+        const isPaid = await checkPaymentStatus(data.checkout_id);
         if (isPaid) {
           stopPolling();
         }
@@ -412,21 +407,6 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
                     className="w-full h-11 rounded-xl bg-white text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-white/90 transition-colors"
                   >
                     Ouvrir la page de paiement <ExternalLink size={14} />
-                  </button>
-                )}
-                {activeCheckout?.checkout_id && (
-                  <button
-                    type="button"
-                    onClick={() => checkPaymentStatus(activeCheckout.checkout_id)}
-                    disabled={isVerifying}
-                    className="w-full h-10 rounded-xl bg-white/[0.06] border border-white/10 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-white/10 transition-colors disabled:opacity-50"
-                  >
-                    {isVerifying ? (
-                      <Loader2 size={13} className="animate-spin" />
-                    ) : (
-                      <RefreshCw size={13} />
-                    )}
-                    Vérifier maintenant
                   </button>
                 )}
               </div>

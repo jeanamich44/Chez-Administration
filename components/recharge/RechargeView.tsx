@@ -1,6 +1,5 @@
 "use client";
-
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
   Wallet,
   ShieldCheck,
@@ -11,9 +10,20 @@ import {
   ExternalLink,
   QrCode,
   Loader2,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
 import { useTelegram } from "@/components/TelegramContext";
 import { useToast } from "@/components/NotificationToast";
+
+/* ===================================================================== */
+
+interface PendingCheckout {
+  checkout_id: string;
+  amount: number;
+  payment_url: string;
+  created_at?: string | null;
+}
 
 /* ===================================================================== */
 
@@ -68,13 +78,48 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
   const [activeCheckout, setActiveCheckout] = useState<{ checkout_id: string; payment_url: string } | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState<boolean>(false);
 
+  const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null);
+  const [isLoadingPending, setIsLoadingPending] = useState<boolean>(false);
+  const [showCancelModal, setShowCancelModal] = useState<boolean>(false);
+  const [isCancelling, setIsCancelling] = useState<boolean>(false);
+
   const activeAmount = parseFloat(amount) || 0;
   const currentMethod = PAYMENT_METHODS.find((m) => m.id === selectedMethod) || PAYMENT_METHODS[0];
 
+  const fetchPendingPayment = useCallback(async () => {
+    try {
+      setIsLoadingPending(true);
+      const rawData = initData || (window as any).Telegram?.WebApp?.initData || "";
+      if (!rawData) return;
+      const res = await fetch("/api/proxy/api/payments/pending", {
+        headers: {
+          "x-telegram-init-data": rawData,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.checkout_id) {
+          setPendingCheckout(data);
+        } else {
+          setPendingCheckout(null);
+        }
+      }
+    } catch (err: any) {
+      console.error("[VERCEL RECHARGE] Erreur vérification facture en attente:", err?.message);
+    } finally {
+      setIsLoadingPending(false);
+    }
+  }, [initData]);
+
+  useEffect(() => {
+    fetchPendingPayment();
+  }, [fetchPendingPayment]);
+
   useEffect(() => {
     const handleFocus = () => {
-      console.log("[VERCEL RECHARGE] Retour utilisateur dans l'application, actualisation du solde...");
+      console.log("[VERCEL RECHARGE] Retour utilisateur dans l'application, actualisation du solde et facture...");
       refreshBalance();
+      fetchPendingPayment();
     };
 
     window.addEventListener("focus", handleFocus);
@@ -89,7 +134,7 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [refreshBalance]);
+  }, [refreshBalance, fetchPendingPayment]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/[^0-9]/g, "");
@@ -102,7 +147,40 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
     toast.success("Adresse copiée dans le presse-papier !");
   };
 
+  const handleCancelPayment = async () => {
+    haptic("impact");
+    setIsCancelling(true);
+    try {
+      const rawData = initData || (window as any).Telegram?.WebApp?.initData || "";
+      const res = await fetch("/api/proxy/api/payments/cancel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-telegram-init-data": rawData,
+        },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.detail || "Impossible d'annuler la facture");
+        return;
+      }
+      toast.success("Facture en attente annulée");
+      setPendingCheckout(null);
+      setShowCancelModal(false);
+      setShowPaymentModal(false);
+      setActiveCheckout(null);
+    } catch (err: any) {
+      toast.error("Erreur de connexion lors de l'annulation");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const handleProceed = async () => {
+    if (pendingCheckout) {
+      toast.error("Vous avez déjà un paiement en attente. Finalisez-le ou annulez-le.");
+      return;
+    }
     if (activeAmount < 1) {
       toast.error("Le montant minimum de recharge est de 1 €");
       return;
@@ -141,15 +219,19 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
         console.error("[VERCEL RECHARGE ERREUR] Création échouée:", err);
         toast.error(err.detail || "Erreur lors de l'initialisation du paiement");
         setIsCreatingPayment(false);
+        fetchPendingPayment();
         return;
       }
 
       const data = await res.json();
       console.log("[VERCEL RECHARGE SUCCÈS] Checkout créé:", data.checkout_id, data.payment_url);
-      setActiveCheckout({
+      const newCheckout: PendingCheckout = {
         checkout_id: data.checkout_id,
         payment_url: data.payment_url,
-      });
+        amount: activeAmount,
+      };
+      setActiveCheckout(newCheckout);
+      setPendingCheckout(newCheckout);
       setShowPaymentModal(true);
 
       const tg = (window as any).Telegram?.WebApp;
@@ -172,6 +254,7 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
     setPaymentCompleted(false);
     console.log("[VERCEL RECHARGE] Modal fermée, rafraîchissement du solde...");
     refreshBalance();
+    fetchPendingPayment();
   };
 
   /* ===================================================================== */
@@ -212,6 +295,53 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
         </div>
       </div>
 
+      {pendingCheckout && (
+        <div className="relative overflow-hidden rounded-2xl p-4 bg-amber-500/10 border border-amber-500/30 shadow-lg space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <AlertTriangle size={16} />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">Paiement en attente</span>
+                <h4 className="text-sm font-bold text-white">Facture de {pendingCheckout.amount.toFixed(2).replace(".", ",")} €</h4>
+              </div>
+            </div>
+            <span className="px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300 text-[9px] font-black uppercase">
+              En cours
+            </span>
+          </div>
+
+          <p className="text-xs text-white/70">
+            Une facture est active. Vous devez la régler ou l&apos;annuler pour effectuer un autre paiement.
+          </p>
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                const tg = (window as any).Telegram?.WebApp;
+                if (tg?.openLink) {
+                  tg.openLink(pendingCheckout.payment_url);
+                } else {
+                  window.open(pendingCheckout.payment_url, "_blank");
+                }
+              }}
+              className="flex-1 h-9 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
+            >
+              Payer <ExternalLink size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCancelModal(true)}
+              className="flex-1 h-9 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
+            >
+              Annuler <XCircle size={13} />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-4 border border-white/[0.06] space-y-2">
         <label className="text-[10px] font-black uppercase tracking-widest text-white/50 block">
           1. Montant à recharger
@@ -223,7 +353,8 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
             placeholder="0"
             value={amount}
             onChange={handleAmountChange}
-            className="w-full h-12 rounded-xl px-4 text-base font-black text-white bg-white/[0.03] border border-white/10 focus:border-primary/80 transition-colors outline-none placeholder:text-white/20"
+            disabled={Boolean(pendingCheckout)}
+            className="w-full h-12 rounded-xl px-4 text-base font-black text-white bg-white/[0.03] border border-white/10 focus:border-primary/80 transition-colors outline-none placeholder:text-white/20 disabled:opacity-50"
           />
           <span className="absolute right-4 text-sm font-black text-white/40 pointer-events-none">
             € EUR
@@ -277,13 +408,18 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
         <button
           type="button"
           onClick={handleProceed}
-          disabled={activeAmount < 1 || activeAmount > 60 || isCreatingPayment}
+          disabled={Boolean(pendingCheckout) || activeAmount < 1 || activeAmount > 60 || isCreatingPayment}
           className="w-full h-12 rounded-2xl bg-primary text-slate-950 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.99] disabled:opacity-50 transition-all"
         >
           {isCreatingPayment ? (
             <>
               <Loader2 size={14} className="animate-spin" />
               <span>Initialisation en cours...</span>
+            </>
+          ) : pendingCheckout ? (
+            <>
+              <AlertTriangle size={14} />
+              <span>Paiement déjà en cours</span>
             </>
           ) : (
             <>
@@ -321,7 +457,7 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
 
             <div className="text-center py-2">
               <p className="text-[11px] text-white/50 uppercase tracking-wider font-bold">Montant net à transférer</p>
-              <h2 className="text-3xl font-black italic text-primary mt-0.5">{activeAmount} €</h2>
+              <h2 className="text-3xl font-black italic text-primary mt-0.5">{activeAmount || pendingCheckout?.amount || 0} €</h2>
             </div>
 
             {currentMethod.id !== "card" ? (
@@ -366,15 +502,16 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
                 <p className="text-xs text-white/70">
                   La fenêtre de paiement SumUp est ouverte. Cliquez ci-dessous si vous souhaitez la rouvrir.
                 </p>
-                {activeCheckout?.payment_url && (
+                {(activeCheckout?.payment_url || pendingCheckout?.payment_url) && (
                   <button
                     type="button"
                     onClick={() => {
+                      const url = activeCheckout?.payment_url || pendingCheckout?.payment_url || "";
                       const tg = (window as any).Telegram?.WebApp;
                       if (tg?.openLink) {
-                        tg.openLink(activeCheckout.payment_url);
+                        tg.openLink(url);
                       } else {
-                        window.open(activeCheckout.payment_url, "_blank");
+                        window.open(url, "_blank");
                       }
                     }}
                     className="w-full h-11 rounded-xl bg-white text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-white/90 transition-colors"
@@ -382,6 +519,13 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
                     Ouvrir la page de paiement <ExternalLink size={14} />
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(true)}
+                  className="w-full h-10 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-300 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
+                >
+                  Annuler ce paiement <XCircle size={14} />
+                </button>
               </div>
             )}
 
@@ -392,6 +536,55 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
             >
               {paymentCompleted ? "Terminer" : "Fermer"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-4 fade-in">
+          <div className="w-full max-w-sm bg-[#111422] border border-white/10 rounded-3xl p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
+              <div className="w-8 h-8 rounded-xl bg-rose-500/15 border border-rose-500/25 flex items-center justify-center text-rose-400">
+                <AlertTriangle size={16} />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-wider text-white">
+                Annulation de recharge
+              </h3>
+            </div>
+
+            <p className="text-xs text-white/70 leading-relaxed">
+              Souhaitez-vous annuler votre facture en attente de{" "}
+              <strong className="text-white font-bold">
+                {(pendingCheckout?.amount || activeAmount).toFixed(2).replace(".", ",")} €
+              </strong>{" "}
+              ? Cette action clôturera immédiatement la demande auprès de SumUp et libérera votre compte.
+            </p>
+
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={handleCancelPayment}
+                className="w-full h-11 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-colors shadow-lg shadow-rose-500/20"
+              >
+                {isCancelling ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Annulation en cours...</span>
+                  </>
+                ) : (
+                  <span>Confirmer l&apos;annulation</span>
+                )}
+              </button>
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={() => setShowCancelModal(false)}
+                className="w-full h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 font-bold text-xs uppercase tracking-wider transition-colors"
+              >
+                Conserver la facture
+              </button>
+            </div>
           </div>
         </div>
       )}

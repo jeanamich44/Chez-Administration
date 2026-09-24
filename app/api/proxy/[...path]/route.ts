@@ -41,7 +41,7 @@ async function handle(request: NextRequest) {
 
   const tgInitData = incomingHeaders.get("x-telegram-init-data");
   if (!tgInitData) {
-    return new NextResponse(null, { status: 404 });
+    return new Response(null, { status: 444 });
   }
   headers.set("x-telegram-init-data", tgInitData);
 
@@ -71,10 +71,7 @@ async function handle(request: NextRequest) {
     });
   } catch (err: any) {
     console.error(`[VERCEL PROXY ERROR] ${request.method} ${pathname} -> ${targetUrl}:`, err?.message);
-    return NextResponse.json(
-      { detail: err?.message || "Service temporairement indisponible" },
-      { status: 502 }
-    );
+    return new NextResponse(null, { status: 502 });
   }
 }
 

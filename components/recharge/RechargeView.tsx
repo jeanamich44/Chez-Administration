@@ -67,23 +67,29 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
   const [isCreatingPayment, setIsCreatingPayment] = useState<boolean>(false);
   const [activeCheckout, setActiveCheckout] = useState<{ checkout_id: string; payment_url: string } | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState<boolean>(false);
-  const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const activeAmount = parseFloat(amount) || 0;
   const currentMethod = PAYMENT_METHODS.find((m) => m.id === selectedMethod) || PAYMENT_METHODS[0];
 
-  const stopPolling = () => {
-    if (pollingTimerRef.current) {
-      clearInterval(pollingTimerRef.current);
-      pollingTimerRef.current = null;
-    }
-  };
-
   useEffect(() => {
-    return () => {
-      stopPolling();
+    const handleFocus = () => {
+      console.log("[VERCEL RECHARGE] Retour utilisateur dans l'application, actualisation du solde...");
+      refreshBalance();
     };
-  }, []);
+
+    window.addEventListener("focus", handleFocus);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        handleFocus();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [refreshBalance]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/[^0-9]/g, "");
@@ -94,30 +100,6 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
     haptic("notification");
     navigator.clipboard.writeText(text);
     toast.success("Adresse copiée dans le presse-papier !");
-  };
-
-  const checkPaymentStatus = async (checkoutId: string) => {
-    try {
-      const rawData = initData || (window as any).Telegram?.WebApp?.initData || "";
-      const res = await fetch(`/api/proxy/api/payments/verify/${checkoutId}`, {
-        headers: {
-          "x-telegram-init-data": rawData,
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status === "PAID") {
-          stopPolling();
-          setPaymentCompleted(true);
-          haptic("notification");
-          await refreshBalance();
-          toast.success(`Paiement de ${data.amount} € validé avec succès !`);
-          return true;
-        }
-      }
-    } catch {
-    }
-    return false;
   };
 
   const handleProceed = async () => {
@@ -137,10 +119,10 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
     }
 
     setIsCreatingPayment(true);
-    stopPolling();
     setPaymentCompleted(false);
 
     try {
+      console.log(`[VERCEL RECHARGE] Initialisation paiement SumUp: montant=${activeAmount}€`);
       const rawData = initData || (window as any).Telegram?.WebApp?.initData || "";
       const res = await fetch("/api/proxy/api/payments/create", {
         method: "POST",
@@ -156,12 +138,14 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
+        console.error("[VERCEL RECHARGE ERREUR] Création échouée:", err);
         toast.error(err.detail || "Erreur lors de l'initialisation du paiement");
         setIsCreatingPayment(false);
         return;
       }
 
       const data = await res.json();
+      console.log("[VERCEL RECHARGE SUCCÈS] Checkout créé:", data.checkout_id, data.payment_url);
       setActiveCheckout({
         checkout_id: data.checkout_id,
         payment_url: data.payment_url,
@@ -174,20 +158,8 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
       } else {
         window.open(data.payment_url, "_blank");
       }
-
-      let attempts = 0;
-      pollingTimerRef.current = setInterval(async () => {
-        attempts++;
-        if (attempts > 80) {
-          stopPolling();
-          return;
-        }
-        const isPaid = await checkPaymentStatus(data.checkout_id);
-        if (isPaid) {
-          stopPolling();
-        }
-      }, 3500);
-    } catch {
+    } catch (err: any) {
+      console.error("[VERCEL RECHARGE ERREUR] Connexion impossible:", err?.message);
       toast.error("Connexion au serveur de paiement impossible");
     } finally {
       setIsCreatingPayment(false);
@@ -195,10 +167,11 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
   };
 
   const handleCloseModal = () => {
-    stopPolling();
     setShowPaymentModal(false);
     setActiveCheckout(null);
     setPaymentCompleted(false);
+    console.log("[VERCEL RECHARGE] Modal fermée, rafraîchissement du solde...");
+    refreshBalance();
   };
 
   /* ===================================================================== */

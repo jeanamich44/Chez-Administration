@@ -55,6 +55,7 @@ async function handle(request: NextRequest) {
     }
 
     const res = await fetch(targetUrl, fetchOptions);
+    console.log(`[VERCEL PROXY] ${request.method} ${pathname} -> ${targetUrl} [${res.status}]`);
 
     const resHeaders = new Headers();
     const resContentType = res.headers.get("content-type");
@@ -69,6 +70,7 @@ async function handle(request: NextRequest) {
       headers: resHeaders,
     });
   } catch (err: any) {
+    console.error(`[VERCEL PROXY ERROR] ${request.method} ${pathname} -> ${targetUrl}:`, err?.message);
     return NextResponse.json(
       { detail: err?.message || "Service temporairement indisponible" },
       { status: 502 }

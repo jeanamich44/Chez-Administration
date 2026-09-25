@@ -50,6 +50,29 @@ interface AdminTransaction {
   date: string;
 }
 
+interface IptvAccount {
+  name: string;
+  pack: string;
+  api_key: string;
+  api_url: string;
+  active: boolean;
+}
+
+interface IptvPanelAccount {
+  name: string;
+  username: string;
+  password: string;
+  active: boolean;
+}
+
+interface SumUpBank {
+  name: string;
+  pay_to_email: string;
+  api_key: string;
+  client_id: string;
+  client_secret: string;
+}
+
 /* ===================================================================== */
 
 export default function AdminWebView({ onLogout }: AdminWebViewProps) {
@@ -57,7 +80,6 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
   const [activeTab, setActiveTab] = useState<AdminWebTab>("dashboard");
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [activeBank, setActiveBank] = useState<string>("bank2");
   const [maintenance, setMaintenance] = useState<boolean>(false);
 
   const [userSearch, setUserSearch] = useState<string>("");
@@ -73,13 +95,30 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
   const [usersList, setUsersList] = useState<AdminUser[]>([]);
   const [transactionsList, setTransactionsList] = useState<AdminTransaction[]>([]);
 
-  const [iptvHost, setIptvHost] = useState<string>("http://cf.business-cloud-neo.com");
-  const [iptvType, setIptvType] = useState<string>("m3u");
-  const [iptvPrice1m, setIptvPrice1m] = useState<string>("10");
-  const [iptvPrice3m, setIptvPrice3m] = useState<string>("25");
-  const [iptvPrice6m, setIptvPrice6m] = useState<string>("45");
-  const [iptvPrice12m, setIptvPrice12m] = useState<string>("70");
+  const [iptvHost, setIptvHost] = useState<string>("");
+  const [iptvType, setIptvType] = useState<string>("");
+  const [iptvPrice1m, setIptvPrice1m] = useState<string>("");
+  const [iptvPrice3m, setIptvPrice3m] = useState<string>("");
+  const [iptvPrice6m, setIptvPrice6m] = useState<string>("");
+  const [iptvPrice12m, setIptvPrice12m] = useState<string>("");
   const [iptvFooter, setIptvFooter] = useState<string>("");
+  const [iptvAccounts, setIptvAccounts] = useState<IptvAccount[]>([]);
+  const [iptvPanelAccounts, setIptvPanelAccounts] = useState<IptvPanelAccount[]>([]);
+  const [iptvApiTestResult, setIptvApiTestResult] = useState<string>("");
+  const [iptvPanelTestResult, setIptvPanelTestResult] = useState<string>("");
+  const [isTestingIptvApi, setIsTestingIptvApi] = useState<boolean>(false);
+  const [isTestingIptvPanel, setIsTestingIptvPanel] = useState<boolean>(false);
+
+  const [telegramMode, setTelegramMode] = useState<string>("webhook");
+  const [sumupMode, setSumupMode] = useState<string>("webhook");
+  const [sumupActive, setSumupActive] = useState<"sumup" | "sumup_bank2">("sumup");
+  const [sumupExpiration, setSumupExpiration] = useState<string>("");
+  const [sumup1, setSumup1] = useState<SumUpBank>({ name: "", pay_to_email: "", api_key: "", client_id: "", client_secret: "" });
+  const [sumup2, setSumup2] = useState<SumUpBank>({ name: "", pay_to_email: "", api_key: "", client_id: "", client_secret: "" });
+  const [oxapayKey, setOxapayKey] = useState<string>("");
+
+  const [adminPassword, setAdminPassword] = useState<string>("");
+  const [adminPasswordConfirm, setAdminPasswordConfirm] = useState<string>("");
 
   const [activeModalUser, setActiveModalUser] = useState<AdminUser | null>(null);
   const [balanceAmount, setBalanceAmount] = useState<string>("");
@@ -106,8 +145,165 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
     }
   };
 
-  useEffect(() => {
+  const fetchSettings = async () => {
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/settings", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.iptv) {
+          setIptvHost(data.iptv.host || "");
+          setIptvType(data.iptv.type || "");
+          setIptvFooter(data.iptv.message_footer || "");
+          setIptvPrice1m(String(data.iptv.price_1m ?? ""));
+          setIptvPrice3m(String(data.iptv.price_3m ?? ""));
+          setIptvPrice6m(String(data.iptv.price_6m ?? ""));
+          setIptvPrice12m(String(data.iptv.price_12m ?? ""));
+          
+          if (Array.isArray(data.iptv.accounts) && data.iptv.accounts.length > 0) {
+            setIptvAccounts(data.iptv.accounts.map((a: any) => ({
+              name: a.name || a.Name || "",
+              pack: a.pack || a.Pack || "",
+              api_key: a.api_key || a.ApiKey || "",
+              api_url: a.api_url || a.ApiUrl || "",
+              active: !!(a.active ?? a.Active)
+            })));
+          } else {
+            setIptvAccounts([{ name: "", pack: "", api_key: "", api_url: "", active: true }]);
+          }
+
+          if (Array.isArray(data.iptv.panel_accounts) && data.iptv.panel_accounts.length > 0) {
+            setIptvPanelAccounts(data.iptv.panel_accounts.map((p: any) => ({
+              name: p.name || p.Name || "",
+              username: p.username || p.Username || "",
+              password: p.password || p.Password || "",
+              active: !!(p.active ?? p.Active)
+            })));
+          } else {
+            setIptvPanelAccounts([{ name: "", username: "", password: "", active: true }]);
+          }
+        }
+
+        if (data.telegramMode) setTelegramMode(data.telegramMode);
+        if (data.sumupMode) setSumupMode(data.sumupMode);
+
+        if (data.sumup) {
+          setSumupActive(data.sumup.active === "sumup_bank2" ? "sumup_bank2" : "sumup");
+          setSumupExpiration(String(data.sumup.expiration_minutes ?? ""));
+          const b1 = data.sumup.banks?.sumup || {};
+          const b2 = data.sumup.banks?.sumup_bank2 || {};
+          setSumup1({
+            name: b1.name || "",
+            pay_to_email: b1.pay_to_email || "",
+            api_key: b1.api_key || "",
+            client_id: b1.client_id || "",
+            client_secret: b1.client_secret || ""
+          });
+          setSumup2({
+            name: b2.name || "",
+            pay_to_email: b2.pay_to_email || "",
+            api_key: b2.api_key || "",
+            client_id: b2.client_id || "",
+            client_secret: b2.client_secret || ""
+          });
+        }
+
+        if (data.oxapayApiKey) {
+          setOxapayKey(data.oxapayApiKey);
+        }
+      }
+    } catch {}
+
+    try {
+      const mRes = await fetch("/api/proxy/admin/maintenance", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (mRes.ok) {
+        const mData = await mRes.json();
+        setMaintenance(!!mData.maintenance);
+      }
+    } catch {}
+  };
+
+  const fetchStock = async () => {
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/stock", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.stock)) {
+          setCarrefourStock(data.stock.map((s: any) => ({
+            id: s.id,
+            code: s.code,
+            pin: s.pin || "0000",
+            val: typeof s.value === "number" ? s.value : (parseFloat(s.value) || 0),
+            price: typeof s.price === "number" ? s.price : (parseFloat(s.price) || 0)
+          })));
+        }
+      }
+    } catch {}
+  };
+
+  const fetchUsers = async () => {
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/users", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.users)) {
+          setUsersList(data.users.map((u: any) => ({
+            id: String(u.id),
+            username: u.username || "Anonyme",
+            balance: typeof u.solde === "number" ? u.solde : (parseFloat(u.solde) || 0),
+            ordersCount: u.achats || 0,
+            isBanned: !!u.isBanned,
+            registeredAt: u.userNumber ? `#${u.userNumber}` : "N/A"
+          })));
+        }
+      }
+    } catch {}
+  };
+
+  const fetchTransactions = async () => {
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/transactions", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.transactions)) {
+          setTransactionsList(data.transactions.map((t: any) => ({
+            id: String(t.id),
+            userId: String(t.userId),
+            service: t.brand ? t.brand.toUpperCase() : "Achat",
+            amount: typeof t.price === "number" ? t.price : (parseFloat(t.price) || 0),
+            status: "completed" as const,
+            date: t.createdAt ? t.createdAt.replace("T", " ") : "N/A"
+          })));
+        }
+      }
+    } catch {}
+  };
+
+  const refreshAll = () => {
     fetchStats();
+    fetchSettings();
+    fetchStock();
+    fetchUsers();
+    fetchTransactions();
+  };
+
+  useEffect(() => {
+    refreshAll();
   }, []);
 
   /* ===================================================================== */
@@ -149,7 +345,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
   /* ===================================================================== */
 
-  const handleApplyBalance = (delta: number) => {
+  const handleApplyBalance = async (delta: number) => {
     if (!activeModalUser) return;
     const val = parseFloat(balanceAmount);
     if (isNaN(val) || val <= 0) {
@@ -157,38 +353,68 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
       return;
     }
 
-    setUsersList(prev => prev.map(u => {
-      if (u.id === activeModalUser.id) {
-        const updated = Math.max(0, u.balance + (delta * val));
-        return { ...u, balance: updated };
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/users/solde", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId: activeModalUser.id,
+          action: delta > 0 ? "add" : "remove",
+          amount: val
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Solde de @${activeModalUser.username} mis à jour`);
+        setActiveModalUser(null);
+        setBalanceAmount("");
+        fetchUsers();
+      } else {
+        toast.error(data.message || "Erreur lors de l'ajustement du solde");
       }
-      return u;
-    }));
-
-    toast.success(`Solde de @${activeModalUser.username} mis à jour`);
-    setActiveModalUser(null);
-    setBalanceAmount("");
+    } catch {
+      toast.error("Erreur réseau");
+    }
   };
 
-  const handleToggleBan = (userId: string) => {
-    setUsersList(prev => prev.map(u => {
-      if (u.id === userId) {
-        const nextState = !u.isBanned;
-        if (nextState) toast.error(`Utilisateur ${u.id} banni`);
-        else toast.success(`Utilisateur ${u.id} débanni`);
-        return { ...u, isBanned: nextState };
+  const handleToggleBan = async (userId: string, currentBanned: boolean) => {
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/users/ban", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId,
+          banned: !currentBanned,
+          reason: "Action manuelle administrateur"
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (!currentBanned) toast.error(`Utilisateur ${userId} banni`);
+        else toast.success(`Utilisateur ${userId} débanni`);
+        fetchUsers();
+      } else {
+        toast.error(data.message || "Erreur ban");
       }
-      return u;
-    }));
+    } catch {
+      toast.error("Erreur réseau");
+    }
   };
 
-  const handleImportStock = (e: React.FormEvent) => {
+  const handleImportStock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stockInput.trim()) return;
 
     const lines = stockInput.trim().split("\n");
-    let count = 0;
-    const newItems: Array<{ id: number; code: string; pin: string; val: number; price: number }> = [];
+    const items: Array<{ brand: string; code: string; pin: string; value: number; price: number }> = [];
 
     for (const rawLine of lines) {
       const parts = rawLine.trim().split("|");
@@ -197,29 +423,342 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
         const pin = parts.length >= 4 ? parts[1].trim() : "0000";
         const val = parseFloat(parts.length >= 4 ? parts[2] : parts[1]) || 0;
         const price = parseFloat(parts.length >= 4 ? parts[3] : parts[2]) || 0;
-        newItems.push({
-          id: Date.now() + count,
-          code,
-          pin,
-          val,
-          price
-        });
-        count++;
+        if (code) {
+          items.push({
+            brand: "carr",
+            code,
+            pin,
+            value: val,
+            price
+          });
+        }
       }
     }
 
-    if (count > 0) {
-      setCarrefourStock(prev => [...newItems, ...prev]);
-      setStockInput("");
-      toast.success(`${count} carte(s) Carrefour importée(s)`);
-    } else {
+    if (items.length === 0) {
       toast.error("Format invalide. Utilisez CODE|PIN|VALEUR|PRIX");
+      return;
+    }
+
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/stock/add", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ items })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`${data.count} carte(s) Carrefour importée(s)`);
+        setStockInput("");
+        fetchStock();
+      } else {
+        toast.error(data.message || "Erreur lors de l'importation");
+      }
+    } catch {
+      toast.error("Erreur réseau");
     }
   };
 
-  const handleSaveIptv = (e: React.FormEvent) => {
+  const handleDeleteStock = async (id: number) => {
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/stock/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Carte supprimée");
+        fetchStock();
+      } else {
+        toast.error("Erreur lors de la suppression");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+  };
+
+  const handleSaveIptv = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Configuration IPTV enregistrée");
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/settings/iptv", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          host: iptvHost.trim(),
+          type: iptvType.trim(),
+          message_footer: iptvFooter,
+          price_1m: iptvPrice1m.trim(),
+          price_3m: iptvPrice3m.trim(),
+          price_6m: iptvPrice6m.trim(),
+          price_12m: iptvPrice12m.trim(),
+          accounts: iptvAccounts.filter(a => a.api_key && a.api_url && a.pack),
+          panel_accounts: iptvPanelAccounts
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Configuration et tarifs IPTV enregistrés");
+        fetchSettings();
+      } else {
+        toast.error(data.message || "Erreur lors de l'enregistrement IPTV");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+  };
+
+  const handleTestIptvApi = async () => {
+    setIsTestingIptvApi(true);
+    setIptvApiTestResult("Connexion en cours…");
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/iptv/api-test", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      if (data.success) {
+        const name = data.stats?.name || "?";
+        const pack = data.stats?.pack || "?";
+        const type = data.stats?.type || "?";
+        const credits = data.stats?.credits;
+        let msg = `Connecté. Compte : ${name} — Pack : ${pack} — Type : ${type}`;
+        if (credits !== undefined && credits !== null) msg += ` — Crédits : ${credits}`;
+        setIptvApiTestResult(msg);
+        toast.success("Connexion API OK");
+      } else {
+        setIptvApiTestResult(data.message || "Échec de la connexion API");
+        toast.error(data.message || "Échec de la connexion API");
+      }
+    } catch {
+      setIptvApiTestResult("Erreur réseau");
+      toast.error("Erreur réseau");
+    } finally {
+      setIsTestingIptvApi(false);
+    }
+  };
+
+  const handleTestIptvPanel = async () => {
+    setIsTestingIptvPanel(true);
+    setIptvPanelTestResult("Connexion en cours…");
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/iptv/panel-test", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      if (data.success) {
+        const credits = data.stats?.credits ?? "?";
+        const demos = data.stats?.remaining_demos ?? "?";
+        setIptvPanelTestResult(`Connecté. Crédits : ${credits} — Démos restantes : ${demos}`);
+        toast.success("Connexion panel OK");
+      } else {
+        setIptvPanelTestResult(data.message || "Échec de la connexion panel");
+        toast.error(data.message || "Échec de la connexion panel");
+      }
+    } catch {
+      setIptvPanelTestResult("Erreur réseau");
+      toast.error("Erreur réseau");
+    } finally {
+      setIsTestingIptvPanel(false);
+    }
+  };
+
+  const handleSaveTelegramMode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/settings/telegram", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ mode: telegramMode })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Mode Telegram basculé sur ${data.mode === "webhook" ? "Webhook" : "Long Polling"}`);
+        fetchSettings();
+      } else {
+        toast.error(data.message || "Erreur mode Telegram");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+  };
+
+  const handleSaveSumupMode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/settings/sumup/mode", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ mode: sumupMode })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Mode SumUp basculé sur ${data.mode === "webhook" ? "Webhook" : "Long Polling"}`);
+        fetchSettings();
+      } else {
+        toast.error(data.message || "Erreur mode SumUp");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+  };
+
+  const handleSaveSumup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem("admin_auth_token") || "";
+    const payload = {
+      active: sumupActive,
+      expiration_minutes: sumupExpiration.trim(),
+      banks: {
+        sumup: {
+          name: sumup1.name.trim(),
+          pay_to_email: sumup1.pay_to_email.trim(),
+          api_key: sumup1.api_key.trim(),
+          client_id: sumup1.client_id.trim(),
+          client_secret: sumup1.client_secret.trim()
+        },
+        sumup_bank2: {
+          name: sumup2.name.trim(),
+          pay_to_email: sumup2.pay_to_email.trim(),
+          api_key: sumup2.api_key.trim(),
+          client_id: sumup2.client_id.trim(),
+          client_secret: sumup2.client_secret.trim()
+        }
+      }
+    };
+    try {
+      const res = await fetch("/api/proxy/admin/settings/sumup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Comptes SumUp enregistrés");
+        fetchSettings();
+      } else {
+        toast.error(data.message || "Erreur enregistrement SumUp");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+  };
+
+  const handleSaveOxapay = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!oxapayKey.trim()) {
+      toast.error("La clé OxaPay ne peut pas être vide");
+      return;
+    }
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/settings/oxapay", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ api_key: oxapayKey.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Clé OxaPay enregistrée");
+        fetchSettings();
+      } else {
+        toast.error(data.message || "Erreur enregistrement OxaPay");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+  };
+
+  const handleToggleMaintenance = async () => {
+    const next = !maintenance;
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/maintenance", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ maintenance: next })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMaintenance(data.maintenance);
+        if (data.maintenance) toast.error("Mode maintenance activé");
+        else toast.success("Mode maintenance désactivé");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+  };
+
+  const handleSavePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (adminPassword !== adminPasswordConfirm) {
+      toast.error("Les mots de passe ne correspondent pas");
+      return;
+    }
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/settings/password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ password: adminPassword })
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.token) {
+          localStorage.setItem("admin_auth_token", data.token);
+        }
+        toast.success("Mot de passe administrateur mis à jour avec succès");
+        setAdminPassword("");
+        setAdminPasswordConfirm("");
+      } else {
+        toast.error(data.message || "Erreur lors du changement de mot de passe");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
   };
 
   /* ===================================================================== */
@@ -318,7 +857,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={fetchStats}
+              onClick={refreshAll}
               className="admin-action-btn"
             >
               <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
@@ -478,19 +1017,33 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           <div className="fade-in space-y-6">
             <div className="admin-card-panel">
               <div className="admin-card-panel-header">
-                <h2 className="admin-card-panel-title">Comptes Clients Telegram</h2>
-                <div className="relative w-80">
-                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
-                  <input
-                    type="text"
-                    value={userSearch}
+                <h2 className="admin-card-panel-title">Base Clients ({filteredUsers.length})</h2>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-72">
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+                    <input
+                      type="text"
+                      value={userSearch}
+                      onChange={(e) => {
+                        setUserSearch(e.target.value);
+                        setUserPage(1);
+                      }}
+                      placeholder="Rechercher nom, Telegram ID..."
+                      className="admin-form-input pl-9"
+                    />
+                  </div>
+                  <select
+                    value={usersPerPage}
                     onChange={(e) => {
-                      setUserSearch(e.target.value);
+                      setUsersPerPage(Number(e.target.value));
                       setUserPage(1);
                     }}
-                    placeholder="Filtrer par ID Telegram ou @pseudo..."
-                    className="admin-form-input pl-9"
-                  />
+                    className="admin-form-input w-28 text-xs"
+                  >
+                    <option value={10}>10 / page</option>
+                    <option value={25}>25 / page</option>
+                    <option value={50}>50 / page</option>
+                  </select>
                 </div>
               </div>
 
@@ -498,29 +1051,42 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                 <table className="admin-table">
                   <thead>
                     <tr>
-                      <th>ID Telegram</th>
-                      <th>Pseudo</th>
-                      <th>Solde Actuel</th>
+                      <th>Client</th>
+                      <th>Identifiant</th>
                       <th>Commandes</th>
+                      <th>Solde</th>
                       <th>Statut</th>
-                      <th>Inscription</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pagedUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="text-center py-8 text-white/30 text-xs">
+                        <td colSpan={6} className="text-center py-8 text-white/30 text-xs">
                           Aucun utilisateur enregistré
                         </td>
                       </tr>
                     ) : (
                       pagedUsers.map((u) => (
                         <tr key={u.id}>
-                          <td className="font-mono text-white/80">{u.id}</td>
-                          <td className="font-bold text-white">@{u.username}</td>
-                          <td className="font-bold text-emerald-400">{u.balance.toFixed(2)} €</td>
-                          <td>{u.ordersCount}</td>
+                          <td>
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center font-bold text-xs text-white">
+                                {u.username.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="font-semibold text-white">@{u.username}</div>
+                                <div className="text-[11px] text-white/40">{u.registeredAt}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="font-mono text-white/70">{u.id}</td>
+                          <td className="font-bold text-white">{u.ordersCount}</td>
+                          <td>
+                            <span className="font-bold text-emerald-400">
+                              {u.balance.toFixed(2)} €
+                            </span>
+                          </td>
                           <td>
                             {u.isBanned ? (
                               <span className="admin-badge admin-badge-danger">Banni</span>
@@ -528,7 +1094,6 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                               <span className="admin-badge admin-badge-success">Actif</span>
                             )}
                           </td>
-                          <td className="text-white/50">{u.registeredAt}</td>
                           <td>
                             <div className="flex items-center gap-2">
                               <button
@@ -539,12 +1104,12 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                                 }}
                                 className="admin-action-btn"
                               >
-                                💳 Solde
+                                Solde
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleToggleBan(u.id)}
-                                className={`admin-action-btn ${u.isBanned ? "" : "admin-action-btn-danger"}`}
+                                onClick={() => handleToggleBan(u.id, u.isBanned)}
+                                className={`admin-action-btn ${u.isBanned ? "admin-action-btn-success" : "admin-action-btn-danger"}`}
                               >
                                 {u.isBanned ? "Débannir" : "Bannir"}
                               </button>
@@ -646,10 +1211,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                           <td>
                             <button
                               type="button"
-                              onClick={() => {
-                                setCarrefourStock(prev => prev.filter(c => c.id !== item.id));
-                                toast.success("Carte supprimée");
-                              }}
+                              onClick={() => handleDeleteStock(item.id)}
                               className="admin-action-btn admin-action-btn-danger"
                             >
                               Supprimer
@@ -669,10 +1231,10 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           <div className="fade-in space-y-6">
             <div className="admin-card-panel">
               <div className="admin-card-panel-header">
-                <h2 className="admin-card-panel-title">Tarifs IPTV & Configuration</h2>
+                <h2 className="admin-card-panel-title">Tarifs IPTV & Configuration API</h2>
               </div>
-              <form onSubmit={handleSaveIptv} className="space-y-4 max-w-2xl">
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSaveIptv} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-white/60 mb-1.5">Host affiché au client</label>
                     <input
@@ -695,7 +1257,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-white/60 mb-1.5">Prix 1 Mois (€)</label>
                     <input
@@ -739,18 +1301,236 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Bas du message client</label>
+                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Bas du message client (texte + lien)</label>
                   <textarea
-                    rows={3}
+                    rows={4}
                     value={iptvFooter}
                     onChange={(e) => setIptvFooter(e.target.value)}
                     className="admin-form-input text-xs"
                     placeholder="Instructions supplémentaires envoyées au client..."
                   />
+                  <span className="text-[11px] text-white/40 block mt-1.5">
+                    Le haut du message (Host / Username / Password) reste fixe. Ce bloc s’affiche en dessous, en texte brut.
+                  </span>
+                </div>
+
+                <div className="space-y-3 pt-4 border-t border-white/[0.06]">
+                  <label className="block text-xs font-semibold text-white/80">Comptes API (clé + pack liés)</label>
+                  <div className="space-y-3">
+                    {iptvAccounts.map((acc, index) => (
+                      <div key={index} className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
+                            <input
+                              type="radio"
+                              name="iptv-acc-active"
+                              checked={acc.active}
+                              onChange={() => {
+                                setIptvAccounts(prev => prev.map((a, i) => ({ ...a, active: i === index })));
+                              }}
+                              className="accent-[#6366f1]"
+                            />
+                            <span>Compte actif</span>
+                          </label>
+                          {iptvAccounts.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setIptvAccounts(prev => prev.filter((_, i) => i !== index))}
+                              className="text-xs text-rose-400 hover:text-rose-300"
+                            >
+                              Supprimer
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] text-white/50 mb-1">Nom</label>
+                            <input
+                              type="text"
+                              value={acc.name}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setIptvAccounts(prev => prev.map((a, i) => i === index ? { ...a, name: val } : a));
+                              }}
+                              placeholder="Compte 1"
+                              className="admin-form-input text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] text-white/50 mb-1">Pack</label>
+                            <input
+                              type="text"
+                              value={acc.pack}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setIptvAccounts(prev => prev.map((a, i) => i === index ? { ...a, pack: val } : a));
+                              }}
+                              placeholder="43551"
+                              className="admin-form-input text-xs"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] text-white/50 mb-1">Clé API</label>
+                            <input
+                              type="text"
+                              value={acc.api_key}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setIptvAccounts(prev => prev.map((a, i) => i === index ? { ...a, api_key: val } : a));
+                              }}
+                              placeholder="api_key"
+                              className="admin-form-input text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] text-white/50 mb-1">URL API</label>
+                            <input
+                              type="text"
+                              value={acc.api_url}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setIptvAccounts(prev => prev.map((a, i) => i === index ? { ...a, api_url: val } : a));
+                              }}
+                              placeholder="https://4k.cms-only.ru/api..."
+                              className="admin-form-input text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIptvAccounts(prev => [...prev, { name: "", pack: "", api_key: "", api_url: "", active: false }])}
+                      className="admin-action-btn"
+                    >
+                      ➕ Ajouter un compte
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleTestIptvApi}
+                      disabled={isTestingIptvApi}
+                      className="admin-action-btn"
+                    >
+                      {isTestingIptvApi ? "Test en cours..." : "Tester la connexion API"}
+                    </button>
+                  </div>
+                  {iptvApiTestResult && (
+                    <div className="text-xs text-primary font-mono bg-white/[0.03] p-2.5 rounded-lg border border-white/[0.08]">
+                      {iptvApiTestResult}
+                    </div>
+                  )}
+                  <span className="text-[11px] text-white/40 block">
+                    Coche <b>Compte actif</b> sur un seul compte. Seul celui-là est utilisé. Enregistre d’abord, puis teste (clé API, sans créer de ligne). S’il échoue à l’achat, erreur client et aucun débit.
+                  </span>
+                </div>
+
+                <div className="space-y-3 pt-4 border-t border-white/[0.06]">
+                  <label className="block text-xs font-semibold text-white/80">Comptes panel (user + mot de passe)</label>
+                  <div className="space-y-3">
+                    {iptvPanelAccounts.map((acc, index) => (
+                      <div key={index} className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
+                            <input
+                              type="radio"
+                              name="iptv-panel-acc-active"
+                              checked={acc.active}
+                              onChange={() => {
+                                setIptvPanelAccounts(prev => prev.map((a, i) => ({ ...a, active: i === index })));
+                              }}
+                              className="accent-[#6366f1]"
+                            />
+                            <span>Compte actif (connexion panel)</span>
+                          </label>
+                          {iptvPanelAccounts.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setIptvPanelAccounts(prev => prev.filter((_, i) => i !== index))}
+                              className="text-xs text-rose-400 hover:text-rose-300"
+                            >
+                              Supprimer
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-[11px] text-white/50 mb-1">Nom</label>
+                            <input
+                              type="text"
+                              value={acc.name}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setIptvPanelAccounts(prev => prev.map((a, i) => i === index ? { ...a, name: val } : a));
+                              }}
+                              placeholder="ChezRheyy"
+                              className="admin-form-input text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] text-white/50 mb-1">Utilisateur</label>
+                            <input
+                              type="text"
+                              value={acc.username}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setIptvPanelAccounts(prev => prev.map((a, i) => i === index ? { ...a, username: val } : a));
+                              }}
+                              placeholder="username"
+                              className="admin-form-input text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] text-white/50 mb-1">Mot de passe</label>
+                            <input
+                              type="text"
+                              value={acc.password}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setIptvPanelAccounts(prev => prev.map((a, i) => i === index ? { ...a, password: val } : a));
+                              }}
+                              placeholder="mot de passe"
+                              className="admin-form-input text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIptvPanelAccounts(prev => [...prev, { name: "", username: "", password: "", active: false }])}
+                      className="admin-action-btn"
+                    >
+                      ➕ Ajouter un compte panel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleTestIptvPanel}
+                      disabled={isTestingIptvPanel}
+                      className="admin-action-btn"
+                    >
+                      {isTestingIptvPanel ? "Test en cours..." : "Tester la connexion panel"}
+                    </button>
+                  </div>
+                  {iptvPanelTestResult && (
+                    <div className="text-xs text-primary font-mono bg-white/[0.03] p-2.5 rounded-lg border border-white/[0.08]">
+                      {iptvPanelTestResult}
+                    </div>
+                  )}
+                  <span className="text-[11px] text-white/40 block">
+                    Même principe que les clés API : plusieurs comptes, un seul actif. Enregistre d’abord, puis teste la connexion (cms-4k.com + Geetest, comme sur le site). Les achats payants restent sur le compte API actif.
+                  </span>
                 </div>
 
                 <button type="submit" className="admin-btn-primary">
-                  Enregistrer IPTV
+                  Enregistrer la Configuration IPTV
                 </button>
               </form>
             </div>
@@ -804,54 +1584,21 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
         )}
 
         {activeTab === "system" && (
-          <div className="fade-in space-y-6">
-            <div className="admin-card-panel max-w-2xl space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-white">Compte d'Encaissement SumUp Actif</h3>
-                </div>
-                <div className="flex rounded-xl bg-white/5 p-1 border border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveBank("bank1");
-                      toast.success("Banque 1 activée");
-                    }}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                      activeBank === "bank1" ? "bg-[#6366f1] text-white" : "text-white/50"
-                    }`}
-                  >
-                    Banque 1
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveBank("bank2");
-                      toast.success("Banque 2 activée");
-                    }}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                      activeBank === "bank2" ? "bg-[#6366f1] text-white" : "text-white/50"
-                    }`}
-                  >
-                    Banque 2
-                  </button>
-                </div>
+          <div className="fade-in space-y-6 max-w-4xl">
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Mode Maintenance Général</h2>
+                <span className={`admin-badge ${maintenance ? "admin-badge-danger" : "admin-badge-success"}`}>
+                  {maintenance ? "Mode Maintenance Actif" : "Mode Normal"}
+                </span>
               </div>
-
-              <div className="h-px bg-white/[0.06]" />
-
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-white">Mode Maintenance Général</h3>
-                </div>
+                <span className="text-xs text-white/60">
+                  Activer ou désactiver la maintenance générale de la boutique et du bot Telegram.
+                </span>
                 <button
                   type="button"
-                  onClick={() => {
-                    const next = !maintenance;
-                    setMaintenance(next);
-                    if (next) toast.error("Mode maintenance activé");
-                    else toast.success("Mode maintenance désactivé");
-                  }}
+                  onClick={handleToggleMaintenance}
                   className={`w-14 h-7 rounded-full transition-colors relative p-1 ${
                     maintenance ? "bg-rose-500" : "bg-white/10"
                   }`}
@@ -863,6 +1610,294 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                   />
                 </button>
               </div>
+            </div>
+
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Mode de Réception Telegram</h2>
+              </div>
+              <form onSubmit={handleSaveTelegramMode} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Mode Actuel</label>
+                  <select
+                    value={telegramMode}
+                    onChange={(e) => setTelegramMode(e.target.value)}
+                    className="admin-form-input max-w-md cursor-pointer"
+                  >
+                    <option value="webhook">⚡ Webhook HTTP (Notification push instantanée)</option>
+                    <option value="polling">🔄 Long Polling (Vérification continue en boucle)</option>
+                  </select>
+                  <span className="text-[11px] text-white/40 block mt-1.5">
+                    *Le mode Webhook est recommandé pour une meilleure performance.
+                  </span>
+                </div>
+                <button type="submit" className="admin-btn-primary">
+                  Appliquer le Mode Telegram
+                </button>
+              </form>
+            </div>
+
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Mode de Vérification SumUp</h2>
+              </div>
+              <form onSubmit={handleSaveSumupMode} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Mode Actuel</label>
+                  <select
+                    value={sumupMode}
+                    onChange={(e) => setSumupMode(e.target.value)}
+                    className="admin-form-input max-w-md cursor-pointer"
+                  >
+                    <option value="webhook">⚡ Webhook HTTP (Notification push instantanée)</option>
+                    <option value="polling">🔄 Long Polling (Vérification périodique)</option>
+                  </select>
+                  <span className="text-[11px] text-white/40 block mt-1.5">
+                    Stocké en table (<code>general.sumup_mode</code>). Webhook = notifications SumUp. Polling = vérification périodique.
+                  </span>
+                </div>
+                <button type="submit" className="admin-btn-primary">
+                  Appliquer le Mode SumUp
+                </button>
+              </form>
+            </div>
+
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Comptes SumUp (CB)</h2>
+              </div>
+              <form onSubmit={handleSaveSumup} className="space-y-5">
+                <p className="text-xs text-white/50">
+                  Les deux banques doivent être complètes en base. Si une clé manque au démarrage, le bot crash. Coche celle utilisée pour les paiements CB.
+                </p>
+                <div>
+                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Expiration facture (minutes)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={sumupExpiration}
+                    onChange={(e) => setSumupExpiration(e.target.value)}
+                    className="admin-form-input max-w-xs"
+                    required
+                  />
+                  <span className="text-[11px] text-white/40 block mt-1">
+                    Durée de validité du lien CB SumUp. Stockée en table (<code>general.sumup_expiration_minutes</code>).
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
+                    <input
+                      type="radio"
+                      name="sumup-active"
+                      value="sumup"
+                      checked={sumupActive === "sumup"}
+                      onChange={() => setSumupActive("sumup")}
+                      className="accent-[#6366f1]"
+                    />
+                    <span>Banque 1 active</span>
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Nom</label>
+                      <input
+                        type="text"
+                        value={sumup1.name}
+                        onChange={(e) => setSumup1({ ...sumup1, name: e.target.value })}
+                        placeholder="Nom d'affichage"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Email marchand</label>
+                      <input
+                        type="text"
+                        value={sumup1.pay_to_email}
+                        onChange={(e) => setSumup1({ ...sumup1, pay_to_email: e.target.value })}
+                        placeholder="pay_to_email"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-white/50 mb-1">API Key</label>
+                    <input
+                      type="text"
+                      value={sumup1.api_key}
+                      onChange={(e) => setSumup1({ ...sumup1, api_key: e.target.value })}
+                      placeholder="api_key"
+                      className="admin-form-input text-xs"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Client ID</label>
+                      <input
+                        type="text"
+                        value={sumup1.client_id}
+                        onChange={(e) => setSumup1({ ...sumup1, client_id: e.target.value })}
+                        placeholder="client_id"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Client Secret</label>
+                      <input
+                        type="text"
+                        value={sumup1.client_secret}
+                        onChange={(e) => setSumup1({ ...sumup1, client_secret: e.target.value })}
+                        placeholder="client_secret"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
+                    <input
+                      type="radio"
+                      name="sumup-active"
+                      value="sumup_bank2"
+                      checked={sumupActive === "sumup_bank2"}
+                      onChange={() => setSumupActive("sumup_bank2")}
+                      className="accent-[#6366f1]"
+                    />
+                    <span>Banque 2 active</span>
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Nom</label>
+                      <input
+                        type="text"
+                        value={sumup2.name}
+                        onChange={(e) => setSumup2({ ...sumup2, name: e.target.value })}
+                        placeholder="Nom d'affichage"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Email marchand</label>
+                      <input
+                        type="text"
+                        value={sumup2.pay_to_email}
+                        onChange={(e) => setSumup2({ ...sumup2, pay_to_email: e.target.value })}
+                        placeholder="pay_to_email"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-white/50 mb-1">API Key</label>
+                    <input
+                      type="text"
+                      value={sumup2.api_key}
+                      onChange={(e) => setSumup2({ ...sumup2, api_key: e.target.value })}
+                      placeholder="api_key"
+                      className="admin-form-input text-xs"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Client ID</label>
+                      <input
+                        type="text"
+                        value={sumup2.client_id}
+                        onChange={(e) => setSumup2({ ...sumup2, client_id: e.target.value })}
+                        placeholder="client_id"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Client Secret</label>
+                      <input
+                        type="text"
+                        value={sumup2.client_secret}
+                        onChange={(e) => setSumup2({ ...sumup2, client_secret: e.target.value })}
+                        placeholder="client_secret"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button type="submit" className="admin-btn-primary">
+                  Enregistrer SumUp
+                </button>
+              </form>
+            </div>
+
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">OxaPay (Crypto)</h2>
+              </div>
+              <form onSubmit={handleSaveOxapay} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Clé API marchand</label>
+                  <input
+                    type="text"
+                    value={oxapayKey}
+                    onChange={(e) => setOxapayKey(e.target.value)}
+                    className="admin-form-input max-w-lg"
+                    placeholder="merchant_api_key"
+                    required
+                  />
+                  <span className="text-[11px] text-white/40 block mt-1.5">
+                    Stockée uniquement en base (<code>oxapay.api_key</code>). Si elle manque au démarrage, le bot crash.
+                  </span>
+                </div>
+                <button type="submit" className="admin-btn-primary">
+                  Enregistrer la clé OxaPay
+                </button>
+              </form>
+            </div>
+
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Mot de Passe Admin Panel</h2>
+              </div>
+              <form onSubmit={handleSavePassword} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg">
+                  <div>
+                    <label className="block text-xs font-semibold text-white/60 mb-1.5">Nouveau Mot de Passe</label>
+                    <input
+                      type="password"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      className="admin-form-input"
+                      placeholder="Nouveau mot de passe"
+                      minLength={4}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-white/60 mb-1.5">Confirmer le Mot de Passe</label>
+                    <input
+                      type="password"
+                      value={adminPasswordConfirm}
+                      onChange={(e) => setAdminPasswordConfirm(e.target.value)}
+                      className="admin-form-input"
+                      placeholder="Confirmer le mot de passe"
+                      minLength={4}
+                      required
+                    />
+                  </div>
+                </div>
+                <button type="submit" className="admin-btn-primary">
+                  Modifier le Mot de Passe
+                </button>
+              </form>
             </div>
           </div>
         )}

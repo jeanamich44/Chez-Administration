@@ -12,7 +12,8 @@ import {
   LogOut, 
   RefreshCw, 
   Search,
-  X
+  X,
+  Trash2
 } from "lucide-react";
 import { useToast } from "@/components/NotificationToast";
 
@@ -35,6 +36,7 @@ interface AdminStats {
 
 interface AdminUser {
   id: string;
+  userNumber?: number;
   username: string;
   balance: number;
   ordersCount: number;
@@ -98,16 +100,36 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
   const [userSearch, setUserSearch] = useState<string>("");
   const [userPage, setUserPage] = useState<number>(1);
   const [usersPerPage, setUsersPerPage] = useState<number>(10);
+  const [userSortField, setUserSortField] = useState<string>("userNumber");
+  const [userSortDir, setUserSortDir] = useState<"asc" | "desc">("asc");
 
   const [paymentSearch, setPaymentSearch] = useState<string>("");
   const [paymentPage, setPaymentPage] = useState<number>(1);
   const [paymentsPerPage, setPaymentsPerPage] = useState<number>(10);
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("");
+  const [paymentSortField, setPaymentSortField] = useState<string>("id");
+  const [paymentSortDir, setPaymentSortDir] = useState<"asc" | "desc">("desc");
 
   const [txSearch, setTxSearch] = useState<string>("");
   const [txPage, setTxPage] = useState<number>(1);
   const [txPerPage, setTxPerPage] = useState<number>(10);
+  const [txSortField, setTxSortField] = useState<string>("id");
+  const [txSortDir, setTxSortDir] = useState<"asc" | "desc">("desc");
+
+  const [recentSalesSearch, setRecentSalesSearch] = useState<string>("");
+  const [recentSalesPage, setRecentSalesPage] = useState<number>(1);
+  const [recentSalesPerPage, setRecentSalesPerPage] = useState<number>(10);
+  const [recentSalesSortField, setRecentSalesSortField] = useState<string>("id");
+  const [recentSalesSortDir, setRecentSalesSortDir] = useState<"asc" | "desc">("desc");
 
   const [stockInput, setStockInput] = useState<string>("");
+  const [stockSearch, setStockSearch] = useState<string>("");
+  const [stockPage, setStockPage] = useState<number>(1);
+  const [stockPerPage, setStockPerPage] = useState<number>(10);
+  const [stockSortField, setStockSortField] = useState<string>("id");
+  const [stockSortDir, setStockSortDir] = useState<"asc" | "desc">("asc");
+  const [showClearStockModal, setShowClearStockModal] = useState<boolean>(false);
+  const [isClearingStock, setIsClearingStock] = useState<boolean>(false);
   const [carrefourStock, setCarrefourStock] = useState<Array<{ id: number; code: string; pin: string; val: number; price: number }>>([]);
   const [usersList, setUsersList] = useState<AdminUser[]>([]);
   const [paymentsList, setPaymentsList] = useState<AdminPayment[]>([]);
@@ -267,13 +289,14 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.users)) {
-          setUsersList(data.users.map((u: any) => ({
+          setUsersList(data.users.map((u: any, idx: number) => ({
             id: String(u.id),
+            userNumber: u.userNumber || (idx + 1),
             username: u.username || "Anonyme",
             balance: typeof u.solde === "number" ? u.solde : (parseFloat(u.solde) || 0),
             ordersCount: u.achats || 0,
             isBanned: !!u.isBanned,
-            registeredAt: u.userNumber ? `#${u.userNumber}` : "N/A"
+            registeredAt: u.userNumber ? `#${u.userNumber}` : `#${idx + 1}`
           })));
         }
       }
@@ -342,60 +365,236 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
   /* ===================================================================== */
 
-  const filteredUsers = useMemo(() => {
-    if (!userSearch.trim()) return usersList;
-    const query = userSearch.toLowerCase();
-    return usersList.filter(u => 
-      u.id.toLowerCase().includes(query) || 
-      u.username.toLowerCase().includes(query)
+  const sortData = <T,>(items: T[], field: string, dir: "asc" | "desc"): T[] => {
+    return [...items].sort((a: any, b: any) => {
+      let valA = a[field];
+      let valB = b[field];
+      if (valA === undefined || valA === null) valA = "";
+      if (valB === undefined || valB === null) valB = "";
+      if (typeof valA === "number" && typeof valB === "number") {
+        return dir === "asc" ? valA - valB : valB - valA;
+      }
+      const strA = String(valA).toLowerCase();
+      const strB = String(valB).toLowerCase();
+      if (strA < strB) return dir === "asc" ? -1 : 1;
+      if (strA > strB) return dir === "asc" ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const renderSortChevron = (field: string, currentField: string, currentDir: "asc" | "desc") => {
+    const isActive = field === currentField;
+    return (
+      <span 
+        className={`ml-1.5 inline-block text-[11px] select-none transition-colors ${
+          isActive ? "text-[#6366f1] font-bold" : "text-white/30 font-normal"
+        }`}
+      >
+        {isActive ? (currentDir === "asc" ? "▲" : "▼") : "↕"}
+      </span>
     );
-  }, [usersList, userSearch]);
+  };
+
+  /* ===================================================================== */
+
+  const filteredRecentSales = useMemo(() => {
+    let list = transactionsList;
+    if (recentSalesSearch.trim()) {
+      const query = recentSalesSearch.toLowerCase();
+      list = list.filter(t => 
+        t.id.toLowerCase().includes(query) || 
+        t.userId.toLowerCase().includes(query) ||
+        t.brand.toLowerCase().includes(query) ||
+        t.code.toLowerCase().includes(query) ||
+        String(t.price).includes(query)
+      );
+    }
+    return sortData(list, recentSalesSortField, recentSalesSortDir);
+  }, [transactionsList, recentSalesSearch, recentSalesSortField, recentSalesSortDir]);
+
+  const pagedRecentSales = useMemo(() => {
+    if (recentSalesPerPage >= 9999) return filteredRecentSales;
+    const start = (recentSalesPage - 1) * recentSalesPerPage;
+    return filteredRecentSales.slice(start, start + recentSalesPerPage);
+  }, [filteredRecentSales, recentSalesPage, recentSalesPerPage]);
+
+  const totalRecentSalesPages = Math.max(1, Math.ceil(filteredRecentSales.length / recentSalesPerPage));
+
+  const handleSortRecentSales = (field: string) => {
+    if (recentSalesSortField === field) {
+      setRecentSalesSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setRecentSalesSortField(field);
+      setRecentSalesSortDir("asc");
+    }
+  };
+
+  /* ===================================================================== */
+
+  const filteredUsers = useMemo(() => {
+    let list = usersList;
+    if (userSearch.trim()) {
+      const query = userSearch.toLowerCase();
+      list = list.filter(u => 
+        u.id.toLowerCase().includes(query) || 
+        u.username.toLowerCase().includes(query) ||
+        u.registeredAt.toLowerCase().includes(query) ||
+        String(u.userNumber || "").includes(query)
+      );
+    }
+    return sortData(list, userSortField, userSortDir);
+  }, [usersList, userSearch, userSortField, userSortDir]);
 
   const pagedUsers = useMemo(() => {
+    if (usersPerPage >= 9999) return filteredUsers;
     const start = (userPage - 1) * usersPerPage;
     return filteredUsers.slice(start, start + usersPerPage);
   }, [filteredUsers, userPage, usersPerPage]);
 
   const totalUserPages = Math.max(1, Math.ceil(filteredUsers.length / usersPerPage));
 
+  const handleSortUsers = (field: string) => {
+    if (userSortField === field) {
+      setUserSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setUserSortField(field);
+      setUserSortDir("asc");
+    }
+  };
+
+  /* ===================================================================== */
+
+  const filteredStock = useMemo(() => {
+    let list = carrefourStock;
+    if (stockSearch.trim()) {
+      const query = stockSearch.toLowerCase();
+      list = list.filter(s => 
+        String(s.id).includes(query) ||
+        s.code.toLowerCase().includes(query) ||
+        s.pin.toLowerCase().includes(query) ||
+        String(s.val).includes(query) ||
+        String(s.price).includes(query)
+      );
+    }
+    return sortData(list, stockSortField, stockSortDir);
+  }, [carrefourStock, stockSearch, stockSortField, stockSortDir]);
+
+  const pagedStock = useMemo(() => {
+    if (stockPerPage >= 9999) return filteredStock;
+    const start = (stockPage - 1) * stockPerPage;
+    return filteredStock.slice(start, start + stockPerPage);
+  }, [filteredStock, stockPage, stockPerPage]);
+
+  const totalStockPages = Math.max(1, Math.ceil(filteredStock.length / stockPerPage));
+
+  const handleSortStock = (field: string) => {
+    if (stockSortField === field) {
+      setStockSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setStockSortField(field);
+      setStockSortDir("asc");
+    }
+  };
+
+  const handleClearStock = async () => {
+    setIsClearingStock(true);
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/stock/clear", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Stock Carrefour entièrement vidé");
+        setShowClearStockModal(false);
+        fetchStock();
+        fetchStats();
+      } else {
+        toast.error(data.message || "Erreur lors du vidage du stock");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    } finally {
+      setIsClearingStock(false);
+    }
+  };
+
   /* ===================================================================== */
 
   const filteredPayments = useMemo(() => {
-    if (!paymentSearch.trim()) return paymentsList;
-    const query = paymentSearch.toLowerCase();
-    return paymentsList.filter(p => 
-      p.id.toLowerCase().includes(query) || 
-      p.chatId.toLowerCase().includes(query) ||
-      p.trackId.toLowerCase().includes(query)
-    );
-  }, [paymentsList, paymentSearch]);
+    let list = paymentsList;
+    if (paymentMethodFilter) {
+      list = list.filter(p => p.method.toUpperCase() === paymentMethodFilter.toUpperCase());
+    }
+    if (paymentSearch.trim()) {
+      const query = paymentSearch.toLowerCase();
+      list = list.filter(p => 
+        p.id.toLowerCase().includes(query) || 
+        p.chatId.toLowerCase().includes(query) ||
+        p.trackId.toLowerCase().includes(query) ||
+        p.method.toLowerCase().includes(query) ||
+        p.status.toLowerCase().includes(query) ||
+        String(p.amount).includes(query)
+      );
+    }
+    return sortData(list, paymentSortField, paymentSortDir);
+  }, [paymentsList, paymentMethodFilter, paymentSearch, paymentSortField, paymentSortDir]);
 
   const pagedPayments = useMemo(() => {
+    if (paymentsPerPage >= 9999) return filteredPayments;
     const start = (paymentPage - 1) * paymentsPerPage;
     return filteredPayments.slice(start, start + paymentsPerPage);
   }, [filteredPayments, paymentPage, paymentsPerPage]);
 
   const totalPaymentPages = Math.max(1, Math.ceil(filteredPayments.length / paymentsPerPage));
 
+  const handleSortPayments = (field: string) => {
+    if (paymentSortField === field) {
+      setPaymentSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setPaymentSortField(field);
+      setPaymentSortDir("asc");
+    }
+  };
+
   /* ===================================================================== */
 
   const filteredTx = useMemo(() => {
-    if (!txSearch.trim()) return transactionsList;
-    const query = txSearch.toLowerCase();
-    return transactionsList.filter(t => 
-      t.id.toLowerCase().includes(query) || 
-      t.userId.toLowerCase().includes(query) ||
-      t.brand.toLowerCase().includes(query) ||
-      t.code.toLowerCase().includes(query)
-    );
-  }, [transactionsList, txSearch]);
+    let list = transactionsList;
+    if (txSearch.trim()) {
+      const query = txSearch.toLowerCase();
+      list = list.filter(t => 
+        t.id.toLowerCase().includes(query) || 
+        t.userId.toLowerCase().includes(query) ||
+        t.brand.toLowerCase().includes(query) ||
+        t.code.toLowerCase().includes(query) ||
+        String(t.price).includes(query) ||
+        String(t.valeur).includes(query)
+      );
+    }
+    return sortData(list, txSortField, txSortDir);
+  }, [transactionsList, txSearch, txSortField, txSortDir]);
 
   const pagedTx = useMemo(() => {
+    if (txPerPage >= 9999) return filteredTx;
     const start = (txPage - 1) * txPerPage;
     return filteredTx.slice(start, start + txPerPage);
   }, [filteredTx, txPage, txPerPage]);
 
   const totalTxPages = Math.max(1, Math.ceil(filteredTx.length / txPerPage));
+
+  const handleSortTx = (field: string) => {
+    if (txSortField === field) {
+      setTxSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setTxSortField(field);
+      setTxSortDir("asc");
+    }
+  };
 
   /* ===================================================================== */
 
@@ -926,19 +1125,48 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
             <div className="admin-card-panel">
               <div className="admin-card-panel-header">
-                <h2 className="admin-card-panel-title">Dernières Activités Enregistrées</h2>
-                <div className="relative w-72">
-                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
-                  <input
-                    type="text"
-                    value={txSearch}
+                <h2 className="admin-card-panel-title">Dernières Activités Enregistrées ({filteredRecentSales.length})</h2>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-64">
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={recentSalesSearch}
+                      onChange={(e) => {
+                        setRecentSalesSearch(e.target.value);
+                        setRecentSalesPage(1);
+                      }}
+                      placeholder="Rechercher ID, Service..."
+                      className="admin-form-input pl-9 pr-8"
+                    />
+                    {recentSalesSearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRecentSalesSearch("");
+                          setRecentSalesPage(1);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white text-xs"
+                        title="Effacer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  <select
+                    value={recentSalesPerPage}
                     onChange={(e) => {
-                      setTxSearch(e.target.value);
-                      setTxPage(1);
+                      setRecentSalesPerPage(Number(e.target.value));
+                      setRecentSalesPage(1);
                     }}
-                    placeholder="Rechercher ID, Service..."
-                    className="admin-form-input pl-9"
-                  />
+                    className="admin-form-input text-xs cursor-pointer w-auto"
+                  >
+                    <option value={10}>10 par page</option>
+                    <option value={25}>25 par page</option>
+                    <option value={50}>50 par page</option>
+                    <option value={999999}>Tout afficher</option>
+                  </select>
                 </div>
               </div>
 
@@ -946,23 +1174,48 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                 <table className="admin-table">
                   <thead>
                     <tr>
-                      <th>ID Transaction</th>
-                      <th>Client Telegram</th>
-                      <th>Service</th>
-                      <th>Montant</th>
+                      <th onClick={() => handleSortRecentSales("id")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>ID Transaction</span>
+                          {renderSortChevron("id", recentSalesSortField, recentSalesSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortRecentSales("userId")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Client Telegram</span>
+                          {renderSortChevron("userId", recentSalesSortField, recentSalesSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortRecentSales("brand")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Service</span>
+                          {renderSortChevron("brand", recentSalesSortField, recentSalesSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortRecentSales("price")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Montant</span>
+                          {renderSortChevron("price", recentSalesSortField, recentSalesSortDir)}
+                        </div>
+                      </th>
                       <th>Statut</th>
-                      <th>Date</th>
+                      <th onClick={() => handleSortRecentSales("createdAt")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Date</span>
+                          {renderSortChevron("createdAt", recentSalesSortField, recentSalesSortDir)}
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {pagedTx.length === 0 ? (
+                    {pagedRecentSales.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="text-center py-8 text-white/30 text-xs">
                           Aucune activité enregistrée
                         </td>
                       </tr>
                     ) : (
-                      pagedTx.map((tx) => (
+                      pagedRecentSales.map((tx) => (
                         <tr key={tx.id}>
                           <td className="font-mono text-white/80">{tx.id}</td>
                           <td className="font-mono text-primary">{tx.userId}</td>
@@ -981,26 +1234,44 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
               <div className="flex justify-between items-center mt-5 pt-4 border-t border-white/[0.06] text-xs text-white/60">
                 <span>
-                  Affichage {pagedTx.length > 0 ? (txPage - 1) * txPerPage + 1 : 0} à {Math.min(txPage * txPerPage, filteredTx.length)} sur {filteredTx.length} activité(s)
+                  Affichage {pagedRecentSales.length > 0 ? (recentSalesPage - 1) * recentSalesPerPage + 1 : 0} à {Math.min(recentSalesPage * recentSalesPerPage, filteredRecentSales.length)} sur {filteredRecentSales.length} activité(s)
                 </span>
                 <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={txPage <= 1}
-                    onClick={() => setTxPage(p => Math.max(1, p - 1))}
-                    className="admin-action-btn disabled:opacity-40"
-                  >
-                    ◀ Précédent
-                  </button>
-                  <span className="font-bold text-white">Page {txPage} / {totalTxPages}</span>
-                  <button
-                    type="button"
-                    disabled={txPage >= totalTxPages}
-                    onClick={() => setTxPage(p => Math.min(totalTxPages, p + 1))}
-                    className="admin-action-btn disabled:opacity-40"
-                  >
-                    Suivant ▶
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <span>Afficher :</span>
+                    <select
+                      value={recentSalesPerPage}
+                      onChange={(e) => {
+                        setRecentSalesPerPage(Number(e.target.value));
+                        setRecentSalesPage(1);
+                      }}
+                      className="admin-form-input text-xs cursor-pointer w-auto py-1 px-2"
+                    >
+                      <option value={10}>10 par page</option>
+                      <option value={25}>25 par page</option>
+                      <option value={50}>50 par page</option>
+                      <option value={999999}>Tout afficher</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={recentSalesPage <= 1}
+                      onClick={() => setRecentSalesPage(p => Math.max(1, p - 1))}
+                      className="admin-action-btn disabled:opacity-40"
+                    >
+                      ◀ Précédent
+                    </button>
+                    <span className="font-bold text-white px-1">Page {recentSalesPage} / {totalRecentSalesPages}</span>
+                    <button
+                      type="button"
+                      disabled={recentSalesPage >= totalRecentSalesPages}
+                      onClick={() => setRecentSalesPage(p => Math.min(totalRecentSalesPages, p + 1))}
+                      className="admin-action-btn disabled:opacity-40"
+                    >
+                      Suivant ▶
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1013,8 +1284,8 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
               <div className="admin-card-panel-header">
                 <h2 className="admin-card-panel-title">Base Clients ({filteredUsers.length})</h2>
                 <div className="flex items-center gap-3">
-                  <div className="relative w-72">
-                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+                  <div className="relative w-64">
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
                     <input
                       type="text"
                       value={userSearch}
@@ -1023,8 +1294,21 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                         setUserPage(1);
                       }}
                       placeholder="Rechercher nom, Telegram ID..."
-                      className="admin-form-input pl-9"
+                      className="admin-form-input pl-9 pr-8"
                     />
+                    {userSearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUserSearch("");
+                          setUserPage(1);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white text-xs"
+                        title="Effacer"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                   <select
                     value={usersPerPage}
@@ -1032,11 +1316,12 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                       setUsersPerPage(Number(e.target.value));
                       setUserPage(1);
                     }}
-                    className="admin-form-input w-28 text-xs"
+                    className="admin-form-input text-xs cursor-pointer w-auto"
                   >
-                    <option value={10}>10 / page</option>
-                    <option value={25}>25 / page</option>
-                    <option value={50}>50 / page</option>
+                    <option value={10}>10 par page</option>
+                    <option value={25}>25 par page</option>
+                    <option value={50}>50 par page</option>
+                    <option value={999999}>Tout afficher</option>
                   </select>
                 </div>
               </div>
@@ -1045,42 +1330,71 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                 <table className="admin-table">
                   <thead>
                     <tr>
-                      <th>Client</th>
-                      <th>Identifiant</th>
-                      <th>Commandes</th>
-                      <th>Solde</th>
-                      <th>Statut</th>
+                      <th onClick={() => handleSortUsers("userNumber")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Rang (N°)</span>
+                          {renderSortChevron("userNumber", userSortField, userSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortUsers("id")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>ID Telegram</span>
+                          {renderSortChevron("id", userSortField, userSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortUsers("username")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Username</span>
+                          {renderSortChevron("username", userSortField, userSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortUsers("balance")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Solde</span>
+                          {renderSortChevron("balance", userSortField, userSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortUsers("ordersCount")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Commandes</span>
+                          {renderSortChevron("ordersCount", userSortField, userSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortUsers("isBanned")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Statut</span>
+                          {renderSortChevron("isBanned", userSortField, userSortDir)}
+                        </div>
+                      </th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pagedUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="text-center py-8 text-white/30 text-xs">
+                        <td colSpan={7} className="text-center py-8 text-white/30 text-xs">
                           Aucun utilisateur enregistré
                         </td>
                       </tr>
                     ) : (
                       pagedUsers.map((u) => (
                         <tr key={u.id}>
+                          <td className="font-mono text-white/70">{u.registeredAt}</td>
+                          <td className="font-mono text-primary font-bold">{u.id}</td>
                           <td>
                             <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center font-bold text-xs text-white">
+                              <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center font-bold text-xs text-white">
                                 {u.username.charAt(0).toUpperCase()}
                               </div>
-                              <div>
-                                <div className="font-semibold text-white">@{u.username}</div>
-                                <div className="text-[11px] text-white/40">{u.registeredAt}</div>
-                              </div>
+                              <span className="font-semibold text-white">@{u.username}</span>
                             </div>
                           </td>
-                          <td className="font-mono text-white/70">{u.id}</td>
-                          <td className="font-bold text-white">{u.ordersCount}</td>
                           <td>
                             <span className="font-bold text-emerald-400">
                               {u.balance.toFixed(2)} €
                             </span>
                           </td>
+                          <td className="font-bold text-white">{u.ordersCount}</td>
                           <td>
                             {u.isBanned ? (
                               <span className="admin-badge admin-badge-danger">Banni</span>
@@ -1121,23 +1435,41 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                   Affichage {pagedUsers.length > 0 ? (userPage - 1) * usersPerPage + 1 : 0} à {Math.min(userPage * usersPerPage, filteredUsers.length)} sur {filteredUsers.length} utilisateur(s)
                 </span>
                 <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={userPage <= 1}
-                    onClick={() => setUserPage(p => Math.max(1, p - 1))}
-                    className="admin-action-btn disabled:opacity-40"
-                  >
-                    ◀ Précédent
-                  </button>
-                  <span className="font-bold text-white">Page {userPage} / {totalUserPages}</span>
-                  <button
-                    type="button"
-                    disabled={userPage >= totalUserPages}
-                    onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))}
-                    className="admin-action-btn disabled:opacity-40"
-                  >
-                    Suivant ▶
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <span>Afficher :</span>
+                    <select
+                      value={usersPerPage}
+                      onChange={(e) => {
+                        setUsersPerPage(Number(e.target.value));
+                        setUserPage(1);
+                      }}
+                      className="admin-form-input text-xs cursor-pointer w-auto py-1 px-2"
+                    >
+                      <option value={10}>10 par page</option>
+                      <option value={25}>25 par page</option>
+                      <option value={50}>50 par page</option>
+                      <option value={999999}>Tout afficher</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={userPage <= 1}
+                      onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                      className="admin-action-btn disabled:opacity-40"
+                    >
+                      ◀ Précédent
+                    </button>
+                    <span className="font-bold text-white px-1">Page {userPage} / {totalUserPages}</span>
+                    <button
+                      type="button"
+                      disabled={userPage >= totalUserPages}
+                      onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))}
+                      className="admin-action-btn disabled:opacity-40"
+                    >
+                      Suivant ▶
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1172,30 +1504,105 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
             <div className="admin-card-panel">
               <div className="admin-card-panel-header">
-                <h2 className="admin-card-panel-title">Stock Cartes Carrefour Actif ({carrefourStock.length})</h2>
+                <h2 className="admin-card-panel-title">Stock Cartes Carrefour Actif ({filteredStock.length})</h2>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-64">
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={stockSearch}
+                      onChange={(e) => {
+                        setStockSearch(e.target.value);
+                        setStockPage(1);
+                      }}
+                      placeholder="Rechercher Code, PIN, Prix..."
+                      className="admin-form-input pl-9 pr-8"
+                    />
+                    {stockSearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStockSearch("");
+                          setStockPage(1);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white text-xs"
+                        title="Effacer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowClearStockModal(true)}
+                    className="admin-action-btn admin-action-btn-danger"
+                    title="Vider entièrement le stock Carrefour"
+                  >
+                    <Trash2 size={13} />
+                    <span>Vider le Stock</span>
+                  </button>
+                  <select
+                    value={stockPerPage}
+                    onChange={(e) => {
+                      setStockPerPage(Number(e.target.value));
+                      setStockPage(1);
+                    }}
+                    className="admin-form-input text-xs cursor-pointer w-auto"
+                  >
+                    <option value={10}>10 par page</option>
+                    <option value={25}>25 par page</option>
+                    <option value={50}>50 par page</option>
+                    <option value={999999}>Tout afficher</option>
+                  </select>
+                </div>
               </div>
 
               <div className="admin-table-wrapper">
                 <table className="admin-table">
                   <thead>
                     <tr>
-                      <th>ID</th>
-                      <th>Code Carte</th>
-                      <th>PIN</th>
-                      <th>Valeur Nominale</th>
-                      <th>Prix Vente</th>
+                      <th onClick={() => handleSortStock("id")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>ID Stock</span>
+                          {renderSortChevron("id", stockSortField, stockSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortStock("code")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Code Carte</span>
+                          {renderSortChevron("code", stockSortField, stockSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortStock("pin")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>PIN</span>
+                          {renderSortChevron("pin", stockSortField, stockSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortStock("val")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Solde Carte</span>
+                          {renderSortChevron("val", stockSortField, stockSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortStock("price")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Prix Vente</span>
+                          {renderSortChevron("price", stockSortField, stockSortDir)}
+                        </div>
+                      </th>
                       <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {carrefourStock.length === 0 ? (
+                    {pagedStock.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="text-center py-8 text-white/30 text-xs">
                           Aucune carte en stock
                         </td>
                       </tr>
                     ) : (
-                      carrefourStock.map((item) => (
+                      pagedStock.map((item) => (
                         <tr key={item.id}>
                           <td className="font-mono text-white/60">#{item.id}</td>
                           <td className="font-mono font-bold text-white">{item.code}</td>
@@ -1217,6 +1624,49 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                   </tbody>
                 </table>
               </div>
+
+              <div className="flex justify-between items-center mt-5 pt-4 border-t border-white/[0.06] text-xs text-white/60">
+                <span>
+                  Affichage {pagedStock.length > 0 ? (stockPage - 1) * stockPerPage + 1 : 0} à {Math.min(stockPage * stockPerPage, filteredStock.length)} sur {filteredStock.length} carte(s)
+                </span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <span>Afficher :</span>
+                    <select
+                      value={stockPerPage}
+                      onChange={(e) => {
+                        setStockPerPage(Number(e.target.value));
+                        setStockPage(1);
+                      }}
+                      className="admin-form-input text-xs cursor-pointer w-auto py-1 px-2"
+                    >
+                      <option value={10}>10 par page</option>
+                      <option value={25}>25 par page</option>
+                      <option value={50}>50 par page</option>
+                      <option value={999999}>Tout afficher</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={stockPage <= 1}
+                      onClick={() => setStockPage(p => Math.max(1, p - 1))}
+                      className="admin-action-btn disabled:opacity-40"
+                    >
+                      ◀ Précédent
+                    </button>
+                    <span className="font-bold text-white px-1">Page {stockPage} / {totalStockPages}</span>
+                    <button
+                      type="button"
+                      disabled={stockPage >= totalStockPages}
+                      onClick={() => setStockPage(p => Math.min(totalStockPages, p + 1))}
+                      className="admin-action-btn disabled:opacity-40"
+                    >
+                      Suivant ▶
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -1225,10 +1675,10 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           <div className="fade-in space-y-6">
             <div className="admin-card-panel">
               <div className="admin-card-panel-header">
-                <h2 className="admin-card-panel-title">Historique des Rechargements (CB) ({filteredPayments.length})</h2>
+                <h2 className="admin-card-panel-title">Historique des Rechargements (CB / Crypto) ({filteredPayments.length})</h2>
                 <div className="flex items-center gap-3">
-                  <div className="relative w-72">
-                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+                  <div className="relative w-64">
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
                     <input
                       type="text"
                       value={paymentSearch}
@@ -1237,20 +1687,46 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                         setPaymentPage(1);
                       }}
                       placeholder="Rechercher ID, Track ID..."
-                      className="admin-form-input pl-9"
+                      className="admin-form-input pl-9 pr-8"
                     />
+                    {paymentSearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentSearch("");
+                          setPaymentPage(1);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white text-xs"
+                        title="Effacer"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
+                  <select
+                    value={paymentMethodFilter}
+                    onChange={(e) => {
+                      setPaymentMethodFilter(e.target.value);
+                      setPaymentPage(1);
+                    }}
+                    className="admin-form-input text-xs cursor-pointer max-w-[180px]"
+                  >
+                    <option value="">Toutes les catégories</option>
+                    <option value="CB">Catégorie: CB</option>
+                    <option value="CRYPTO">Catégorie: Crypto</option>
+                  </select>
                   <select
                     value={paymentsPerPage}
                     onChange={(e) => {
                       setPaymentsPerPage(Number(e.target.value));
                       setPaymentPage(1);
                     }}
-                    className="admin-form-input w-28 text-xs"
+                    className="admin-form-input text-xs cursor-pointer w-auto"
                   >
-                    <option value={10}>10 / page</option>
-                    <option value={25}>25 / page</option>
-                    <option value={50}>50 / page</option>
+                    <option value={10}>10 par page</option>
+                    <option value={25}>25 par page</option>
+                    <option value={50}>50 par page</option>
+                    <option value={999999}>Tout afficher</option>
                   </select>
                 </div>
               </div>
@@ -1259,13 +1735,48 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                 <table className="admin-table">
                   <thead>
                     <tr>
-                      <th>ID</th>
-                      <th>Client Telegram</th>
-                      <th>Méthode</th>
-                      <th>Montant</th>
-                      <th>Statut</th>
-                      <th>Track ID</th>
-                      <th>Date</th>
+                      <th onClick={() => handleSortPayments("id")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>ID</span>
+                          {renderSortChevron("id", paymentSortField, paymentSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortPayments("chatId")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Client Telegram</span>
+                          {renderSortChevron("chatId", paymentSortField, paymentSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortPayments("method")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Méthode</span>
+                          {renderSortChevron("method", paymentSortField, paymentSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortPayments("amount")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Montant</span>
+                          {renderSortChevron("amount", paymentSortField, paymentSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortPayments("status")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Statut</span>
+                          {renderSortChevron("status", paymentSortField, paymentSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortPayments("trackId")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Track ID</span>
+                          {renderSortChevron("trackId", paymentSortField, paymentSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortPayments("createdAt")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Date</span>
+                          {renderSortChevron("createdAt", paymentSortField, paymentSortDir)}
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1279,8 +1790,12 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                       pagedPayments.map((p) => (
                         <tr key={p.id}>
                           <td className="font-mono text-white/60">#{p.id}</td>
-                          <td className="font-mono text-primary">{p.chatId}</td>
-                          <td className="font-semibold text-white">{p.method}</td>
+                          <td className="font-mono text-primary font-bold">{p.chatId}</td>
+                          <td>
+                            <span className="font-semibold text-white bg-white/5 px-2 py-0.5 rounded text-xs">
+                              {p.method}
+                            </span>
+                          </td>
                           <td className="font-bold text-emerald-400">{p.amount.toFixed(2)} €</td>
                           <td>
                             <span className="admin-badge admin-badge-success">{p.status}</span>
@@ -1299,23 +1814,41 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                   Affichage {pagedPayments.length > 0 ? (paymentPage - 1) * paymentsPerPage + 1 : 0} à {Math.min(paymentPage * paymentsPerPage, filteredPayments.length)} sur {filteredPayments.length} rechargement(s)
                 </span>
                 <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={paymentPage <= 1}
-                    onClick={() => setPaymentPage(p => Math.max(1, p - 1))}
-                    className="admin-action-btn disabled:opacity-40"
-                  >
-                    ◀ Précédent
-                  </button>
-                  <span className="font-bold text-white">Page {paymentPage} / {totalPaymentPages}</span>
-                  <button
-                    type="button"
-                    disabled={paymentPage >= totalPaymentPages}
-                    onClick={() => setPaymentPage(p => Math.min(totalPaymentPages, p + 1))}
-                    className="admin-action-btn disabled:opacity-40"
-                  >
-                    Suivant ▶
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <span>Afficher :</span>
+                    <select
+                      value={paymentsPerPage}
+                      onChange={(e) => {
+                        setPaymentsPerPage(Number(e.target.value));
+                        setPaymentPage(1);
+                      }}
+                      className="admin-form-input text-xs cursor-pointer w-auto py-1 px-2"
+                    >
+                      <option value={10}>10 par page</option>
+                      <option value={25}>25 par page</option>
+                      <option value={50}>50 par page</option>
+                      <option value={999999}>Tout afficher</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={paymentPage <= 1}
+                      onClick={() => setPaymentPage(p => Math.max(1, p - 1))}
+                      className="admin-action-btn disabled:opacity-40"
+                    >
+                      ◀ Précédent
+                    </button>
+                    <span className="font-bold text-white px-1">Page {paymentPage} / {totalPaymentPages}</span>
+                    <button
+                      type="button"
+                      disabled={paymentPage >= totalPaymentPages}
+                      onClick={() => setPaymentPage(p => Math.min(totalPaymentPages, p + 1))}
+                      className="admin-action-btn disabled:opacity-40"
+                    >
+                      Suivant ▶
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1328,8 +1861,8 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
               <div className="admin-card-panel-header">
                 <h2 className="admin-card-panel-title">Historique Complet des Achats ({filteredTx.length})</h2>
                 <div className="flex items-center gap-3">
-                  <div className="relative w-72">
-                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+                  <div className="relative w-64">
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
                     <input
                       type="text"
                       value={txSearch}
@@ -1338,8 +1871,21 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                         setTxPage(1);
                       }}
                       placeholder="Rechercher ID, Produit..."
-                      className="admin-form-input pl-9"
+                      className="admin-form-input pl-9 pr-8"
                     />
+                    {txSearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTxSearch("");
+                          setTxPage(1);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white text-xs"
+                        title="Effacer"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                   <select
                     value={txPerPage}
@@ -1347,11 +1893,12 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                       setTxPerPage(Number(e.target.value));
                       setTxPage(1);
                     }}
-                    className="admin-form-input w-28 text-xs"
+                    className="admin-form-input text-xs cursor-pointer w-auto"
                   >
-                    <option value={10}>10 / page</option>
-                    <option value={25}>25 / page</option>
-                    <option value={50}>50 / page</option>
+                    <option value={10}>10 par page</option>
+                    <option value={25}>25 par page</option>
+                    <option value={50}>50 par page</option>
+                    <option value={999999}>Tout afficher</option>
                   </select>
                 </div>
               </div>
@@ -1360,13 +1907,48 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                 <table className="admin-table">
                   <thead>
                     <tr>
-                      <th>ID</th>
-                      <th>Client Telegram</th>
-                      <th>Produit</th>
-                      <th>Code / Info</th>
-                      <th>Prix</th>
-                      <th>Statut</th>
-                      <th>Date</th>
+                      <th onClick={() => handleSortTx("id")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>ID</span>
+                          {renderSortChevron("id", txSortField, txSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortTx("userId")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Client Telegram</span>
+                          {renderSortChevron("userId", txSortField, txSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortTx("brand")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Produit</span>
+                          {renderSortChevron("brand", txSortField, txSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortTx("code")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Code / Info</span>
+                          {renderSortChevron("code", txSortField, txSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortTx("valeur")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Valeur</span>
+                          {renderSortChevron("valeur", txSortField, txSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortTx("price")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Prix</span>
+                          {renderSortChevron("price", txSortField, txSortDir)}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSortTx("createdAt")} className="cursor-pointer select-none hover:text-white transition-colors">
+                        <div className="inline-flex items-center">
+                          <span>Date</span>
+                          {renderSortChevron("createdAt", txSortField, txSortDir)}
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1380,13 +1962,11 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                       pagedTx.map((tx) => (
                         <tr key={tx.id}>
                           <td className="font-mono text-white/60">#{tx.id}</td>
-                          <td className="font-mono text-primary">{tx.userId}</td>
+                          <td className="font-mono text-primary font-bold">{tx.userId}</td>
                           <td className="font-semibold text-white">{tx.brand}</td>
                           <td className="font-mono text-xs text-white/60">{tx.code}</td>
-                          <td className="font-bold text-emerald-400">{tx.price.toFixed(2)} €</td>
-                          <td>
-                            <span className="admin-badge admin-badge-success">{tx.status || "Validé"}</span>
-                          </td>
+                          <td className="font-bold text-emerald-400">{tx.valeur ? tx.valeur.toFixed(2) + " €" : "-"}</td>
+                          <td className="font-bold text-primary">{tx.price.toFixed(2)} €</td>
                           <td className="text-white/50">{tx.createdAt}</td>
                         </tr>
                       ))
@@ -1400,23 +1980,41 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                   Affichage {pagedTx.length > 0 ? (txPage - 1) * txPerPage + 1 : 0} à {Math.min(txPage * txPerPage, filteredTx.length)} sur {filteredTx.length} achat(s)
                 </span>
                 <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={txPage <= 1}
-                    onClick={() => setTxPage(p => Math.max(1, p - 1))}
-                    className="admin-action-btn disabled:opacity-40"
-                  >
-                    ◀ Précédent
-                  </button>
-                  <span className="font-bold text-white">Page {txPage} / {totalTxPages}</span>
-                  <button
-                    type="button"
-                    disabled={txPage >= totalTxPages}
-                    onClick={() => setTxPage(p => Math.min(totalTxPages, p + 1))}
-                    className="admin-action-btn disabled:opacity-40"
-                  >
-                    Suivant ▶
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <span>Afficher :</span>
+                    <select
+                      value={txPerPage}
+                      onChange={(e) => {
+                        setTxPerPage(Number(e.target.value));
+                        setTxPage(1);
+                      }}
+                      className="admin-form-input text-xs cursor-pointer w-auto py-1 px-2"
+                    >
+                      <option value={10}>10 par page</option>
+                      <option value={25}>25 par page</option>
+                      <option value={50}>50 par page</option>
+                      <option value={999999}>Tout afficher</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={txPage <= 1}
+                      onClick={() => setTxPage(p => Math.max(1, p - 1))}
+                      className="admin-action-btn disabled:opacity-40"
+                    >
+                      ◀ Précédent
+                    </button>
+                    <span className="font-bold text-white px-1">Page {txPage} / {totalTxPages}</span>
+                    <button
+                      type="button"
+                      disabled={txPage >= totalTxPages}
+                      onClick={() => setTxPage(p => Math.min(totalTxPages, p + 1))}
+                      className="admin-action-btn disabled:opacity-40"
+                    >
+                      Suivant ▶
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2019,6 +2617,49 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           </div>
         )}
       </main>
+
+      {showClearStockModal && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-modal-box">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.08]">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <span>⚠️</span> Confirmation de vidage
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowClearStockModal(false)}
+                className="text-white/40 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs text-white/70 leading-relaxed">
+                Êtes-vous sûr de vouloir vider l'intégralité du stock de cartes Carrefour ? Cette action est irréversible.
+              </p>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowClearStockModal(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-semibold text-xs hover:bg-white/10 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  disabled={isClearingStock}
+                  onClick={handleClearStock}
+                  className="flex-1 py-2.5 rounded-xl bg-rose-600 border border-rose-500 text-white font-bold text-xs hover:bg-rose-700 transition-colors disabled:opacity-50"
+                >
+                  {isClearingStock ? "Vidage en cours..." : "Confirmer le vidage"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeModalUser && (
         <div className="admin-modal-backdrop">

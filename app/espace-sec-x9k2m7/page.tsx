@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, FormEvent } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { ToastProvider } from "@/components/NotificationToast";
 import AdminWebView from "@/components/admin/AdminWebView";
 
@@ -10,6 +10,7 @@ import AdminWebView from "@/components/admin/AdminWebView";
 function SecretAdminContent() {
   const [token, setToken] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [checking, setChecking] = useState<boolean>(true);
   const [errorShake, setErrorShake] = useState<boolean>(false);
@@ -99,24 +100,33 @@ function SecretAdminContent() {
           }`}
         >
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             autoFocus
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
-            className="w-full bg-[#0a0c12] border border-white/[0.08] focus:border-white/20 rounded-xl px-4 py-3 text-xs text-white placeholder-transparent focus:outline-none transition-colors"
+            className="w-full bg-[#0a0c12] border border-white/[0.08] focus:border-white/20 rounded-xl pl-4 pr-16 py-3 text-xs text-white placeholder-transparent focus:outline-none transition-colors"
           />
-          <button
-            type="submit"
-            disabled={loading || !password.trim()}
-            className="absolute right-2 p-1.5 rounded-lg text-white/30 hover:text-white disabled:opacity-0 transition-all"
-          >
-            {loading ? (
-              <div className="w-3.5 h-3.5 border border-white/20 border-t-white rounded-full animate-spin" />
-            ) : (
-              <ArrowRight size={14} />
-            )}
-          </button>
+          <div className="absolute right-2 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="p-1 rounded-lg text-white/30 hover:text-white transition-colors"
+            >
+              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !password.trim()}
+              className="p-1 rounded-lg text-white/30 hover:text-white disabled:opacity-0 transition-all"
+            >
+              {loading ? (
+                <div className="w-3.5 h-3.5 border border-white/20 border-t-white rounded-full animate-spin" />
+              ) : (
+                <ArrowRight size={14} />
+              )}
+            </button>
+          </div>
         </div>
       </form>
     </div>

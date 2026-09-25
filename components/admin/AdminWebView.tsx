@@ -109,13 +109,10 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
   const [isTestingIptvApi, setIsTestingIptvApi] = useState<boolean>(false);
   const [isTestingIptvPanel, setIsTestingIptvPanel] = useState<boolean>(false);
 
-  const [telegramMode, setTelegramMode] = useState<string>("webhook");
-  const [sumupMode, setSumupMode] = useState<string>("webhook");
   const [sumupActive, setSumupActive] = useState<"sumup" | "sumup_bank2">("sumup");
   const [sumupExpiration, setSumupExpiration] = useState<string>("");
   const [sumup1, setSumup1] = useState<SumUpBank>({ name: "", pay_to_email: "", api_key: "", client_id: "", client_secret: "" });
   const [sumup2, setSumup2] = useState<SumUpBank>({ name: "", pay_to_email: "", api_key: "", client_id: "", client_secret: "" });
-  const [oxapayKey, setOxapayKey] = useState<string>("");
 
   const [adminPassword, setAdminPassword] = useState<string>("");
   const [adminPasswordConfirm, setAdminPasswordConfirm] = useState<string>("");
@@ -188,9 +185,6 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           }
         }
 
-        if (data.telegramMode) setTelegramMode(data.telegramMode);
-        if (data.sumupMode) setSumupMode(data.sumupMode);
-
         if (data.sumup) {
           setSumupActive(data.sumup.active === "sumup_bank2" ? "sumup_bank2" : "sumup");
           setSumupExpiration(String(data.sumup.expiration_minutes ?? ""));
@@ -210,10 +204,6 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
             client_id: b2.client_id || "",
             client_secret: b2.client_secret || ""
           });
-        }
-
-        if (data.oxapayApiKey) {
-          setOxapayKey(data.oxapayApiKey);
         }
       }
     } catch {}
@@ -586,54 +576,6 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
     }
   };
 
-  const handleSaveTelegramMode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const token = localStorage.getItem("admin_auth_token") || "";
-    try {
-      const res = await fetch("/api/proxy/admin/settings/telegram", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ mode: telegramMode })
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Mode Telegram basculé sur ${data.mode === "webhook" ? "Webhook" : "Long Polling"}`);
-        fetchSettings();
-      } else {
-        toast.error(data.message || "Erreur mode Telegram");
-      }
-    } catch {
-      toast.error("Erreur réseau");
-    }
-  };
-
-  const handleSaveSumupMode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const token = localStorage.getItem("admin_auth_token") || "";
-    try {
-      const res = await fetch("/api/proxy/admin/settings/sumup/mode", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ mode: sumupMode })
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Mode SumUp basculé sur ${data.mode === "webhook" ? "Webhook" : "Long Polling"}`);
-        fetchSettings();
-      } else {
-        toast.error(data.message || "Erreur mode SumUp");
-      }
-    } catch {
-      toast.error("Erreur réseau");
-    }
-  };
-
   const handleSaveSumup = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem("admin_auth_token") || "";
@@ -672,34 +614,6 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
         fetchSettings();
       } else {
         toast.error(data.message || "Erreur enregistrement SumUp");
-      }
-    } catch {
-      toast.error("Erreur réseau");
-    }
-  };
-
-  const handleSaveOxapay = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!oxapayKey.trim()) {
-      toast.error("La clé OxaPay ne peut pas être vide");
-      return;
-    }
-    const token = localStorage.getItem("admin_auth_token") || "";
-    try {
-      const res = await fetch("/api/proxy/admin/settings/oxapay", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ api_key: oxapayKey.trim() })
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Clé OxaPay enregistrée");
-        fetchSettings();
-      } else {
-        toast.error(data.message || "Erreur enregistrement OxaPay");
       }
     } catch {
       toast.error("Erreur réseau");
@@ -1614,61 +1528,11 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
             <div className="admin-card-panel">
               <div className="admin-card-panel-header">
-                <h2 className="admin-card-panel-title">Mode de Réception Telegram</h2>
-              </div>
-              <form onSubmit={handleSaveTelegramMode} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Mode Actuel</label>
-                  <select
-                    value={telegramMode}
-                    onChange={(e) => setTelegramMode(e.target.value)}
-                    className="admin-form-input max-w-md cursor-pointer"
-                  >
-                    <option value="webhook">⚡ Webhook HTTP (Notification push instantanée)</option>
-                    <option value="polling">🔄 Long Polling (Vérification continue en boucle)</option>
-                  </select>
-                  <span className="text-[11px] text-white/40 block mt-1.5">
-                    *Le mode Webhook est recommandé pour une meilleure performance.
-                  </span>
-                </div>
-                <button type="submit" className="admin-btn-primary">
-                  Appliquer le Mode Telegram
-                </button>
-              </form>
-            </div>
-
-            <div className="admin-card-panel">
-              <div className="admin-card-panel-header">
-                <h2 className="admin-card-panel-title">Mode de Vérification SumUp</h2>
-              </div>
-              <form onSubmit={handleSaveSumupMode} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Mode Actuel</label>
-                  <select
-                    value={sumupMode}
-                    onChange={(e) => setSumupMode(e.target.value)}
-                    className="admin-form-input max-w-md cursor-pointer"
-                  >
-                    <option value="webhook">⚡ Webhook HTTP (Notification push instantanée)</option>
-                    <option value="polling">🔄 Long Polling (Vérification périodique)</option>
-                  </select>
-                  <span className="text-[11px] text-white/40 block mt-1.5">
-                    Stocké en table (<code>general.sumup_mode</code>). Webhook = notifications SumUp. Polling = vérification périodique.
-                  </span>
-                </div>
-                <button type="submit" className="admin-btn-primary">
-                  Appliquer le Mode SumUp
-                </button>
-              </form>
-            </div>
-
-            <div className="admin-card-panel">
-              <div className="admin-card-panel-header">
                 <h2 className="admin-card-panel-title">Comptes SumUp (CB)</h2>
               </div>
               <form onSubmit={handleSaveSumup} className="space-y-5">
                 <p className="text-xs text-white/50">
-                  Les deux banques doivent être complètes en base. Si une clé manque au démarrage, le bot crash. Coche celle utilisée pour les paiements CB.
+                  Les deux banques doivent être configurées en base. Coche celle utilisée pour les paiements CB.
                 </p>
                 <div>
                   <label className="block text-xs font-semibold text-white/60 mb-1.5">Expiration facture (minutes)</label>
@@ -1682,7 +1546,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                     required
                   />
                   <span className="text-[11px] text-white/40 block mt-1">
-                    Durée de validité du lien CB SumUp. Stockée en table (<code>general.sumup_expiration_minutes</code>).
+                    Durée de validité du lien CB SumUp. Stockée en table (<code>settings.payments.expirationMinutes</code>).
                   </span>
                 </div>
 
@@ -1834,31 +1698,6 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
                 <button type="submit" className="admin-btn-primary">
                   Enregistrer SumUp
-                </button>
-              </form>
-            </div>
-
-            <div className="admin-card-panel">
-              <div className="admin-card-panel-header">
-                <h2 className="admin-card-panel-title">OxaPay (Crypto)</h2>
-              </div>
-              <form onSubmit={handleSaveOxapay} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Clé API marchand</label>
-                  <input
-                    type="text"
-                    value={oxapayKey}
-                    onChange={(e) => setOxapayKey(e.target.value)}
-                    className="admin-form-input max-w-lg"
-                    placeholder="merchant_api_key"
-                    required
-                  />
-                  <span className="text-[11px] text-white/40 block mt-1.5">
-                    Stockée uniquement en base (<code>oxapay.api_key</code>). Si elle manque au démarrage, le bot crash.
-                  </span>
-                </div>
-                <button type="submit" className="admin-btn-primary">
-                  Enregistrer la clé OxaPay
                 </button>
               </form>
             </div>

@@ -7,8 +7,8 @@ export const revalidate = 0;
 
 /* ===================================================================== */
 
-const BACKEND_URL = process.env.BACKEND_URL || process.env.API_URL || "http://localhost:8000";
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || "";
+const BACKEND_URL = process.env.BACKEND_URL || process.env.API_URL || "https://backend-app-eas7.onrender.com";
+const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || "c8b9f1d0a83e47229b12480ad2e08e6f";
 
 /* ===================================================================== */
 
@@ -81,7 +81,7 @@ async function handle(request: NextRequest) {
       headers: resHeaders,
     });
   } catch {
-    return new Response(null, { status: 444 });
+    return new Response(null, { status: 502 });
   }
 }
 

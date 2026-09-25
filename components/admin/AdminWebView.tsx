@@ -845,16 +845,6 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className={`admin-badge ${maintenance ? "admin-badge-danger" : "admin-badge-success"}`}>
-              {maintenance ? "Mode Maintenance" : "Mode Normal"}
-            </span>
-            <button
-              type="button"
-              onClick={handleToggleMaintenance}
-              className="admin-action-btn"
-            >
-              <span>🛠️ Basculer Maintenance</span>
-            </button>
             <button
               type="button"
               onClick={refreshAll}

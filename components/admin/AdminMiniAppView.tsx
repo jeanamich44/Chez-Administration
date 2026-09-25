@@ -95,7 +95,6 @@ export default function AdminMiniAppView({ onBack }: AdminMiniAppViewProps) {
               <Shield size={16} className="text-primary" />
               <h1 className="text-sm font-black tracking-wider text-white uppercase">Panel Admin TMA</h1>
             </div>
-            <p className="text-[10px] text-white/40 font-mono">Mobile Control Center</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold">
@@ -141,7 +140,7 @@ export default function AdminMiniAppView({ onBack }: AdminMiniAppViewProps) {
           }`}
         >
           <Package size={16} />
-          <span className="text-[9px] mt-1 font-bold">Boutique</span>
+          <span className="text-[9px] mt-1 font-bold">Services</span>
         </button>
 
         <button
@@ -182,50 +181,44 @@ export default function AdminMiniAppView({ onBack }: AdminMiniAppViewProps) {
               <div className="text-2xl font-black text-white">
                 {loading ? "..." : stats?.users_count ?? 0}
               </div>
-              <span className="text-[9px] text-sky-400 font-bold">Inscrits en BDD</span>
             </div>
 
             <div className="bg-[#0f121d]/80 rounded-2xl p-4 border border-white/[0.08] relative overflow-hidden">
               <div className="flex items-center justify-between text-white/40 mb-2">
-                <span className="text-[10px] font-black uppercase tracking-wider">CA Recharges</span>
+                <span className="text-[10px] font-black uppercase tracking-wider">Recharges</span>
                 <TrendingUp size={14} className="text-emerald-400" />
               </div>
               <div className="text-2xl font-black text-white">
                 {loading ? "..." : `${(stats?.payments_volume ?? 0).toFixed(2)}€`}
               </div>
               <span className="text-[9px] text-emerald-400 font-bold">
-                {stats?.payments_count ?? 0} paiements validés
+                {stats?.payments_count ?? 0} paiements
               </span>
             </div>
 
             <div className="bg-[#0f121d]/80 rounded-2xl p-4 border border-white/[0.08] relative overflow-hidden">
               <div className="flex items-center justify-between text-white/40 mb-2">
-                <span className="text-[10px] font-black uppercase tracking-wider">Docs Générés</span>
+                <span className="text-[10px] font-black uppercase tracking-wider">Documents</span>
                 <FileText size={14} className="text-amber-400" />
               </div>
               <div className="text-2xl font-black text-white">
                 {loading ? "..." : stats?.generations_count ?? 0}
               </div>
-              <span className="text-[9px] text-amber-400 font-bold">Total créations</span>
             </div>
 
             <div className="bg-[#0f121d]/80 rounded-2xl p-4 border border-white/[0.08] relative overflow-hidden">
               <div className="flex items-center justify-between text-white/40 mb-2">
-                <span className="text-[10px] font-black uppercase tracking-wider">Boutique & IPTV</span>
+                <span className="text-[10px] font-black uppercase tracking-wider">Services</span>
                 <Package size={14} className="text-violet-400" />
               </div>
               <div className="text-2xl font-black text-white">Actif</div>
-              <span className="text-[9px] text-violet-400 font-bold">Stock C# converti</span>
             </div>
           </div>
 
           <div className="bg-[#0f121d]/80 rounded-2xl p-4 border border-white/[0.08] flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Activity size={18} className="text-primary" />
-              <div>
-                <p className="text-xs font-bold text-white">Synchronisation Backend</p>
-                <p className="text-[10px] text-white/40">Render (FastAPI) & Railway SQL</p>
-              </div>
+              <p className="text-xs font-bold text-white">Statut des services</p>
             </div>
             <button
               type="button"

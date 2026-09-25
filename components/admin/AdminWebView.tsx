@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { 
-  Shield, 
   LayoutDashboard, 
   Users, 
   ShoppingCart, 
-  Tv, 
+  CreditCard,
+  History,
   FileText, 
   Settings, 
   LogOut, 
@@ -22,12 +22,13 @@ interface AdminWebViewProps {
   onLogout: () => void;
 }
 
-type AdminWebTab = "dashboard" | "users" | "carrefour" | "iptv" | "docs" | "system";
+type AdminWebTab = "dashboard" | "users" | "carrefour" | "payments" | "transactions" | "docs" | "system";
 
 interface AdminStats {
   users_count: number;
   payments_count: number;
   payments_volume: number;
+  stock_count?: number;
   generations_count: number;
   timestamp: string;
 }
@@ -41,13 +42,25 @@ interface AdminUser {
   registeredAt: string;
 }
 
+interface AdminPayment {
+  id: string;
+  chatId: string;
+  trackId: string;
+  amount: number;
+  method: string;
+  status: string;
+  createdAt: string;
+}
+
 interface AdminTransaction {
   id: string;
   userId: string;
-  service: string;
-  amount: number;
-  status: "completed" | "pending";
-  date: string;
+  brand: string;
+  code: string;
+  price: number;
+  valeur: number;
+  status?: string;
+  createdAt: string;
 }
 
 interface IptvAccount {
@@ -86,6 +99,10 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
   const [userPage, setUserPage] = useState<number>(1);
   const [usersPerPage, setUsersPerPage] = useState<number>(10);
 
+  const [paymentSearch, setPaymentSearch] = useState<string>("");
+  const [paymentPage, setPaymentPage] = useState<number>(1);
+  const [paymentsPerPage, setPaymentsPerPage] = useState<number>(10);
+
   const [txSearch, setTxSearch] = useState<string>("");
   const [txPage, setTxPage] = useState<number>(1);
   const [txPerPage, setTxPerPage] = useState<number>(10);
@@ -93,6 +110,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
   const [stockInput, setStockInput] = useState<string>("");
   const [carrefourStock, setCarrefourStock] = useState<Array<{ id: number; code: string; pin: string; val: number; price: number }>>([]);
   const [usersList, setUsersList] = useState<AdminUser[]>([]);
+  const [paymentsList, setPaymentsList] = useState<AdminPayment[]>([]);
   const [transactionsList, setTransactionsList] = useState<AdminTransaction[]>([]);
 
   const [iptvHost, setIptvHost] = useState<string>("");
@@ -262,6 +280,29 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
     } catch {}
   };
 
+  const fetchPayments = async () => {
+    const token = localStorage.getItem("admin_auth_token") || "";
+    try {
+      const res = await fetch("/api/proxy/admin/payments", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.payments)) {
+          setPaymentsList(data.payments.map((p: any) => ({
+            id: String(p.id),
+            chatId: String(p.chatId),
+            trackId: p.trackId || "N/A",
+            amount: typeof p.amount === "number" ? p.amount : (parseFloat(p.amount) || 0),
+            method: p.method || "CB",
+            status: p.status || "PAID",
+            createdAt: p.createdAt ? p.createdAt.replace("T", " ") : "N/A"
+          })));
+        }
+      }
+    } catch {}
+  };
+
   const fetchTransactions = async () => {
     const token = localStorage.getItem("admin_auth_token") || "";
     try {
@@ -274,10 +315,12 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           setTransactionsList(data.transactions.map((t: any) => ({
             id: String(t.id),
             userId: String(t.userId),
-            service: t.brand ? t.brand.toUpperCase() : "Achat",
-            amount: typeof t.price === "number" ? t.price : (parseFloat(t.price) || 0),
-            status: "completed" as const,
-            date: t.createdAt ? t.createdAt.replace("T", " ") : "N/A"
+            brand: t.brand || "Achat",
+            code: t.code || "N/A",
+            price: typeof t.price === "number" ? t.price : (parseFloat(t.price) || 0),
+            valeur: typeof t.valeur === "number" ? t.valeur : (parseFloat(t.valeur) || 0),
+            status: t.status || "completed",
+            createdAt: t.createdAt ? t.createdAt.replace("T", " ") : "N/A"
           })));
         }
       }
@@ -289,6 +332,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
     fetchSettings();
     fetchStock();
     fetchUsers();
+    fetchPayments();
     fetchTransactions();
   };
 
@@ -316,13 +360,33 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
   /* ===================================================================== */
 
+  const filteredPayments = useMemo(() => {
+    if (!paymentSearch.trim()) return paymentsList;
+    const query = paymentSearch.toLowerCase();
+    return paymentsList.filter(p => 
+      p.id.toLowerCase().includes(query) || 
+      p.chatId.toLowerCase().includes(query) ||
+      p.trackId.toLowerCase().includes(query)
+    );
+  }, [paymentsList, paymentSearch]);
+
+  const pagedPayments = useMemo(() => {
+    const start = (paymentPage - 1) * paymentsPerPage;
+    return filteredPayments.slice(start, start + paymentsPerPage);
+  }, [filteredPayments, paymentPage, paymentsPerPage]);
+
+  const totalPaymentPages = Math.max(1, Math.ceil(filteredPayments.length / paymentsPerPage));
+
+  /* ===================================================================== */
+
   const filteredTx = useMemo(() => {
     if (!txSearch.trim()) return transactionsList;
     const query = txSearch.toLowerCase();
     return transactionsList.filter(t => 
       t.id.toLowerCase().includes(query) || 
       t.userId.toLowerCase().includes(query) ||
-      t.service.toLowerCase().includes(query)
+      t.brand.toLowerCase().includes(query) ||
+      t.code.toLowerCase().includes(query)
     );
   }, [transactionsList, txSearch]);
 
@@ -445,6 +509,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
         toast.success(`${data.count} carte(s) Carrefour importée(s)`);
         setStockInput("");
         fetchStock();
+        fetchStats();
       } else {
         toast.error(data.message || "Erreur lors de l'importation");
       }
@@ -468,6 +533,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
       if (data.success) {
         toast.success("Carte supprimée");
         fetchStock();
+        fetchStats();
       } else {
         toast.error("Erreur lors de la suppression");
       }
@@ -712,16 +778,25 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
             className={`admin-nav-item ${activeTab === "carrefour" ? "active" : ""}`}
           >
             <ShoppingCart size={16} />
-            <span>Carrefour</span>
+            <span>Stock Carrefour</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveTab("iptv")}
-            className={`admin-nav-item ${activeTab === "iptv" ? "active" : ""}`}
+            onClick={() => setActiveTab("payments")}
+            className={`admin-nav-item ${activeTab === "payments" ? "active" : ""}`}
           >
-            <Tv size={16} />
-            <span>IPTV</span>
+            <CreditCard size={16} />
+            <span>Rechargements CB</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("transactions")}
+            className={`admin-nav-item ${activeTab === "transactions" ? "active" : ""}`}
+          >
+            <History size={16} />
+            <span>Historique Achats</span>
           </button>
 
           <button
@@ -761,14 +836,25 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
             <h1 className="admin-page-title">
               {activeTab === "dashboard" && "Vue d'Ensemble"}
               {activeTab === "users" && "Gestion des Utilisateurs"}
-              {activeTab === "carrefour" && "Carrefour"}
-              {activeTab === "iptv" && "IPTV"}
+              {activeTab === "carrefour" && "Stock Carrefour"}
+              {activeTab === "payments" && "Historique des Rechargements (CB)"}
+              {activeTab === "transactions" && "Historique Complet des Achats"}
               {activeTab === "docs" && "Générateurs de Documents"}
               {activeTab === "system" && "Configuration Système"}
             </h1>
           </div>
 
           <div className="flex items-center gap-3">
+            <span className={`admin-badge ${maintenance ? "admin-badge-danger" : "admin-badge-success"}`}>
+              {maintenance ? "Mode Maintenance" : "Mode Normal"}
+            </span>
+            <button
+              type="button"
+              onClick={handleToggleMaintenance}
+              className="admin-action-btn"
+            >
+              <span>🛠️ Basculer Maintenance</span>
+            </button>
             <button
               type="button"
               onClick={refreshAll}
@@ -785,7 +871,8 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
             <div className="admin-stats-grid">
               <div 
                 className="admin-stat-card admin-stat-card-interactive"
-                onClick={() => setActiveTab("dashboard")}
+                onClick={() => setActiveTab("payments")}
+                title="Cliquer pour voir les rechargements CB"
               >
                 <div className="admin-stat-icon" style={{ background: "rgba(99, 102, 241, 0.15)", color: "#6366f1" }}>
                   💶
@@ -800,7 +887,8 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
               <div 
                 className="admin-stat-card admin-stat-card-interactive"
-                onClick={() => setActiveTab("dashboard")}
+                onClick={() => setActiveTab("transactions")}
+                title="Cliquer pour voir les achats"
               >
                 <div className="admin-stat-icon" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981" }}>
                   🛒
@@ -809,13 +897,14 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                   <div className="admin-stat-val">
                     {loading ? "..." : stats?.payments_count ?? 0}
                   </div>
-                  <div className="admin-stat-lbl">Paiements Validés</div>
+                  <div className="admin-stat-lbl">Ventes Réalisées</div>
                 </div>
               </div>
 
               <div 
                 className="admin-stat-card admin-stat-card-interactive"
                 onClick={() => setActiveTab("users")}
+                title="Cliquer pour voir les utilisateurs"
               >
                 <div className="admin-stat-icon" style={{ background: "rgba(245, 158, 11, 0.15)", color: "#f59e0b" }}>
                   👥
@@ -824,22 +913,23 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                   <div className="admin-stat-val">
                     {loading ? "..." : stats?.users_count ?? 0}
                   </div>
-                  <div className="admin-stat-lbl">Clients Enregistrés</div>
+                  <div className="admin-stat-lbl">Utilisateurs Enregistrés</div>
                 </div>
               </div>
 
               <div 
                 className="admin-stat-card admin-stat-card-interactive"
-                onClick={() => setActiveTab("docs")}
+                onClick={() => setActiveTab("carrefour")}
+                title="Cliquer pour voir le stock Carrefour"
               >
-                <div className="admin-stat-icon" style={{ background: "rgba(14, 165, 233, 0.15)", color: "#0ea5e9" }}>
-                  📄
+                <div className="admin-stat-icon" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#ef4444" }}>
+                  📦
                 </div>
                 <div>
                   <div className="admin-stat-val">
-                    {loading ? "..." : stats?.generations_count ?? 0}
+                    {loading ? "..." : (stats?.stock_count ?? carrefourStock.length)}
                   </div>
-                  <div className="admin-stat-lbl">Documents Produits</div>
+                  <div className="admin-stat-lbl">Cartes Carrefour en Stock</div>
                 </div>
               </div>
             </div>
@@ -886,12 +976,12 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                         <tr key={tx.id}>
                           <td className="font-mono text-white/80">{tx.id}</td>
                           <td className="font-mono text-primary">{tx.userId}</td>
-                          <td className="font-semibold text-white">{tx.service}</td>
-                          <td className="font-bold text-emerald-400">{tx.amount.toFixed(2)} €</td>
+                          <td className="font-semibold text-white">{tx.brand}</td>
+                          <td className="font-bold text-emerald-400">{tx.price.toFixed(2)} €</td>
                           <td>
-                            <span className="admin-badge admin-badge-success">Validé</span>
+                            <span className="admin-badge admin-badge-success">{tx.status || "Validé"}</span>
                           </td>
-                          <td className="text-white/50">{tx.date}</td>
+                          <td className="text-white/50">{tx.createdAt}</td>
                         </tr>
                       ))
                     )}
@@ -1141,8 +1231,459 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           </div>
         )}
 
-        {activeTab === "iptv" && (
+        {activeTab === "payments" && (
           <div className="fade-in space-y-6">
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Historique des Rechargements (CB) ({filteredPayments.length})</h2>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-72">
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+                    <input
+                      type="text"
+                      value={paymentSearch}
+                      onChange={(e) => {
+                        setPaymentSearch(e.target.value);
+                        setPaymentPage(1);
+                      }}
+                      placeholder="Rechercher ID, Track ID..."
+                      className="admin-form-input pl-9"
+                    />
+                  </div>
+                  <select
+                    value={paymentsPerPage}
+                    onChange={(e) => {
+                      setPaymentsPerPage(Number(e.target.value));
+                      setPaymentPage(1);
+                    }}
+                    className="admin-form-input w-28 text-xs"
+                  >
+                    <option value={10}>10 / page</option>
+                    <option value={25}>25 / page</option>
+                    <option value={50}>50 / page</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="admin-table-wrapper">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Client Telegram</th>
+                      <th>Méthode</th>
+                      <th>Montant</th>
+                      <th>Statut</th>
+                      <th>Track ID</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedPayments.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-8 text-white/30 text-xs">
+                          Aucun rechargement enregistré
+                        </td>
+                      </tr>
+                    ) : (
+                      pagedPayments.map((p) => (
+                        <tr key={p.id}>
+                          <td className="font-mono text-white/60">#{p.id}</td>
+                          <td className="font-mono text-primary">{p.chatId}</td>
+                          <td className="font-semibold text-white">{p.method}</td>
+                          <td className="font-bold text-emerald-400">{p.amount.toFixed(2)} €</td>
+                          <td>
+                            <span className="admin-badge admin-badge-success">{p.status}</span>
+                          </td>
+                          <td className="font-mono text-xs text-white/60">{p.trackId}</td>
+                          <td className="text-white/50">{p.createdAt}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-between items-center mt-5 pt-4 border-t border-white/[0.06] text-xs text-white/60">
+                <span>
+                  Affichage {pagedPayments.length > 0 ? (paymentPage - 1) * paymentsPerPage + 1 : 0} à {Math.min(paymentPage * paymentsPerPage, filteredPayments.length)} sur {filteredPayments.length} rechargement(s)
+                </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={paymentPage <= 1}
+                    onClick={() => setPaymentPage(p => Math.max(1, p - 1))}
+                    className="admin-action-btn disabled:opacity-40"
+                  >
+                    ◀ Précédent
+                  </button>
+                  <span className="font-bold text-white">Page {paymentPage} / {totalPaymentPages}</span>
+                  <button
+                    type="button"
+                    disabled={paymentPage >= totalPaymentPages}
+                    onClick={() => setPaymentPage(p => Math.min(totalPaymentPages, p + 1))}
+                    className="admin-action-btn disabled:opacity-40"
+                  >
+                    Suivant ▶
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "transactions" && (
+          <div className="fade-in space-y-6">
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Historique Complet des Achats ({filteredTx.length})</h2>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-72">
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+                    <input
+                      type="text"
+                      value={txSearch}
+                      onChange={(e) => {
+                        setTxSearch(e.target.value);
+                        setTxPage(1);
+                      }}
+                      placeholder="Rechercher ID, Produit..."
+                      className="admin-form-input pl-9"
+                    />
+                  </div>
+                  <select
+                    value={txPerPage}
+                    onChange={(e) => {
+                      setTxPerPage(Number(e.target.value));
+                      setTxPage(1);
+                    }}
+                    className="admin-form-input w-28 text-xs"
+                  >
+                    <option value={10}>10 / page</option>
+                    <option value={25}>25 / page</option>
+                    <option value={50}>50 / page</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="admin-table-wrapper">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Client Telegram</th>
+                      <th>Produit</th>
+                      <th>Code / Info</th>
+                      <th>Prix</th>
+                      <th>Statut</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedTx.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-8 text-white/30 text-xs">
+                          Aucun achat enregistré
+                        </td>
+                      </tr>
+                    ) : (
+                      pagedTx.map((tx) => (
+                        <tr key={tx.id}>
+                          <td className="font-mono text-white/60">#{tx.id}</td>
+                          <td className="font-mono text-primary">{tx.userId}</td>
+                          <td className="font-semibold text-white">{tx.brand}</td>
+                          <td className="font-mono text-xs text-white/60">{tx.code}</td>
+                          <td className="font-bold text-emerald-400">{tx.price.toFixed(2)} €</td>
+                          <td>
+                            <span className="admin-badge admin-badge-success">{tx.status || "Validé"}</span>
+                          </td>
+                          <td className="text-white/50">{tx.createdAt}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-between items-center mt-5 pt-4 border-t border-white/[0.06] text-xs text-white/60">
+                <span>
+                  Affichage {pagedTx.length > 0 ? (txPage - 1) * txPerPage + 1 : 0} à {Math.min(txPage * txPerPage, filteredTx.length)} sur {filteredTx.length} achat(s)
+                </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={txPage <= 1}
+                    onClick={() => setTxPage(p => Math.max(1, p - 1))}
+                    className="admin-action-btn disabled:opacity-40"
+                  >
+                    ◀ Précédent
+                  </button>
+                  <span className="font-bold text-white">Page {txPage} / {totalTxPages}</span>
+                  <button
+                    type="button"
+                    disabled={txPage >= totalTxPages}
+                    onClick={() => setTxPage(p => Math.min(totalTxPages, p + 1))}
+                    className="admin-action-btn disabled:opacity-40"
+                  >
+                    Suivant ▶
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "docs" && (
+          <div className="fade-in space-y-6">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="admin-card-panel mb-0 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-white">RIB Bancaires</span>
+                  <span className="admin-badge admin-badge-success">17 Banques</span>
+                </div>
+                <div className="text-xs text-white/50">Banques Physiques & Néobanques</div>
+              </div>
+
+              <div className="admin-card-panel mb-0 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-white">Fiches de Paie</span>
+                  <span className="admin-badge admin-badge-success">Actif</span>
+                </div>
+                <div className="text-xs text-white/50">Bulletins 1 à 12 mois</div>
+              </div>
+
+              <div className="admin-card-panel mb-0 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-white">Relevés Bancaires</span>
+                  <span className="admin-badge admin-badge-success">LBP Actif</span>
+                </div>
+                <div className="text-xs text-white/50">Comptes CCP & Livrets</div>
+              </div>
+
+              <div className="admin-card-panel mb-0 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-white">Factures Officielles</span>
+                  <span className="admin-badge admin-badge-success">18 Modèles</span>
+                </div>
+                <div className="text-xs text-white/50">Luxe, Commerce & Énergie</div>
+              </div>
+
+              <div className="admin-card-panel mb-0 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-white">Attestations</span>
+                  <span className="admin-badge admin-badge-success">Actif</span>
+                </div>
+                <div className="text-xs text-white/50">Maxance, AXA, Conduite</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "system" && (
+          <div className="fade-in space-y-6 max-w-4xl">
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Mode Maintenance Général</h2>
+                <span className={`admin-badge ${maintenance ? "admin-badge-danger" : "admin-badge-success"}`}>
+                  {maintenance ? "Mode Maintenance Actif" : "Mode Normal"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-white/60">
+                  Activer ou désactiver la maintenance générale de la boutique et du bot Telegram.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleToggleMaintenance}
+                  className={`w-14 h-7 rounded-full transition-colors relative p-1 ${
+                    maintenance ? "bg-rose-500" : "bg-white/10"
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                      maintenance ? "translate-x-7" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Comptes SumUp (CB)</h2>
+              </div>
+              <form onSubmit={handleSaveSumup} className="space-y-5">
+                <p className="text-xs text-white/50">
+                  Les deux banques doivent être configurées en base. Coche celle utilisée pour les paiements CB.
+                </p>
+                <div>
+                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Expiration facture (minutes)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={sumupExpiration}
+                    onChange={(e) => setSumupExpiration(e.target.value)}
+                    className="admin-form-input max-w-xs"
+                    required
+                  />
+                  <span className="text-[11px] text-white/40 block mt-1">
+                    Durée de validité du lien CB SumUp. Stockée en table (<code>settings.payments.expirationMinutes</code>).
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
+                    <input
+                      type="radio"
+                      name="sumup-active"
+                      value="sumup"
+                      checked={sumupActive === "sumup"}
+                      onChange={() => setSumupActive("sumup")}
+                      className="accent-[#6366f1]"
+                    />
+                    <span>Banque 1 active</span>
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Nom</label>
+                      <input
+                        type="text"
+                        value={sumup1.name}
+                        onChange={(e) => setSumup1({ ...sumup1, name: e.target.value })}
+                        placeholder="Nom d'affichage"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Email marchand</label>
+                      <input
+                        type="text"
+                        value={sumup1.pay_to_email}
+                        onChange={(e) => setSumup1({ ...sumup1, pay_to_email: e.target.value })}
+                        placeholder="pay_to_email"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-white/50 mb-1">API Key</label>
+                    <input
+                      type="text"
+                      value={sumup1.api_key}
+                      onChange={(e) => setSumup1({ ...sumup1, api_key: e.target.value })}
+                      placeholder="api_key"
+                      className="admin-form-input text-xs"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Client ID</label>
+                      <input
+                        type="text"
+                        value={sumup1.client_id}
+                        onChange={(e) => setSumup1({ ...sumup1, client_id: e.target.value })}
+                        placeholder="client_id"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Client Secret</label>
+                      <input
+                        type="text"
+                        value={sumup1.client_secret}
+                        onChange={(e) => setSumup1({ ...sumup1, client_secret: e.target.value })}
+                        placeholder="client_secret"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
+                    <input
+                      type="radio"
+                      name="sumup-active"
+                      value="sumup_bank2"
+                      checked={sumupActive === "sumup_bank2"}
+                      onChange={() => setSumupActive("sumup_bank2")}
+                      className="accent-[#6366f1]"
+                    />
+                    <span>Banque 2 active</span>
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Nom</label>
+                      <input
+                        type="text"
+                        value={sumup2.name}
+                        onChange={(e) => setSumup2({ ...sumup2, name: e.target.value })}
+                        placeholder="Nom d'affichage"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Email marchand</label>
+                      <input
+                        type="text"
+                        value={sumup2.pay_to_email}
+                        onChange={(e) => setSumup2({ ...sumup2, pay_to_email: e.target.value })}
+                        placeholder="pay_to_email"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-white/50 mb-1">API Key</label>
+                    <input
+                      type="text"
+                      value={sumup2.api_key}
+                      onChange={(e) => setSumup2({ ...sumup2, api_key: e.target.value })}
+                      placeholder="api_key"
+                      className="admin-form-input text-xs"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Client ID</label>
+                      <input
+                        type="text"
+                        value={sumup2.client_id}
+                        onChange={(e) => setSumup2({ ...sumup2, client_id: e.target.value })}
+                        placeholder="client_id"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-white/50 mb-1">Client Secret</label>
+                      <input
+                        type="text"
+                        value={sumup2.client_secret}
+                        onChange={(e) => setSumup2({ ...sumup2, client_secret: e.target.value })}
+                        placeholder="client_secret"
+                        className="admin-form-input text-xs"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button type="submit" className="admin-btn-primary">
+                  Enregistrer SumUp
+                </button>
+              </form>
+            </div>
+
             <div className="admin-card-panel">
               <div className="admin-card-panel-header">
                 <h2 className="admin-card-panel-title">Tarifs IPTV & Configuration API</h2>
@@ -1401,7 +1942,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                           <div>
                             <label className="block text-[11px] text-white/50 mb-1">Mot de passe</label>
                             <input
-                              type="text"
+                              type="password"
                               value={acc.password}
                               onChange={(e) => {
                                 const val = e.target.value;
@@ -1445,259 +1986,6 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
                 <button type="submit" className="admin-btn-primary">
                   Enregistrer la Configuration IPTV
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "docs" && (
-          <div className="fade-in space-y-6">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="admin-card-panel mb-0 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-white">RIB Bancaires</span>
-                  <span className="admin-badge admin-badge-success">17 Banques</span>
-                </div>
-                <div className="text-xs text-white/50">Banques Physiques & Néobanques</div>
-              </div>
-
-              <div className="admin-card-panel mb-0 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-white">Fiches de Paie</span>
-                  <span className="admin-badge admin-badge-success">Actif</span>
-                </div>
-                <div className="text-xs text-white/50">Bulletins 1 à 12 mois</div>
-              </div>
-
-              <div className="admin-card-panel mb-0 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-white">Relevés Bancaires</span>
-                  <span className="admin-badge admin-badge-success">LBP Actif</span>
-                </div>
-                <div className="text-xs text-white/50">Comptes CCP & Livrets</div>
-              </div>
-
-              <div className="admin-card-panel mb-0 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-white">Factures Officielles</span>
-                  <span className="admin-badge admin-badge-success">18 Modèles</span>
-                </div>
-                <div className="text-xs text-white/50">Luxe, Commerce & Énergie</div>
-              </div>
-
-              <div className="admin-card-panel mb-0 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-white">Attestations</span>
-                  <span className="admin-badge admin-badge-success">Actif</span>
-                </div>
-                <div className="text-xs text-white/50">Maxance, AXA, Conduite</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "system" && (
-          <div className="fade-in space-y-6 max-w-4xl">
-            <div className="admin-card-panel">
-              <div className="admin-card-panel-header">
-                <h2 className="admin-card-panel-title">Mode Maintenance Général</h2>
-                <span className={`admin-badge ${maintenance ? "admin-badge-danger" : "admin-badge-success"}`}>
-                  {maintenance ? "Mode Maintenance Actif" : "Mode Normal"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-white/60">
-                  Activer ou désactiver la maintenance générale de la boutique et du bot Telegram.
-                </span>
-                <button
-                  type="button"
-                  onClick={handleToggleMaintenance}
-                  className={`w-14 h-7 rounded-full transition-colors relative p-1 ${
-                    maintenance ? "bg-rose-500" : "bg-white/10"
-                  }`}
-                >
-                  <div
-                    className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                      maintenance ? "translate-x-7" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-
-            <div className="admin-card-panel">
-              <div className="admin-card-panel-header">
-                <h2 className="admin-card-panel-title">Comptes SumUp (CB)</h2>
-              </div>
-              <form onSubmit={handleSaveSumup} className="space-y-5">
-                <p className="text-xs text-white/50">
-                  Les deux banques doivent être configurées en base. Coche celle utilisée pour les paiements CB.
-                </p>
-                <div>
-                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Expiration facture (minutes)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={sumupExpiration}
-                    onChange={(e) => setSumupExpiration(e.target.value)}
-                    className="admin-form-input max-w-xs"
-                    required
-                  />
-                  <span className="text-[11px] text-white/40 block mt-1">
-                    Durée de validité du lien CB SumUp. Stockée en table (<code>settings.payments.expirationMinutes</code>).
-                  </span>
-                </div>
-
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-3">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
-                    <input
-                      type="radio"
-                      name="sumup-active"
-                      value="sumup"
-                      checked={sumupActive === "sumup"}
-                      onChange={() => setSumupActive("sumup")}
-                      className="accent-[#6366f1]"
-                    />
-                    <span>Banque 1 active</span>
-                  </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Nom</label>
-                      <input
-                        type="text"
-                        value={sumup1.name}
-                        onChange={(e) => setSumup1({ ...sumup1, name: e.target.value })}
-                        placeholder="Nom d'affichage"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Email marchand</label>
-                      <input
-                        type="text"
-                        value={sumup1.pay_to_email}
-                        onChange={(e) => setSumup1({ ...sumup1, pay_to_email: e.target.value })}
-                        placeholder="pay_to_email"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-white/50 mb-1">API Key</label>
-                    <input
-                      type="text"
-                      value={sumup1.api_key}
-                      onChange={(e) => setSumup1({ ...sumup1, api_key: e.target.value })}
-                      placeholder="api_key"
-                      className="admin-form-input text-xs"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Client ID</label>
-                      <input
-                        type="text"
-                        value={sumup1.client_id}
-                        onChange={(e) => setSumup1({ ...sumup1, client_id: e.target.value })}
-                        placeholder="client_id"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Client Secret</label>
-                      <input
-                        type="text"
-                        value={sumup1.client_secret}
-                        onChange={(e) => setSumup1({ ...sumup1, client_secret: e.target.value })}
-                        placeholder="client_secret"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-3">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
-                    <input
-                      type="radio"
-                      name="sumup-active"
-                      value="sumup_bank2"
-                      checked={sumupActive === "sumup_bank2"}
-                      onChange={() => setSumupActive("sumup_bank2")}
-                      className="accent-[#6366f1]"
-                    />
-                    <span>Banque 2 active</span>
-                  </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Nom</label>
-                      <input
-                        type="text"
-                        value={sumup2.name}
-                        onChange={(e) => setSumup2({ ...sumup2, name: e.target.value })}
-                        placeholder="Nom d'affichage"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Email marchand</label>
-                      <input
-                        type="text"
-                        value={sumup2.pay_to_email}
-                        onChange={(e) => setSumup2({ ...sumup2, pay_to_email: e.target.value })}
-                        placeholder="pay_to_email"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-white/50 mb-1">API Key</label>
-                    <input
-                      type="text"
-                      value={sumup2.api_key}
-                      onChange={(e) => setSumup2({ ...sumup2, api_key: e.target.value })}
-                      placeholder="api_key"
-                      className="admin-form-input text-xs"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Client ID</label>
-                      <input
-                        type="text"
-                        value={sumup2.client_id}
-                        onChange={(e) => setSumup2({ ...sumup2, client_id: e.target.value })}
-                        placeholder="client_id"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Client Secret</label>
-                      <input
-                        type="text"
-                        value={sumup2.client_secret}
-                        onChange={(e) => setSumup2({ ...sumup2, client_secret: e.target.value })}
-                        placeholder="client_secret"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <button type="submit" className="admin-btn-primary">
-                  Enregistrer SumUp
                 </button>
               </form>
             </div>

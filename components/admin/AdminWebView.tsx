@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Shield, 
   LayoutDashboard, 
@@ -8,11 +8,15 @@ import {
   Package, 
   FileText, 
   Settings, 
-  TrendingUp, 
   LogOut, 
   RefreshCw, 
   Search,
-  Tv
+  CheckCircle2,
+  Tv,
+  ArrowRight,
+  TrendingUp,
+  CreditCard,
+  X
 } from "lucide-react";
 import { useToast } from "@/components/NotificationToast";
 
@@ -22,7 +26,7 @@ interface AdminWebViewProps {
   onLogout: () => void;
 }
 
-type AdminWebTab = "dashboard" | "users" | "stock" | "docs" | "system";
+type AdminWebTab = "dashboard" | "users" | "services" | "docs" | "system";
 
 interface AdminStats {
   users_count: number;
@@ -30,6 +34,24 @@ interface AdminStats {
   payments_volume: number;
   generations_count: number;
   timestamp: string;
+}
+
+interface MockUser {
+  id: string;
+  username: string;
+  balance: number;
+  ordersCount: number;
+  isBanned: boolean;
+  registeredAt: string;
+}
+
+interface MockTransaction {
+  id: string;
+  userId: string;
+  service: string;
+  amount: number;
+  status: "completed" | "pending";
+  date: string;
 }
 
 /* ===================================================================== */
@@ -41,6 +63,40 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const [activeBank, setActiveBank] = useState<string>("bank2");
   const [maintenance, setMaintenance] = useState<boolean>(false);
+
+  const [userSearch, setUserSearch] = useState<string>("");
+  const [userPage, setUserPage] = useState<number>(1);
+  const [usersPerPage, setUsersPerPage] = useState<number>(10);
+
+  const [txSearch, setTxSearch] = useState<string>("");
+  const [txPage, setTxPage] = useState<number>(1);
+  const [txPerPage, setTxPerPage] = useState<number>(10);
+
+  const [stockInput, setStockInput] = useState<string>("");
+  const [carrefourStock, setCarrefourStock] = useState<Array<{ id: number; code: string; pin: string; val: number; price: number }>>([
+    { id: 1, code: "9876543210125", pin: "4321", val: 50, price: 25 },
+    { id: 2, code: "9876543210126", pin: "8899", val: 100, price: 50 },
+    { id: 3, code: "9876543210127", pin: "1122", val: 20, price: 10 },
+  ]);
+
+  const [usersList, setUsersList] = useState<MockUser[]>([
+    { id: "148920194", username: "alex_dev", balance: 45.0, ordersCount: 6, isBanned: false, registeredAt: "24/09/2026 14:22" },
+    { id: "591029412", username: "thomas_b", balance: 0.0, ordersCount: 1, isBanned: false, registeredAt: "23/09/2026 19:05" },
+    { id: "882910394", username: "karim93", balance: 120.0, ordersCount: 14, isBanned: false, registeredAt: "22/09/2026 11:40" },
+    { id: "339102491", username: "julie_m", balance: 12.5, ordersCount: 2, isBanned: false, registeredAt: "21/09/2026 09:15" },
+    { id: "772910481", username: "spam_bot_test", balance: 0.0, ordersCount: 0, isBanned: true, registeredAt: "20/09/2026 23:59" },
+  ]);
+
+  const [transactionsList] = useState<MockTransaction[]>([
+    { id: "TX-9041", userId: "148920194", service: "Recharge SumUp CB", amount: 20.0, status: "completed", date: "25/09/2026 16:40" },
+    { id: "TX-9040", userId: "882910394", service: "Génération RIB LBP", amount: 3.0, status: "completed", date: "25/09/2026 15:12" },
+    { id: "TX-9039", userId: "882910394", service: "Fiche de Paie (3 mois)", amount: 20.0, status: "completed", date: "25/09/2026 14:05" },
+    { id: "TX-9038", userId: "339102491", service: "Carte Carrefour 20€", amount: 10.0, status: "completed", date: "24/09/2026 21:30" },
+    { id: "TX-9037", userId: "591029412", service: "Recharge SumUp CB", amount: 15.0, status: "completed", date: "24/09/2026 18:02" },
+  ]);
+
+  const [activeModalUser, setActiveModalUser] = useState<MockUser | null>(null);
+  const [balanceAmount, setBalanceAmount] = useState<string>("");
 
   /* ===================================================================== */
 
@@ -70,66 +126,146 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
   /* ===================================================================== */
 
+  const filteredUsers = useMemo(() => {
+    if (!userSearch.trim()) return usersList;
+    const query = userSearch.toLowerCase();
+    return usersList.filter(u => 
+      u.id.toLowerCase().includes(query) || 
+      u.username.toLowerCase().includes(query)
+    );
+  }, [usersList, userSearch]);
+
+  const pagedUsers = useMemo(() => {
+    const start = (userPage - 1) * usersPerPage;
+    return filteredUsers.slice(start, start + usersPerPage);
+  }, [filteredUsers, userPage, usersPerPage]);
+
+  const totalUserPages = Math.max(1, Math.ceil(filteredUsers.length / usersPerPage));
+
+  /* ===================================================================== */
+
+  const filteredTx = useMemo(() => {
+    if (!txSearch.trim()) return transactionsList;
+    const query = txSearch.toLowerCase();
+    return transactionsList.filter(t => 
+      t.id.toLowerCase().includes(query) || 
+      t.userId.toLowerCase().includes(query) ||
+      t.service.toLowerCase().includes(query)
+    );
+  }, [transactionsList, txSearch]);
+
+  const pagedTx = useMemo(() => {
+    const start = (txPage - 1) * txPerPage;
+    return filteredTx.slice(start, start + txPerPage);
+  }, [filteredTx, txPage, txPerPage]);
+
+  const totalTxPages = Math.max(1, Math.ceil(filteredTx.length / txPerPage));
+
+  /* ===================================================================== */
+
+  const handleApplyBalance = (delta: number) => {
+    if (!activeModalUser) return;
+    const val = parseFloat(balanceAmount);
+    if (isNaN(val) || val <= 0) {
+      toast.error("Veuillez saisir un montant valide");
+      return;
+    }
+
+    setUsersList(prev => prev.map(u => {
+      if (u.id === activeModalUser.id) {
+        const updated = Math.max(0, u.balance + (delta * val));
+        return { ...u, balance: updated };
+      }
+      return u;
+    }));
+
+    toast.success(`Solde de @${activeModalUser.username} mis à jour`);
+    setActiveModalUser(null);
+    setBalanceAmount("");
+  };
+
+  const handleToggleBan = (userId: string) => {
+    setUsersList(prev => prev.map(u => {
+      if (u.id === userId) {
+        const nextState = !u.isBanned;
+        if (nextState) toast.error(`Utilisateur ${u.id} banni`);
+        else toast.success(`Utilisateur ${u.id} débanni`);
+        return { ...u, isBanned: nextState };
+      }
+      return u;
+    }));
+  };
+
+  const handleImportStock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stockInput.trim()) return;
+
+    const lines = stockInput.trim().split("\n");
+    let count = 0;
+    const newItems: Array<{ id: number; code: string; pin: string; val: number; price: number }> = [];
+
+    for (const rawLine of lines) {
+      const parts = rawLine.trim().split("|");
+      if (parts.length >= 3) {
+        const code = parts[0].trim();
+        const pin = parts.length >= 4 ? parts[1].trim() : "0000";
+        const val = parseFloat(parts.length >= 4 ? parts[2] : parts[1]) || 0;
+        const price = parseFloat(parts.length >= 4 ? parts[3] : parts[2]) || 0;
+        newItems.push({
+          id: Date.now() + count,
+          code,
+          pin,
+          val,
+          price
+        });
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      setCarrefourStock(prev => [...newItems, ...prev]);
+      setStockInput("");
+      toast.success(`${count} carte(s) Carrefour importée(s)`);
+    } else {
+      toast.error("Format invalide. Utilisez CODE|PIN|VALEUR|PRIX");
+    }
+  };
+
+  /* ===================================================================== */
+
   return (
-    <div className="min-h-screen bg-[#07090e] text-white flex flex-col font-sans">
-      <header className="h-16 border-b border-white/[0.08] bg-[#0c0e17]/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary to-sky-400 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-primary/20">
-            <Shield size={20} />
+    <div className="admin-layout">
+      <aside className="admin-sidebar">
+        <div className="admin-sidebar-header">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#6366f1] to-[#a855f7] flex items-center justify-center text-white font-black shadow-lg shadow-[#6366f1]/25 text-base">
+            ⚡
           </div>
-          <div>
-            <h1 className="text-sm font-black tracking-wider uppercase text-white">ChezRheyy Admin</h1>
-          </div>
+          <span className="admin-sidebar-brand">ChezRheyy Admin</span>
         </div>
 
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={onLogout}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-rose-500/20 hover:border-rose-500/30 hover:text-rose-400 text-white/70 text-xs font-bold transition-colors"
-          >
-            <LogOut size={14} />
-            <span>Déconnexion</span>
-          </button>
-        </div>
-      </header>
-
-      <div className="flex-1 flex">
-        <aside className="w-64 border-r border-white/[0.08] bg-[#090b12] p-4 flex flex-col gap-2 shrink-0">
+        <nav className="admin-nav-menu">
           <button
             type="button"
             onClick={() => setActiveTab("dashboard")}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              activeTab === "dashboard"
-                ? "bg-primary text-slate-950 shadow-lg shadow-primary/20 font-black"
-                : "text-white/60 hover:text-white hover:bg-white/5"
-            }`}
+            className={`admin-nav-item ${activeTab === "dashboard" ? "active" : ""}`}
           >
             <LayoutDashboard size={16} />
-            <span>Tableau de bord</span>
+            <span>Vue d'Ensemble</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("users")}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              activeTab === "users"
-                ? "bg-primary text-slate-950 shadow-lg shadow-primary/20 font-black"
-                : "text-white/60 hover:text-white hover:bg-white/5"
-            }`}
+            className={`admin-nav-item ${activeTab === "users" ? "active" : ""}`}
           >
             <Users size={16} />
-            <span>Utilisateurs & Soldes</span>
+            <span>Utilisateurs</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveTab("stock")}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              activeTab === "stock"
-                ? "bg-primary text-slate-950 shadow-lg shadow-primary/20 font-black"
-                : "text-white/60 hover:text-white hover:bg-white/5"
-            }`}
+            onClick={() => setActiveTab("services")}
+            className={`admin-nav-item ${activeTab === "services" ? "active" : ""}`}
           >
             <Package size={16} />
             <span>Services</span>
@@ -138,237 +274,594 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           <button
             type="button"
             onClick={() => setActiveTab("docs")}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              activeTab === "docs"
-                ? "bg-primary text-slate-950 shadow-lg shadow-primary/20 font-black"
-                : "text-white/60 hover:text-white hover:bg-white/5"
-            }`}
+            className={`admin-nav-item ${activeTab === "docs" ? "active" : ""}`}
           >
             <FileText size={16} />
-            <span>Générateurs de Docs</span>
+            <span>Générateurs Docs</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("system")}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              activeTab === "system"
-                ? "bg-primary text-slate-950 shadow-lg shadow-primary/20 font-black"
-                : "text-white/60 hover:text-white hover:bg-white/5"
-            }`}
+            className={`admin-nav-item ${activeTab === "system" ? "active" : ""}`}
           >
             <Settings size={16} />
-            <span>Système & Passerelles</span>
+            <span>Configuration</span>
           </button>
-        </aside>
+        </nav>
 
-        <main className="flex-1 p-8 overflow-y-auto max-w-7xl">
-          {activeTab === "dashboard" && (
-            <div className="space-y-6 fade-in">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-black text-white">Métriques</h2>
+        <div className="admin-sidebar-footer">
+          <button
+            type="button"
+            onClick={onLogout}
+            className="admin-btn-logout"
+          >
+            <LogOut size={14} />
+            <span>Déconnexion</span>
+          </button>
+        </div>
+      </aside>
+
+      <main className="admin-main-content">
+        <header className="admin-header-bar">
+          <div>
+            <h1 className="admin-page-title">
+              {activeTab === "dashboard" && "Vue d'Ensemble"}
+              {activeTab === "users" && "Gestion des Utilisateurs"}
+              {activeTab === "services" && "Services & Stocks"}
+              {activeTab === "docs" && "Générateurs de Documents"}
+              {activeTab === "system" && "Configuration Système"}
+            </h1>
+            <p className="admin-page-subtitle">
+              {activeTab === "dashboard" && "Statistiques consolidées et flux récents"}
+              {activeTab === "users" && "Consultation des profils, ajustement des soldes et modération"}
+              {activeTab === "services" && "Gestion des cartes Carrefour et abonnements IPTV"}
+              {activeTab === "docs" && "Supervision des 5 modules documentaires officiels"}
+              {activeTab === "system" && "Passerelles bancaires SumUp et maintenance générale"}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className={`admin-badge ${maintenance ? "admin-badge-danger" : "admin-badge-success"}`}>
+              <span className={`w-2 h-2 rounded-full ${maintenance ? "bg-rose-400" : "bg-emerald-400"} animate-pulse`} />
+              {maintenance ? "Mode Maintenance" : "Système Opérationnel"}
+            </span>
+
+            <button
+              type="button"
+              onClick={fetchStats}
+              className="admin-action-btn"
+            >
+              <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+              <span>Actualiser</span>
+            </button>
+          </div>
+        </header>
+
+        {activeTab === "dashboard" && (
+          <div className="fade-in space-y-6">
+            <div className="admin-stats-grid">
+              <div 
+                className="admin-stat-card admin-stat-card-interactive"
+                onClick={() => setActiveTab("dashboard")}
+              >
+                <div className="admin-stat-icon" style={{ background: "rgba(99, 102, 241, 0.15)", color: "#6366f1" }}>
+                  💶
                 </div>
-                <button
-                  type="button"
-                  onClick={fetchStats}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:text-white text-xs font-bold"
-                >
-                  <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-                  <span>Actualiser</span>
-                </button>
+                <div>
+                  <div className="admin-stat-val">
+                    {loading ? "..." : `${(stats?.payments_volume ?? 0).toFixed(2)} €`}
+                  </div>
+                  <div className="admin-stat-lbl">Chiffre d'Affaires Total</div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-4">
-                <div className="bg-[#0f121d] rounded-2xl p-5 border border-white/[0.08]">
-                  <div className="flex items-center justify-between text-white/40 mb-3">
-                    <span className="text-xs font-black uppercase tracking-wider">Clients</span>
-                    <Users size={16} className="text-sky-400" />
+              <div 
+                className="admin-stat-card admin-stat-card-interactive"
+                onClick={() => setActiveTab("dashboard")}
+              >
+                <div className="admin-stat-icon" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981" }}>
+                  🛒
+                </div>
+                <div>
+                  <div className="admin-stat-val">
+                    {loading ? "..." : stats?.payments_count ?? 0}
                   </div>
-                  <div className="text-3xl font-black text-white">
+                  <div className="admin-stat-lbl">Paiements Validés</div>
+                </div>
+              </div>
+
+              <div 
+                className="admin-stat-card admin-stat-card-interactive"
+                onClick={() => setActiveTab("users")}
+              >
+                <div className="admin-stat-icon" style={{ background: "rgba(245, 158, 11, 0.15)", color: "#f59e0b" }}>
+                  👥
+                </div>
+                <div>
+                  <div className="admin-stat-val">
                     {loading ? "..." : stats?.users_count ?? 0}
                   </div>
+                  <div className="admin-stat-lbl">Clients Enregistrés</div>
                 </div>
+              </div>
 
-                <div className="bg-[#0f121d] rounded-2xl p-5 border border-white/[0.08]">
-                  <div className="flex items-center justify-between text-white/40 mb-3">
-                    <span className="text-xs font-black uppercase tracking-wider">Recharges</span>
-                    <TrendingUp size={16} className="text-emerald-400" />
-                  </div>
-                  <div className="text-3xl font-black text-white">
-                    {loading ? "..." : `${(stats?.payments_volume ?? 0).toFixed(2)}€`}
-                  </div>
-                  <p className="text-[11px] text-emerald-400 font-bold mt-2">
-                    {stats?.payments_count ?? 0} paiements
-                  </p>
+              <div 
+                className="admin-stat-card admin-stat-card-interactive"
+                onClick={() => setActiveTab("docs")}
+              >
+                <div className="admin-stat-icon" style={{ background: "rgba(14, 165, 233, 0.15)", color: "#0ea5e9" }}>
+                  📄
                 </div>
-
-                <div className="bg-[#0f121d] rounded-2xl p-5 border border-white/[0.08]">
-                  <div className="flex items-center justify-between text-white/40 mb-3">
-                    <span className="text-xs font-black uppercase tracking-wider">Documents</span>
-                    <FileText size={16} className="text-amber-400" />
-                  </div>
-                  <div className="text-3xl font-black text-white">
+                <div>
+                  <div className="admin-stat-val">
                     {loading ? "..." : stats?.generations_count ?? 0}
                   </div>
+                  <div className="admin-stat-lbl">Documents Produits</div>
                 </div>
+              </div>
 
-                <div className="bg-[#0f121d] rounded-2xl p-5 border border-white/[0.08]">
-                  <div className="flex items-center justify-between text-white/40 mb-3">
-                    <span className="text-xs font-black uppercase tracking-wider">Services</span>
-                    <Package size={16} className="text-violet-400" />
-                  </div>
-                  <div className="text-3xl font-black text-white">Carrefour / IPTV</div>
+              <div 
+                className="admin-stat-card admin-stat-card-interactive"
+                onClick={() => setActiveTab("services")}
+              >
+                <div className="admin-stat-icon" style={{ background: "rgba(168, 85, 247, 0.15)", color: "#a855f7" }}>
+                  📦
+                </div>
+                <div>
+                  <div className="admin-stat-val">Carrefour / IPTV</div>
+                  <div className="admin-stat-lbl">Services Actifs</div>
                 </div>
               </div>
             </div>
-          )}
 
-          {activeTab === "users" && (
-            <div className="space-y-6 fade-in">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-black text-white">Utilisateurs</h2>
-                </div>
-                <div className="relative w-80">
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Dernières Activités Enregistrées</h2>
+                <div className="relative w-72">
                   <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
                   <input
                     type="text"
-                    placeholder="Filtrer par ID Telegram ou @pseudo..."
-                    className="w-full bg-[#0f121d] border border-white/[0.08] rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50"
+                    value={txSearch}
+                    onChange={(e) => {
+                      setTxSearch(e.target.value);
+                      setTxPage(1);
+                    }}
+                    placeholder="Rechercher ID, Service..."
+                    className="admin-form-input pl-9"
                   />
                 </div>
               </div>
 
-              <div className="bg-[#0f121d] rounded-2xl p-8 border border-white/[0.08] text-center space-y-3">
-                <Users size={40} className="mx-auto text-primary/40" />
-                <h3 className="text-sm font-black text-white">Module Utilisateurs</h3>
-                <p className="text-xs text-white/40 max-w-md mx-auto">
-                  Consultation des comptes, crédits/débits et modération.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "stock" && (
-            <div className="space-y-6 fade-in">
-              <div>
-                <h2 className="text-xl font-black text-white">Services</h2>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="bg-[#0f121d] rounded-2xl p-6 border border-white/[0.08] space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Package size={20} className="text-primary" />
-                    <div>
-                      <h3 className="text-sm font-black text-white">Stock Carrefour</h3>
-                    </div>
-                  </div>
-                  <p className="text-xs text-white/60">
-                    Schéma d'importation en masse <code className="text-primary font-mono">CODE|PIN|VALEUR|PRIX</code>.
-                  </p>
-                </div>
-
-                <div className="bg-[#0f121d] rounded-2xl p-6 border border-white/[0.08] space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Tv size={20} className="text-sky-400" />
-                    <div>
-                      <h3 className="text-sm font-black text-white">Services IPTV</h3>
-                    </div>
-                  </div>
-                  <p className="text-xs text-white/60">
-                    Lignes Xtream et quota de démos.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "docs" && (
-            <div className="space-y-6 fade-in">
-              <div>
-                <h2 className="text-xl font-black text-white">Générateurs de Documents</h2>
+              <div className="admin-table-wrapper">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>ID Transaction</th>
+                      <th>Client Telegram</th>
+                      <th>Service</th>
+                      <th>Montant</th>
+                      <th>Statut</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedTx.map((tx) => (
+                      <tr key={tx.id}>
+                        <td className="font-mono text-white/80">{tx.id}</td>
+                        <td className="font-mono text-primary">{tx.userId}</td>
+                        <td className="font-semibold text-white">{tx.service}</td>
+                        <td className="font-bold text-emerald-400">{tx.amount.toFixed(2)} €</td>
+                        <td>
+                          <span className="admin-badge admin-badge-success">Validé</span>
+                        </td>
+                        <td className="text-white/50">{tx.date}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
-              <div className="bg-[#0f121d] rounded-2xl p-8 border border-white/[0.08] text-center space-y-3">
-                <FileText size={40} className="mx-auto text-primary/40" />
-                <h3 className="text-sm font-black text-white">Générateurs Raccordés</h3>
-                <p className="text-xs text-white/40 max-w-md mx-auto">
-                  RIB, Fiches de paie, Relevés, Factures et Assurances.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "system" && (
-            <div className="space-y-6 fade-in">
-              <div>
-                <h2 className="text-xl font-black text-white">Système & Passerelles</h2>
-              </div>
-
-              <div className="bg-[#0f121d] rounded-2xl p-6 border border-white/[0.08] space-y-6 max-w-2xl">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-black text-white">Compte d'Encaissement SumUp Actif</h3>
-                  </div>
-                  <div className="flex rounded-xl bg-white/5 p-1 border border-white/10">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveBank("bank1");
-                        toast.success("Banque 1 activée");
-                      }}
-                      className={`px-4 py-1.5 rounded-lg text-xs font-bold ${
-                        activeBank === "bank1" ? "bg-primary text-slate-950 font-black" : "text-white/50"
-                      }`}
-                    >
-                      Banque 1
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveBank("bank2");
-                        toast.success("Banque 2 activée");
-                      }}
-                      className={`px-4 py-1.5 rounded-lg text-xs font-bold ${
-                        activeBank === "bank2" ? "bg-primary text-slate-950 font-black" : "text-white/50"
-                      }`}
-                    >
-                      Banque 2
-                    </button>
-                  </div>
-                </div>
-
-                <div className="h-px bg-white/[0.06]" />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-black text-white">Mode Maintenance Général</h3>
-                  </div>
+              <div className="flex justify-between items-center mt-5 pt-4 border-t border-white/[0.06] text-xs text-white/60">
+                <span>
+                  Affichage {pagedTx.length > 0 ? (txPage - 1) * txPerPage + 1 : 0} à {Math.min(txPage * txPerPage, filteredTx.length)} sur {filteredTx.length} activité(s)
+                </span>
+                <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => {
-                      const newState = !maintenance;
-                      setMaintenance(newState);
-                      if (newState) toast.error("Mode maintenance activé");
-                      else toast.success("Mode maintenance désactivé");
-                    }}
-                    className={`w-14 h-7 rounded-full transition-colors relative p-1 ${
-                      maintenance ? "bg-rose-500" : "bg-white/10"
-                    }`}
+                    disabled={txPage <= 1}
+                    onClick={() => setTxPage(p => Math.max(1, p - 1))}
+                    className="admin-action-btn disabled:opacity-40"
                   >
-                    <div
-                      className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                        maintenance ? "translate-x-7" : "translate-x-0"
-                      }`}
-                    />
+                    ◀ Précédent
+                  </button>
+                  <span className="font-bold text-white">Page {txPage} / {totalTxPages}</span>
+                  <button
+                    type="button"
+                    disabled={txPage >= totalTxPages}
+                    onClick={() => setTxPage(p => Math.min(totalTxPages, p + 1))}
+                    className="admin-action-btn disabled:opacity-40"
+                  >
+                    Suivant ▶
                   </button>
                 </div>
               </div>
             </div>
-          )}
-        </main>
-      </div>
+          </div>
+        )}
+
+        {activeTab === "users" && (
+          <div className="fade-in space-y-6">
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Comptes Clients Telegram</h2>
+                <div className="relative w-80">
+                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+                  <input
+                    type="text"
+                    value={userSearch}
+                    onChange={(e) => {
+                      setUserSearch(e.target.value);
+                      setUserPage(1);
+                    }}
+                    placeholder="Filtrer par ID Telegram ou @pseudo..."
+                    className="admin-form-input pl-9"
+                  />
+                </div>
+              </div>
+
+              <div className="admin-table-wrapper">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>ID Telegram</th>
+                      <th>Pseudo</th>
+                      <th>Solde Actuel</th>
+                      <th>Commandes</th>
+                      <th>Statut</th>
+                      <th>Inscription</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedUsers.map((u) => (
+                      <tr key={u.id}>
+                        <td className="font-mono text-white/80">{u.id}</td>
+                        <td className="font-bold text-white">@{u.username}</td>
+                        <td className="font-bold text-emerald-400">{u.balance.toFixed(2)} €</td>
+                        <td>{u.ordersCount}</td>
+                        <td>
+                          {u.isBanned ? (
+                            <span className="admin-badge admin-badge-danger">Banni</span>
+                          ) : (
+                            <span className="admin-badge admin-badge-success">Actif</span>
+                          )}
+                        </td>
+                        <td className="text-white/50">{u.registeredAt}</td>
+                        <td>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveModalUser(u);
+                                setBalanceAmount("");
+                              }}
+                              className="admin-action-btn"
+                            >
+                              💳 Solde
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleBan(u.id)}
+                              className={`admin-action-btn ${u.isBanned ? "" : "admin-action-btn-danger"}`}
+                            >
+                              {u.isBanned ? "Débannir" : "Bannir"}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-between items-center mt-5 pt-4 border-t border-white/[0.06] text-xs text-white/60">
+                <span>
+                  Affichage {pagedUsers.length > 0 ? (userPage - 1) * usersPerPage + 1 : 0} à {Math.min(userPage * usersPerPage, filteredUsers.length)} sur {filteredUsers.length} utilisateur(s)
+                </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={userPage <= 1}
+                    onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                    className="admin-action-btn disabled:opacity-40"
+                  >
+                    ◀ Précédent
+                  </button>
+                  <span className="font-bold text-white">Page {userPage} / {totalUserPages}</span>
+                  <button
+                    type="button"
+                    disabled={userPage >= totalUserPages}
+                    onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))}
+                    className="admin-action-btn disabled:opacity-40"
+                  >
+                    Suivant ▶
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "services" && (
+          <div className="fade-in space-y-6">
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Ajout de Stock en Masse (Carrefour)</h2>
+              </div>
+              <form onSubmit={handleImportStock} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-white/60 mb-2">
+                    Format : CODE|PIN|VALEUR|PRIX (un code par ligne)
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={stockInput}
+                    onChange={(e) => setStockInput(e.target.value)}
+                    placeholder="9876543210125|4321|50|25&#10;9876543210126|8899|100|50"
+                    className="admin-form-input font-mono text-xs"
+                    required
+                  />
+                </div>
+                <button type="submit" className="admin-btn-primary">
+                  📥 Importer le Stock
+                </button>
+              </form>
+            </div>
+
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Stock Cartes Carrefour Actif ({carrefourStock.length})</h2>
+              </div>
+
+              <div className="admin-table-wrapper">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Code Carte</th>
+                      <th>PIN</th>
+                      <th>Valeur Nominale</th>
+                      <th>Prix Vente</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {carrefourStock.map((item) => (
+                      <tr key={item.id}>
+                        <td className="font-mono text-white/60">#{item.id}</td>
+                        <td className="font-mono font-bold text-white">{item.code}</td>
+                        <td className="font-mono text-white/60">{item.pin}</td>
+                        <td className="font-bold text-emerald-400">{item.val} €</td>
+                        <td className="font-bold text-primary">{item.price} €</td>
+                        <td>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCarrefourStock(prev => prev.filter(c => c.id !== item.id));
+                              toast.success("Carte supprimée");
+                            }}
+                            className="admin-action-btn admin-action-btn-danger"
+                          >
+                            Supprimer
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="admin-card-panel">
+              <div className="admin-card-panel-header">
+                <h2 className="admin-card-panel-title">Services IPTV Xtream</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div className="bg-[#0f121d] p-4 rounded-xl border border-white/[0.06] space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-white">
+                    <Tv size={16} className="text-primary" />
+                    <span>Passerelle Xtream Codes</span>
+                  </div>
+                  <p className="text-white/60">Génération de flux M3U et gestion des lignes actives.</p>
+                  <div className="text-[11px] font-mono text-emerald-400">Statut : Prêt pour raccordement</div>
+                </div>
+                <div className="bg-[#0f121d] p-4 rounded-xl border border-white/[0.06] space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-white">
+                    <Package size={16} className="text-violet-400" />
+                    <span>Gestion des Quotas Démo</span>
+                  </div>
+                  <p className="text-white/60">Attribution de tests 24h gratuits aux nouveaux clients.</p>
+                  <div className="text-[11px] font-mono text-emerald-400">Statut : Configuré</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "docs" && (
+          <div className="fade-in space-y-6">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="admin-card-panel mb-0 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-white">RIB Bancaires</span>
+                  <span className="admin-badge admin-badge-success">17 Banques</span>
+                </div>
+                <p className="text-xs text-white/50">Banques traditionnelles et néobanques avec vérification IBAN/BIC.</p>
+              </div>
+
+              <div className="admin-card-panel mb-0 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-white">Fiches de Paie</span>
+                  <span className="admin-badge admin-badge-success">Actif</span>
+                </div>
+                <p className="text-xs text-white/50">Bulletins de salaires multi-mois (1 à 12 mois) avec cumuls conformes.</p>
+              </div>
+
+              <div className="admin-card-panel mb-0 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-white">Relevés Bancaires</span>
+                  <span className="admin-badge admin-badge-success">LBP Actif</span>
+                </div>
+                <p className="text-xs text-white/50">Relevés de comptes CCP & livrets d'épargne avec continuité des soldes.</p>
+              </div>
+
+              <div className="admin-card-panel mb-0 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-white">Factures Officielles</span>
+                  <span className="admin-badge admin-badge-success">18 Modèles</span>
+                </div>
+                <p className="text-xs text-white/50">Grandes enseignes, boutiques de luxe et fournisseurs d'énergie.</p>
+              </div>
+
+              <div className="admin-card-panel mb-0 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-white">Attestations</span>
+                  <span className="admin-badge admin-badge-success">Actif</span>
+                </div>
+                <p className="text-xs text-white/50">Assurances véhicules (Maxance, AXA) et attestations de conduite.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "system" && (
+          <div className="fade-in space-y-6">
+            <div className="admin-card-panel max-w-2xl space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-white">Compte d'Encaissement SumUp Actif</h3>
+                  <p className="text-xs text-white/50">Bascule instantanée de la passerelle de paiement</p>
+                </div>
+                <div className="flex rounded-xl bg-white/5 p-1 border border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveBank("bank1");
+                      toast.success("Banque 1 activée");
+                    }}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                      activeBank === "bank1" ? "bg-[#6366f1] text-white" : "text-white/50"
+                    }`}
+                  >
+                    Banque 1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveBank("bank2");
+                      toast.success("Banque 2 activée");
+                    }}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                      activeBank === "bank2" ? "bg-[#6366f1] text-white" : "text-white/50"
+                    }`}
+                  >
+                    Banque 2
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-px bg-white/[0.06]" />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-white">Mode Maintenance Général</h3>
+                  <p className="text-xs text-white/50">Suspend les requêtes publiques du bot et de la mini-app</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !maintenance;
+                    setMaintenance(next);
+                    if (next) toast.error("Mode maintenance activé");
+                    else toast.success("Mode maintenance désactivé");
+                  }}
+                  className={`w-14 h-7 rounded-full transition-colors relative p-1 ${
+                    maintenance ? "bg-rose-500" : "bg-white/10"
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                      maintenance ? "translate-x-7" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {activeModalUser && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-modal-box">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.08]">
+              <h3 className="text-base font-bold text-white">
+                Ajuster le Solde (@{activeModalUser.username})
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActiveModalUser(null)}
+                className="text-white/40 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl text-xs">
+                <span className="text-white/60">Solde actuel :</span>
+                <span className="font-bold text-emerald-400 text-sm">
+                  {activeModalUser.balance.toFixed(2)} €
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-white/60 mb-1.5">
+                  Montant en euros (€)
+                </label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={balanceAmount}
+                  onChange={(e) => setBalanceAmount(e.target.value)}
+                  placeholder="Ex : 20.00"
+                  className="admin-form-input text-sm"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleApplyBalance(1)}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold text-xs hover:bg-emerald-500/30 transition-colors"
+                >
+                  ➕ Créditer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyBalance(-1)}
+                  className="flex-1 py-2.5 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400 font-bold text-xs hover:bg-rose-500/30 transition-colors"
+                >
+                  ➖ Débiter
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -73,27 +73,9 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
   const [txPerPage, setTxPerPage] = useState<number>(10);
 
   const [stockInput, setStockInput] = useState<string>("");
-  const [carrefourStock, setCarrefourStock] = useState<Array<{ id: number; code: string; pin: string; val: number; price: number }>>([
-    { id: 1, code: "9876543210125", pin: "4321", val: 50, price: 25 },
-    { id: 2, code: "9876543210126", pin: "8899", val: 100, price: 50 },
-    { id: 3, code: "9876543210127", pin: "1122", val: 20, price: 10 },
-  ]);
-
-  const [usersList, setUsersList] = useState<MockUser[]>([
-    { id: "148920194", username: "alex_dev", balance: 45.0, ordersCount: 6, isBanned: false, registeredAt: "24/09/2026 14:22" },
-    { id: "591029412", username: "thomas_b", balance: 0.0, ordersCount: 1, isBanned: false, registeredAt: "23/09/2026 19:05" },
-    { id: "882910394", username: "karim93", balance: 120.0, ordersCount: 14, isBanned: false, registeredAt: "22/09/2026 11:40" },
-    { id: "339102491", username: "julie_m", balance: 12.5, ordersCount: 2, isBanned: false, registeredAt: "21/09/2026 09:15" },
-    { id: "772910481", username: "spam_bot_test", balance: 0.0, ordersCount: 0, isBanned: true, registeredAt: "20/09/2026 23:59" },
-  ]);
-
-  const [transactionsList] = useState<MockTransaction[]>([
-    { id: "TX-9041", userId: "148920194", service: "Recharge SumUp CB", amount: 20.0, status: "completed", date: "25/09/2026 16:40" },
-    { id: "TX-9040", userId: "882910394", service: "Génération RIB LBP", amount: 3.0, status: "completed", date: "25/09/2026 15:12" },
-    { id: "TX-9039", userId: "882910394", service: "Fiche de Paie (3 mois)", amount: 20.0, status: "completed", date: "25/09/2026 14:05" },
-    { id: "TX-9038", userId: "339102491", service: "Carte Carrefour 20€", amount: 10.0, status: "completed", date: "24/09/2026 21:30" },
-    { id: "TX-9037", userId: "591029412", service: "Recharge SumUp CB", amount: 15.0, status: "completed", date: "24/09/2026 18:02" },
-  ]);
+  const [carrefourStock, setCarrefourStock] = useState<Array<{ id: number; code: string; pin: string; val: number; price: number }>>([]);
+  const [usersList, setUsersList] = useState<MockUser[]>([]);
+  const [transactionsList, setTransactionsList] = useState<MockTransaction[]>([]);
 
   const [activeModalUser, setActiveModalUser] = useState<MockUser | null>(null);
   const [balanceAmount, setBalanceAmount] = useState<string>("");
@@ -434,18 +416,26 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {pagedTx.map((tx) => (
-                      <tr key={tx.id}>
-                        <td className="font-mono text-white/80">{tx.id}</td>
-                        <td className="font-mono text-primary">{tx.userId}</td>
-                        <td className="font-semibold text-white">{tx.service}</td>
-                        <td className="font-bold text-emerald-400">{tx.amount.toFixed(2)} €</td>
-                        <td>
-                          <span className="admin-badge admin-badge-success">Validé</span>
+                    {pagedTx.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="text-center py-8 text-white/30 text-xs">
+                          Aucune activité enregistrée
                         </td>
-                        <td className="text-white/50">{tx.date}</td>
                       </tr>
-                    ))}
+                    ) : (
+                      pagedTx.map((tx) => (
+                        <tr key={tx.id}>
+                          <td className="font-mono text-white/80">{tx.id}</td>
+                          <td className="font-mono text-primary">{tx.userId}</td>
+                          <td className="font-semibold text-white">{tx.service}</td>
+                          <td className="font-bold text-emerald-400">{tx.amount.toFixed(2)} €</td>
+                          <td>
+                            <span className="admin-badge admin-badge-success">Validé</span>
+                          </td>
+                          <td className="text-white/50">{tx.date}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -512,43 +502,51 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {pagedUsers.map((u) => (
-                      <tr key={u.id}>
-                        <td className="font-mono text-white/80">{u.id}</td>
-                        <td className="font-bold text-white">@{u.username}</td>
-                        <td className="font-bold text-emerald-400">{u.balance.toFixed(2)} €</td>
-                        <td>{u.ordersCount}</td>
-                        <td>
-                          {u.isBanned ? (
-                            <span className="admin-badge admin-badge-danger">Banni</span>
-                          ) : (
-                            <span className="admin-badge admin-badge-success">Actif</span>
-                          )}
-                        </td>
-                        <td className="text-white/50">{u.registeredAt}</td>
-                        <td>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveModalUser(u);
-                                setBalanceAmount("");
-                              }}
-                              className="admin-action-btn"
-                            >
-                              💳 Solde
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleBan(u.id)}
-                              className={`admin-action-btn ${u.isBanned ? "" : "admin-action-btn-danger"}`}
-                            >
-                              {u.isBanned ? "Débannir" : "Bannir"}
-                            </button>
-                          </div>
+                    {pagedUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-8 text-white/30 text-xs">
+                          Aucun utilisateur enregistré
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      pagedUsers.map((u) => (
+                        <tr key={u.id}>
+                          <td className="font-mono text-white/80">{u.id}</td>
+                          <td className="font-bold text-white">@{u.username}</td>
+                          <td className="font-bold text-emerald-400">{u.balance.toFixed(2)} €</td>
+                          <td>{u.ordersCount}</td>
+                          <td>
+                            {u.isBanned ? (
+                              <span className="admin-badge admin-badge-danger">Banni</span>
+                            ) : (
+                              <span className="admin-badge admin-badge-success">Actif</span>
+                            )}
+                          </td>
+                          <td className="text-white/50">{u.registeredAt}</td>
+                          <td>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveModalUser(u);
+                                  setBalanceAmount("");
+                                }}
+                                className="admin-action-btn"
+                              >
+                                💳 Solde
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleBan(u.id)}
+                                className={`admin-action-btn ${u.isBanned ? "" : "admin-action-btn-danger"}`}
+                              >
+                                {u.isBanned ? "Débannir" : "Bannir"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -625,27 +623,35 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {carrefourStock.map((item) => (
-                      <tr key={item.id}>
-                        <td className="font-mono text-white/60">#{item.id}</td>
-                        <td className="font-mono font-bold text-white">{item.code}</td>
-                        <td className="font-mono text-white/60">{item.pin}</td>
-                        <td className="font-bold text-emerald-400">{item.val} €</td>
-                        <td className="font-bold text-primary">{item.price} €</td>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCarrefourStock(prev => prev.filter(c => c.id !== item.id));
-                              toast.success("Carte supprimée");
-                            }}
-                            className="admin-action-btn admin-action-btn-danger"
-                          >
-                            Supprimer
-                          </button>
+                    {carrefourStock.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="text-center py-8 text-white/30 text-xs">
+                          Aucune carte en stock
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      carrefourStock.map((item) => (
+                        <tr key={item.id}>
+                          <td className="font-mono text-white/60">#{item.id}</td>
+                          <td className="font-mono font-bold text-white">{item.code}</td>
+                          <td className="font-mono text-white/60">{item.pin}</td>
+                          <td className="font-bold text-emerald-400">{item.val} €</td>
+                          <td className="font-bold text-primary">{item.price} €</td>
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCarrefourStock(prev => prev.filter(c => c.id !== item.id));
+                                toast.success("Carte supprimée");
+                              }}
+                              className="admin-action-btn admin-action-btn-danger"
+                            >
+                              Supprimer
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

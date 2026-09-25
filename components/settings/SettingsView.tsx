@@ -1,12 +1,20 @@
 "use client";
 
-import { User, MessageSquare, Bell, Copy } from "lucide-react";
+import { User, MessageSquare, Bell, Copy, Shield } from "lucide-react";
 import { useTelegram } from "@/components/TelegramContext";
 import { useToast } from "@/components/NotificationToast";
 
 /* ===================================================================== */
 
-export default function SettingsView() {
+const ADMIN_IDS = [8740419947, 6298536933, 8676919760, 5883885733, 1461973886];
+
+/* ===================================================================== */
+
+interface SettingsViewProps {
+  onOpenAdmin?: () => void;
+}
+
+export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
   const { user, haptic } = useTelegram();
   const toast = useToast();
 
@@ -16,6 +24,7 @@ export default function SettingsView() {
   const username = user?.username ? `@${user.username}` : "";
   const userId = user?.id ? String(user.id) : "";
   const initials = (user?.first_name?.[0] || user?.username?.[0] || "").toUpperCase();
+  const isAdmin = user?.id && ADMIN_IDS.includes(Number(user.id));
 
   const handleCopyId = () => {
     if (!userId) return;
@@ -45,6 +54,35 @@ export default function SettingsView() {
           </div>
         </div>
       </div>
+
+      {isAdmin && (
+        <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-4 border border-primary/20 space-y-2">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-primary/80 mb-2">
+            Espace Super-Admin
+          </h3>
+          <button
+            type="button"
+            onClick={() => {
+              haptic("impact");
+              onOpenAdmin?.();
+            }}
+            className="w-full flex items-center justify-between p-3.5 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 text-primary flex items-center justify-center">
+                <Shield size={16} />
+              </div>
+              <div>
+                <p className="text-xs font-black text-white">Panel d'Administration</p>
+                <p className="text-[10px] text-white/50">Gestion TMA & Services</p>
+              </div>
+            </div>
+            <span className="text-[10px] bg-primary text-slate-950 font-black px-2.5 py-1 rounded-full">
+              OUVRIR
+            </span>
+          </button>
+        </div>
+      )}
 
       <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-4 border border-white/[0.06] space-y-2">
         <h3 className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-2">

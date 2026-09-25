@@ -20,6 +20,7 @@ const FactureHubContent = lazy(() => import("@/components/facture/FactureHubCont
 const DynamicFormView = lazy(() => import("@/components/facture/DynamicFormView"));
 const AssuranceHubContent = lazy(() => import("@/components/assurance/AssuranceHubContent"));
 const JustificatifHubContent = lazy(() => import("@/components/justificatif/JustificatifHubContent"));
+const AdminMiniAppView = lazy(() => import("@/components/admin/AdminMiniAppView"));
 
 /* ===================================================================== */
 
@@ -96,6 +97,7 @@ function LoadingSpinner() {
 function AppRouter() {
   const { user, navigation, navigateTo, goBack, haptic, balance, ready, isTelegram } = useTelegram();
   const [activeTab, setActiveTab] = useState<MainTab>("services");
+  const [showAdmin, setShowAdmin] = useState<boolean>(false);
 
   const handleCategoryClick = useCallback(
     (categoryId: string) => {
@@ -120,6 +122,7 @@ function AppRouter() {
 
   const handleTabChange = useCallback(
     (tab: MainTab) => {
+      setShowAdmin(false);
       setActiveTab(tab);
       if (tab === "services" && navigation.view === "form") {
         goBack();
@@ -128,7 +131,7 @@ function AppRouter() {
     [navigation.view, goBack]
   );
 
-  const isInForm = navigation.view === "form";
+  const isInForm = navigation.view === "form" || showAdmin;
 
   /* ===================================================================== */
 
@@ -166,131 +169,141 @@ function AppRouter() {
           </button>
         </header>
 
-        {activeTab === "recharge" && (
-          <RechargeView onBackToServices={() => handleTabChange("services")} />
-        )}
-
-        {activeTab === "settings" && <SettingsView />}
-
-        {activeTab === "services" && (
+        {showAdmin ? (
+          <Suspense fallback={<LoadingSpinner />}>
+            <AdminMiniAppView onBack={() => setShowAdmin(false)} />
+          </Suspense>
+        ) : (
           <>
-            {navigation.view === "form" && navigation.category && navigation.slug && (
-              <Suspense fallback={<LoadingSpinner />}>
-                {navigation.category === "rib" && (
-                  <RibWorkspace slug={navigation.slug} onBack={handleBack} />
-                )}
-                {navigation.category === "emploi" && navigation.slug === "fiche_de_paie" && (
-                  <FicheDePaieWorkspace onBack={handleBack} />
-                )}
-                {navigation.category === "releve" && navigation.slug === "lbp" && (
-                  <LbpReleveWorkspace onBack={handleBack} />
-                )}
-                {(navigation.category === "facture" ||
-                  navigation.category === "assurance" ||
-                  navigation.category === "justificatif") && (
-                  <DynamicFormView
-                    category={navigation.category as "facture" | "assurance" | "justificatif"}
-                    slug={navigation.slug}
-                    onBack={handleBack}
-                  />
-                )}
-              </Suspense>
+            {activeTab === "recharge" && (
+              <RechargeView onBackToServices={() => handleTabChange("services")} />
             )}
 
-            {navigation.view === "category" && navigation.category && (
-              <Suspense fallback={<LoadingSpinner />}>
-                {navigation.category === "rib" && (
-                  <RibHubContent
-                    onNavigate={(slug: string) => handleFormClick("rib", slug)}
-                    onBack={handleBack}
-                  />
-                )}
-                {navigation.category === "emploi" && (
-                  <EmploiHubContent
-                    onNavigate={(slug: string) => handleFormClick("emploi", slug)}
-                    onBack={handleBack}
-                  />
-                )}
-                {navigation.category === "releve" && (
-                  <ReleveHubContent
-                    onNavigate={(slug: string) => handleFormClick("releve", slug)}
-                    onBack={handleBack}
-                  />
-                )}
-                {navigation.category === "facture" && (
-                  <FactureHubContent
-                    onNavigate={(slug: string) => handleFormClick("facture", slug)}
-                    onBack={handleBack}
-                  />
-                )}
-                {navigation.category === "assurance" && (
-                  <AssuranceHubContent
-                    onNavigate={(slug: string) => handleFormClick("assurance", slug)}
-                    onBack={handleBack}
-                  />
-                )}
-                {navigation.category === "justificatif" && (
-                  <JustificatifHubContent
-                    onNavigate={(slug: string) => handleFormClick("justificatif", slug)}
-                    onBack={handleBack}
-                  />
-                )}
-              </Suspense>
+            {activeTab === "settings" && (
+              <SettingsView onOpenAdmin={() => setShowAdmin(true)} />
             )}
 
-            {navigation.view === "hub" && (
-              <div className="space-y-4 pb-20 fade-in">
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 flex items-center justify-between">
-                  <div>
-                    <span className="text-[9px] font-black uppercase tracking-wider text-primary flex items-center gap-1">
-                      <Sparkles size={11} /> Documents certifiés
-                    </span>
-                    <h2 className="text-sm font-black italic text-white mt-0.5">
-                      Générateur Professionnel
-                    </h2>
-                    <p className="text-[10px] text-white/50 font-medium">
-                      Sélectionnez un type de document pour débuter
-                    </p>
+            {activeTab === "services" && (
+              <>
+                {navigation.view === "form" && navigation.category && navigation.slug && (
+                  <Suspense fallback={<LoadingSpinner />}>
+                    {navigation.category === "rib" && (
+                      <RibWorkspace slug={navigation.slug} onBack={handleBack} />
+                    )}
+                    {navigation.category === "emploi" && navigation.slug === "fiche_de_paie" && (
+                      <FicheDePaieWorkspace onBack={handleBack} />
+                    )}
+                    {navigation.category === "releve" && navigation.slug === "lbp" && (
+                      <LbpReleveWorkspace onBack={handleBack} />
+                    )}
+                    {(navigation.category === "facture" ||
+                      navigation.category === "assurance" ||
+                      navigation.category === "justificatif") && (
+                      <DynamicFormView
+                        category={navigation.category as "facture" | "assurance" | "justificatif"}
+                        slug={navigation.slug}
+                        onBack={handleBack}
+                      />
+                    )}
+                  </Suspense>
+                )}
+
+                {navigation.view === "category" && navigation.category && (
+                  <Suspense fallback={<LoadingSpinner />}>
+                    {navigation.category === "rib" && (
+                      <RibHubContent
+                        onNavigate={(slug: string) => handleFormClick("rib", slug)}
+                        onBack={handleBack}
+                      />
+                    )}
+                    {navigation.category === "emploi" && (
+                      <EmploiHubContent
+                        onNavigate={(slug: string) => handleFormClick("emploi", slug)}
+                        onBack={handleBack}
+                      />
+                    )}
+                    {navigation.category === "releve" && (
+                      <ReleveHubContent
+                        onNavigate={(slug: string) => handleFormClick("releve", slug)}
+                        onBack={handleBack}
+                      />
+                    )}
+                    {navigation.category === "facture" && (
+                      <FactureHubContent
+                        onNavigate={(slug: string) => handleFormClick("facture", slug)}
+                        onBack={handleBack}
+                      />
+                    )}
+                    {navigation.category === "assurance" && (
+                      <AssuranceHubContent
+                        onNavigate={(slug: string) => handleFormClick("assurance", slug)}
+                        onBack={handleBack}
+                      />
+                    )}
+                    {navigation.category === "justificatif" && (
+                      <JustificatifHubContent
+                        onNavigate={(slug: string) => handleFormClick("justificatif", slug)}
+                        onBack={handleBack}
+                      />
+                    )}
+                  </Suspense>
+                )}
+
+                {navigation.view === "hub" && (
+                  <div className="space-y-4 pb-20 fade-in">
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 flex items-center justify-between">
+                      <div>
+                        <span className="text-[9px] font-black uppercase tracking-wider text-primary flex items-center gap-1">
+                          <Sparkles size={11} /> Documents certifiés
+                        </span>
+                        <h2 className="text-sm font-black italic text-white mt-0.5">
+                          Générateur Professionnel
+                        </h2>
+                        <p className="text-[10px] text-white/50 font-medium">
+                          Sélectionnez un type de document pour débuter
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {CATEGORIES.map((cat) => {
+                        const Icon = cat.icon;
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => handleCategoryClick(cat.id)}
+                            className="bg-[#0f121d]/85 backdrop-blur-md p-3.5 rounded-2xl border border-white/[0.06] hover:border-primary/40 active:scale-[0.98] transition-all text-left flex flex-col justify-between group shadow-sm"
+                          >
+                            <div className="flex items-center justify-between w-full mb-3">
+                              <div className={`w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center ${cat.color} group-hover:scale-105 transition-transform`}>
+                                <Icon size={18} />
+                              </div>
+                              <span className={`px-1.5 py-0.5 rounded-full border text-[7px] font-black tracking-wider uppercase ${cat.badgeColor}`}>
+                                {cat.badge}
+                              </span>
+                            </div>
+
+                            <div>
+                              <h3 className="text-xs font-black italic text-white leading-tight mb-1">
+                                {cat.name}
+                              </h3>
+                              <p className="text-[9px] text-white/40 font-medium leading-tight">
+                                {cat.description}
+                              </p>
+                            </div>
+
+                            <div className="mt-3 flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-primary">
+                              <span>Ouvrir</span>
+                              <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  {CATEGORIES.map((cat, i) => {
-                    const Icon = cat.icon;
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => handleCategoryClick(cat.id)}
-                        className="bg-[#0f121d]/85 backdrop-blur-md p-3.5 rounded-2xl border border-white/[0.06] hover:border-primary/40 active:scale-[0.98] transition-all text-left flex flex-col justify-between group shadow-sm"
-                      >
-                        <div className="flex items-center justify-between w-full mb-3">
-                          <div className={`w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center ${cat.color} group-hover:scale-105 transition-transform`}>
-                            <Icon size={18} />
-                          </div>
-                          <span className={`px-1.5 py-0.5 rounded-full border text-[7px] font-black tracking-wider uppercase ${cat.badgeColor}`}>
-                            {cat.badge}
-                          </span>
-                        </div>
-
-                        <div>
-                          <h3 className="text-xs font-black italic text-white leading-tight mb-1">
-                            {cat.name}
-                          </h3>
-                          <p className="text-[9px] text-white/40 font-medium leading-tight">
-                            {cat.description}
-                          </p>
-                        </div>
-
-                        <div className="mt-3 flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-primary">
-                          <span>Ouvrir</span>
-                          <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                )}
+              </>
             )}
           </>
         )}

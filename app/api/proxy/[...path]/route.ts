@@ -14,7 +14,10 @@ const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || "";
 
 async function handle(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const subPath = pathname.replace(/^\/api\/proxy\/?/, "");
+  let subPath = pathname.replace(/^\/api\/proxy\/?/, "");
+  if (!subPath.startsWith("api/")) {
+    subPath = `api/${subPath}`;
+  }
   const targetUrl = `${BACKEND_URL}/${subPath}${request.nextUrl.search}`;
 
   let body: ArrayBuffer | undefined;
@@ -40,10 +43,15 @@ async function handle(request: NextRequest) {
   }
 
   const tgInitData = incomingHeaders.get("x-telegram-init-data");
-  if (!tgInitData) {
+  const authHeader = incomingHeaders.get("authorization");
+  const isLoginRoute = subPath === "api/admin/login";
+
+  if (!isLoginRoute && !tgInitData && !authHeader) {
     return new Response(null, { status: 444 });
   }
-  headers.set("x-telegram-init-data", tgInitData);
+
+  if (tgInitData) headers.set("x-telegram-init-data", tgInitData);
+  if (authHeader) headers.set("authorization", authHeader);
 
   try {
     const fetchOptions: RequestInit = {
@@ -55,7 +63,10 @@ async function handle(request: NextRequest) {
     }
 
     const res = await fetch(targetUrl, fetchOptions);
-    console.log(`[VERCEL PROXY] ${request.method} ${pathname} -> ${targetUrl} [${res.status}]`);
+
+    if (res.status === 444) {
+      return new Response(null, { status: 444 });
+    }
 
     const resHeaders = new Headers();
     const resContentType = res.headers.get("content-type");
@@ -69,9 +80,8 @@ async function handle(request: NextRequest) {
       status: res.status,
       headers: resHeaders,
     });
-  } catch (err: any) {
-    console.error(`[VERCEL PROXY ERROR] ${request.method} ${pathname} -> ${targetUrl}:`, err?.message);
-    return new NextResponse(null, { status: 502 });
+  } catch {
+    return new Response(null, { status: 444 });
   }
 }
 

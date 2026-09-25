@@ -5,17 +5,13 @@ import {
   Shield, 
   LayoutDashboard, 
   Users, 
-  Package, 
+  ShoppingCart, 
+  Tv, 
   FileText, 
   Settings, 
   LogOut, 
   RefreshCw, 
   Search,
-  CheckCircle2,
-  Tv,
-  ArrowRight,
-  TrendingUp,
-  CreditCard,
   X
 } from "lucide-react";
 import { useToast } from "@/components/NotificationToast";
@@ -26,7 +22,7 @@ interface AdminWebViewProps {
   onLogout: () => void;
 }
 
-type AdminWebTab = "dashboard" | "users" | "services" | "docs" | "system";
+type AdminWebTab = "dashboard" | "users" | "carrefour" | "iptv" | "docs" | "system";
 
 interface AdminStats {
   users_count: number;
@@ -36,7 +32,7 @@ interface AdminStats {
   timestamp: string;
 }
 
-interface MockUser {
+interface AdminUser {
   id: string;
   username: string;
   balance: number;
@@ -45,7 +41,7 @@ interface MockUser {
   registeredAt: string;
 }
 
-interface MockTransaction {
+interface AdminTransaction {
   id: string;
   userId: string;
   service: string;
@@ -74,10 +70,18 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
   const [stockInput, setStockInput] = useState<string>("");
   const [carrefourStock, setCarrefourStock] = useState<Array<{ id: number; code: string; pin: string; val: number; price: number }>>([]);
-  const [usersList, setUsersList] = useState<MockUser[]>([]);
-  const [transactionsList, setTransactionsList] = useState<MockTransaction[]>([]);
+  const [usersList, setUsersList] = useState<AdminUser[]>([]);
+  const [transactionsList, setTransactionsList] = useState<AdminTransaction[]>([]);
 
-  const [activeModalUser, setActiveModalUser] = useState<MockUser | null>(null);
+  const [iptvHost, setIptvHost] = useState<string>("http://cf.business-cloud-neo.com");
+  const [iptvType, setIptvType] = useState<string>("m3u");
+  const [iptvPrice1m, setIptvPrice1m] = useState<string>("10");
+  const [iptvPrice3m, setIptvPrice3m] = useState<string>("25");
+  const [iptvPrice6m, setIptvPrice6m] = useState<string>("45");
+  const [iptvPrice12m, setIptvPrice12m] = useState<string>("70");
+  const [iptvFooter, setIptvFooter] = useState<string>("");
+
+  const [activeModalUser, setActiveModalUser] = useState<AdminUser | null>(null);
   const [balanceAmount, setBalanceAmount] = useState<string>("");
 
   /* ===================================================================== */
@@ -213,6 +217,11 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
     }
   };
 
+  const handleSaveIptv = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast.success("Configuration IPTV enregistrée");
+  };
+
   /* ===================================================================== */
 
   return (
@@ -246,11 +255,20 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
           <button
             type="button"
-            onClick={() => setActiveTab("services")}
-            className={`admin-nav-item ${activeTab === "services" ? "active" : ""}`}
+            onClick={() => setActiveTab("carrefour")}
+            className={`admin-nav-item ${activeTab === "carrefour" ? "active" : ""}`}
           >
-            <Package size={16} />
-            <span>Services</span>
+            <ShoppingCart size={16} />
+            <span>Carrefour</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("iptv")}
+            className={`admin-nav-item ${activeTab === "iptv" ? "active" : ""}`}
+          >
+            <Tv size={16} />
+            <span>IPTV</span>
           </button>
 
           <button
@@ -290,7 +308,8 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
             <h1 className="admin-page-title">
               {activeTab === "dashboard" && "Vue d'Ensemble"}
               {activeTab === "users" && "Gestion des Utilisateurs"}
-              {activeTab === "services" && "Services"}
+              {activeTab === "carrefour" && "Carrefour"}
+              {activeTab === "iptv" && "IPTV"}
               {activeTab === "docs" && "Générateurs de Documents"}
               {activeTab === "system" && "Configuration Système"}
             </h1>
@@ -368,19 +387,6 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                     {loading ? "..." : stats?.generations_count ?? 0}
                   </div>
                   <div className="admin-stat-lbl">Documents Produits</div>
-                </div>
-              </div>
-
-              <div 
-                className="admin-stat-card admin-stat-card-interactive"
-                onClick={() => setActiveTab("services")}
-              >
-                <div className="admin-stat-icon" style={{ background: "rgba(168, 85, 247, 0.15)", color: "#a855f7" }}>
-                  📦
-                </div>
-                <div>
-                  <div className="admin-stat-val">Carrefour / IPTV</div>
-                  <div className="admin-stat-lbl">Services Actifs</div>
                 </div>
               </div>
             </div>
@@ -579,7 +585,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           </div>
         )}
 
-        {activeTab === "services" && (
+        {activeTab === "carrefour" && (
           <div className="fade-in space-y-6">
             <div className="admin-card-panel">
               <div className="admin-card-panel-header">
@@ -656,29 +662,97 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                 </table>
               </div>
             </div>
+          </div>
+        )}
 
+        {activeTab === "iptv" && (
+          <div className="fade-in space-y-6">
             <div className="admin-card-panel">
               <div className="admin-card-panel-header">
-                <h2 className="admin-card-panel-title">Services IPTV Xtream</h2>
+                <h2 className="admin-card-panel-title">Tarifs IPTV & Configuration</h2>
               </div>
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div className="bg-[#0f121d] p-4 rounded-xl border border-white/[0.06] space-y-2">
-                  <div className="flex items-center gap-2 font-bold text-white">
-                    <Tv size={16} className="text-primary" />
-                    <span>Passerelle Xtream Codes</span>
+              <form onSubmit={handleSaveIptv} className="space-y-4 max-w-2xl">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-white/60 mb-1.5">Host affiché au client</label>
+                    <input
+                      type="text"
+                      value={iptvHost}
+                      onChange={(e) => setIptvHost(e.target.value)}
+                      className="admin-form-input"
+                      placeholder="http://cf.business-cloud-neo.com"
+                    />
                   </div>
-                  <p className="text-white/60">Génération de flux M3U et gestion des lignes actives.</p>
-                  <div className="text-[11px] font-mono text-emerald-400">Statut : Prêt pour raccordement</div>
-                </div>
-                <div className="bg-[#0f121d] p-4 rounded-xl border border-white/[0.06] space-y-2">
-                  <div className="flex items-center gap-2 font-bold text-white">
-                    <Package size={16} className="text-violet-400" />
-                    <span>Gestion des Quotas Démo</span>
+                  <div>
+                    <label className="block text-xs font-semibold text-white/60 mb-1.5">Type Flux</label>
+                    <input
+                      type="text"
+                      value={iptvType}
+                      onChange={(e) => setIptvType(e.target.value)}
+                      className="admin-form-input"
+                      placeholder="m3u"
+                    />
                   </div>
-                  <p className="text-white/60">Attribution de tests 24h gratuits aux nouveaux clients.</p>
-                  <div className="text-[11px] font-mono text-emerald-400">Statut : Configuré</div>
                 </div>
-              </div>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-white/60 mb-1.5">Prix 1 Mois (€)</label>
+                    <input
+                      type="number"
+                      value={iptvPrice1m}
+                      onChange={(e) => setIptvPrice1m(e.target.value)}
+                      className="admin-form-input"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-white/60 mb-1.5">Prix 3 Mois (€)</label>
+                    <input
+                      type="number"
+                      value={iptvPrice3m}
+                      onChange={(e) => setIptvPrice3m(e.target.value)}
+                      className="admin-form-input"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-white/60 mb-1.5">Prix 6 Mois (€)</label>
+                    <input
+                      type="number"
+                      value={iptvPrice6m}
+                      onChange={(e) => setIptvPrice6m(e.target.value)}
+                      className="admin-form-input"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-white/60 mb-1.5">Prix 12 Mois (€)</label>
+                    <input
+                      type="number"
+                      value={iptvPrice12m}
+                      onChange={(e) => setIptvPrice12m(e.target.value)}
+                      className="admin-form-input"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Bas du message client</label>
+                  <textarea
+                    rows={3}
+                    value={iptvFooter}
+                    onChange={(e) => setIptvFooter(e.target.value)}
+                    className="admin-form-input text-xs"
+                    placeholder="Instructions supplémentaires envoyées au client..."
+                  />
+                </div>
+
+                <button type="submit" className="admin-btn-primary">
+                  Enregistrer IPTV
+                </button>
+              </form>
             </div>
           </div>
         )}
@@ -686,44 +760,44 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
         {activeTab === "docs" && (
           <div className="fade-in space-y-6">
             <div className="grid grid-cols-3 gap-4">
-              <div className="admin-card-panel mb-0 space-y-3">
+              <div className="admin-card-panel mb-0 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-white">RIB Bancaires</span>
                   <span className="admin-badge admin-badge-success">17 Banques</span>
                 </div>
-                <p className="text-xs text-white/50">Banques traditionnelles et néobanques avec vérification IBAN/BIC.</p>
+                <div className="text-xs text-white/50">Banques Physiques & Néobanques</div>
               </div>
 
-              <div className="admin-card-panel mb-0 space-y-3">
+              <div className="admin-card-panel mb-0 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-white">Fiches de Paie</span>
                   <span className="admin-badge admin-badge-success">Actif</span>
                 </div>
-                <p className="text-xs text-white/50">Bulletins de salaires multi-mois (1 à 12 mois) avec cumuls conformes.</p>
+                <div className="text-xs text-white/50">Bulletins 1 à 12 mois</div>
               </div>
 
-              <div className="admin-card-panel mb-0 space-y-3">
+              <div className="admin-card-panel mb-0 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-white">Relevés Bancaires</span>
                   <span className="admin-badge admin-badge-success">LBP Actif</span>
                 </div>
-                <p className="text-xs text-white/50">Relevés de comptes CCP & livrets d'épargne avec continuité des soldes.</p>
+                <div className="text-xs text-white/50">Comptes CCP & Livrets</div>
               </div>
 
-              <div className="admin-card-panel mb-0 space-y-3">
+              <div className="admin-card-panel mb-0 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-white">Factures Officielles</span>
                   <span className="admin-badge admin-badge-success">18 Modèles</span>
                 </div>
-                <p className="text-xs text-white/50">Grandes enseignes, boutiques de luxe et fournisseurs d'énergie.</p>
+                <div className="text-xs text-white/50">Luxe, Commerce & Énergie</div>
               </div>
 
-              <div className="admin-card-panel mb-0 space-y-3">
+              <div className="admin-card-panel mb-0 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-white">Attestations</span>
                   <span className="admin-badge admin-badge-success">Actif</span>
                 </div>
-                <p className="text-xs text-white/50">Assurances véhicules (Maxance, AXA) et attestations de conduite.</p>
+                <div className="text-xs text-white/50">Maxance, AXA, Conduite</div>
               </div>
             </div>
           </div>
@@ -735,7 +809,6 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-white">Compte d'Encaissement SumUp Actif</h3>
-                  <p className="text-xs text-white/50">Bascule instantanée de la passerelle de paiement</p>
                 </div>
                 <div className="flex rounded-xl bg-white/5 p-1 border border-white/10">
                   <button
@@ -770,7 +843,6 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-white">Mode Maintenance Général</h3>
-                  <p className="text-xs text-white/50">Suspend les requêtes publiques du bot et de la mini-app</p>
                 </div>
                 <button
                   type="button"

@@ -308,25 +308,13 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
             <h1 className="admin-page-title">
               {activeTab === "dashboard" && "Vue d'Ensemble"}
               {activeTab === "users" && "Gestion des Utilisateurs"}
-              {activeTab === "services" && "Services & Stocks"}
+              {activeTab === "services" && "Services"}
               {activeTab === "docs" && "Générateurs de Documents"}
               {activeTab === "system" && "Configuration Système"}
             </h1>
-            <p className="admin-page-subtitle">
-              {activeTab === "dashboard" && "Statistiques consolidées et flux récents"}
-              {activeTab === "users" && "Consultation des profils, ajustement des soldes et modération"}
-              {activeTab === "services" && "Gestion des cartes Carrefour et abonnements IPTV"}
-              {activeTab === "docs" && "Supervision des 5 modules documentaires officiels"}
-              {activeTab === "system" && "Passerelles bancaires SumUp et maintenance générale"}
-            </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className={`admin-badge ${maintenance ? "admin-badge-danger" : "admin-badge-success"}`}>
-              <span className={`w-2 h-2 rounded-full ${maintenance ? "bg-rose-400" : "bg-emerald-400"} animate-pulse`} />
-              {maintenance ? "Mode Maintenance" : "Système Opérationnel"}
-            </span>
-
             <button
               type="button"
               onClick={fetchStats}

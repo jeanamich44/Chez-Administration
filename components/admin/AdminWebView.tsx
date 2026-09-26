@@ -171,6 +171,10 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           "Authorization": `Bearer ${token}`
         }
       });
+      if (res.status === 444 || res.status === 401) {
+        onLogout();
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setStats(data);
@@ -190,6 +194,10 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           "Authorization": `Bearer ${token}`
         }
       });
+      if (res.status === 444 || res.status === 401) {
+        onLogout();
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         if (data.iptv) {
@@ -265,6 +273,10 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
       const res = await fetch("/api/proxy/admin/stock", {
         headers: { "Authorization": `Bearer ${token}` }
       });
+      if (res.status === 444 || res.status === 401) {
+        onLogout();
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.stock)) {
@@ -286,6 +298,10 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
       const res = await fetch("/api/proxy/admin/users", {
         headers: { "Authorization": `Bearer ${token}` }
       });
+      if (res.status === 444 || res.status === 401) {
+        onLogout();
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.users)) {
@@ -309,6 +325,10 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
       const res = await fetch("/api/proxy/admin/payments", {
         headers: { "Authorization": `Bearer ${token}` }
       });
+      if (res.status === 444 || res.status === 401) {
+        onLogout();
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.payments)) {
@@ -332,6 +352,10 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
       const res = await fetch("/api/proxy/admin/transactions", {
         headers: { "Authorization": `Bearer ${token}` }
       });
+      if (res.status === 444 || res.status === 401) {
+        onLogout();
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.transactions)) {

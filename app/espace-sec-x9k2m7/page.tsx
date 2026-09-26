@@ -22,14 +22,32 @@ function SecretAdminContent() {
     const savedTime = parseInt(localStorage.getItem("admin_auth_token_time") || "0", 10);
     const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
-    if (savedToken && savedTime && Date.now() - savedTime < TWENTY_FOUR_HOURS) {
-      setToken(savedToken);
-    } else {
+    if (!savedToken || !savedTime || Date.now() - savedTime >= TWENTY_FOUR_HOURS) {
       localStorage.removeItem("admin_auth_token");
       localStorage.removeItem("admin_auth_token_time");
       setToken("");
+      setChecking(false);
+      return;
     }
-    setChecking(false);
+
+    fetch("/api/proxy/admin/check", {
+      headers: { "Authorization": `Bearer ${savedToken}` }
+    })
+      .then((res) => {
+        if (res.ok) {
+          setToken(savedToken);
+        } else {
+          localStorage.removeItem("admin_auth_token");
+          localStorage.removeItem("admin_auth_token_time");
+          setToken("");
+        }
+      })
+      .catch(() => {
+        setToken(savedToken);
+      })
+      .finally(() => {
+        setChecking(false);
+      });
   }, []);
 
   /* ===================================================================== */

@@ -598,11 +598,12 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
   /* ===================================================================== */
 
-  const handleApplyBalance = async (delta: number) => {
+  const handleSetDirectBalance = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!activeModalUser) return;
     const val = parseFloat(balanceAmount);
-    if (isNaN(val) || val <= 0) {
-      toast.error("Veuillez saisir un montant valide");
+    if (isNaN(val) || val < 0) {
+      toast.error("Veuillez saisir un solde valide (>= 0)");
       return;
     }
 
@@ -616,18 +617,18 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
         },
         body: JSON.stringify({
           userId: activeModalUser.id,
-          action: delta > 0 ? "add" : "remove",
+          action: "set",
           amount: val
         })
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Solde de @${activeModalUser.username} mis à jour`);
+        toast.success(`Solde de @${activeModalUser.username} défini à ${val.toFixed(2)} €`);
         setActiveModalUser(null);
         setBalanceAmount("");
         fetchUsers();
       } else {
-        toast.error(data.message || "Erreur lors de l'ajustement du solde");
+        toast.error(data.message || "Erreur lors de la modification du solde");
       }
     } catch {
       toast.error("Erreur réseau");
@@ -1408,7 +1409,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                                 type="button"
                                 onClick={() => {
                                   setActiveModalUser(u);
-                                  setBalanceAmount("");
+                                  setBalanceAmount(u.balance.toFixed(2));
                                 }}
                                 className="admin-action-btn"
                               >
@@ -1796,9 +1797,25 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                               {p.method}
                             </span>
                           </td>
-                          <td className="font-bold text-emerald-400">{p.amount.toFixed(2)} €</td>
+                          <td className={`font-bold ${
+                            (p.status || "").toUpperCase() === "PAID" || (p.status || "").toUpperCase() === "SUCCESS" || (p.status || "").toUpperCase() === "COMPLETED"
+                              ? "text-emerald-400"
+                              : (p.status || "").toUpperCase() === "PENDING" || (p.status || "").toUpperCase() === "WAITING"
+                              ? "text-amber-400"
+                              : "text-white/40"
+                          }`}>
+                            {p.amount.toFixed(2)} €
+                          </td>
                           <td>
-                            <span className="admin-badge admin-badge-success">{p.status}</span>
+                            <span className={`admin-badge ${
+                              (p.status || "").toUpperCase() === "PAID" || (p.status || "").toUpperCase() === "SUCCESS" || (p.status || "").toUpperCase() === "COMPLETED"
+                                ? "admin-badge-success"
+                                : (p.status || "").toUpperCase() === "PENDING" || (p.status || "").toUpperCase() === "WAITING"
+                                ? "admin-badge-warning"
+                                : "admin-badge-danger"
+                            }`}>
+                              {p.status}
+                            </span>
                           </td>
                           <td className="font-mono text-xs text-white/60">{p.trackId}</td>
                           <td className="text-white/50">{p.createdAt}</td>
@@ -2679,7 +2696,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
               </button>
             </div>
 
-            <div className="space-y-4">
+            <form onSubmit={handleSetDirectBalance} className="space-y-4">
               <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl text-xs">
                 <span className="text-white/60">Solde actuel :</span>
                 <span className="font-bold text-emerald-400 text-sm">
@@ -2689,37 +2706,30 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
 
               <div>
                 <label className="block text-xs font-semibold text-white/60 mb-1.5">
-                  Montant en euros (€)
+                  Nouveau solde direct (€)
                 </label>
                 <input
                   type="number"
-                  step="0.5"
+                  step="0.01"
                   min="0"
                   value={balanceAmount}
                   onChange={(e) => setBalanceAmount(e.target.value)}
-                  placeholder="Ex : 20.00"
+                  placeholder={activeModalUser.balance.toFixed(2)}
                   className="admin-form-input text-sm"
                   autoFocus
+                  onFocus={(e) => e.target.select()}
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="pt-2">
                 <button
-                  type="button"
-                  onClick={() => handleApplyBalance(1)}
-                  className="flex-1 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold text-xs hover:bg-emerald-500/30 transition-colors"
+                  type="submit"
+                  className="admin-btn-primary w-full py-2.5 rounded-xl font-bold text-xs"
                 >
-                  ➕ Créditer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleApplyBalance(-1)}
-                  className="flex-1 py-2.5 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400 font-bold text-xs hover:bg-rose-500/30 transition-colors"
-                >
-                  ➖ Débiter
+                  Valider le solde (Entrée)
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}

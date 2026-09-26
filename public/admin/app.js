@@ -1,0 +1,2351 @@
+document.addEventListener('DOMContentLoaded', () => {
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000; // 24 heures en millisecondes
+
+    function getValidAuthToken() {
+        const token = localStorage.getItem('admin_auth_token') || '';
+        const savedTime = parseInt(localStorage.getItem('admin_auth_token_time') || '0', 10);
+        if (token && savedTime && (Date.now() - savedTime < TWENTY_FOUR_HOURS)) {
+            return token;
+        }
+        localStorage.removeItem('admin_auth_token');
+        localStorage.removeItem('admin_auth_token_time');
+        return '';
+    }
+
+    let authToken = getValidAuthToken();
+
+    const loginView = document.getElementById('login-view');
+    const appView = document.getElementById('app-view');
+    const loginForm = document.getElementById('login-form');
+    const tokenInput = document.getElementById('token-input');
+    const logoutBtn = document.getElementById('logout-btn');
+    const navItems = document.querySelectorAll('.nav-item');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const pageTitleHeading = document.getElementById('page-title-heading');
+
+    const modalBackdrop = document.getElementById('custom-modal-backdrop');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBodyContent = document.getElementById('modal-body-content');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+    const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+    let modalOnConfirmCallback = null;
+
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerText = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(30px)';
+            toast.style.transition = 'all 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3500);
+    }
+
+    function formatParisDate(dateStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        const pad = n => n.toString().padStart(2, '0');
+        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function openModal(title, htmlContent, onConfirm) {
+        modalTitle.innerText = title;
+        modalBodyContent.innerHTML = htmlContent;
+        modalOnConfirmCallback = onConfirm;
+        modalBackdrop.classList.add('active');
+    }
+
+    function closeModal() {
+        modalBackdrop.classList.remove('active');
+        modalOnConfirmCallback = null;
+    }
+
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    window.redirectToUser = (userId) => {
+        window.switchTab('users');
+        const searchInput = document.getElementById('user-search-input');
+        if (searchInput) {
+            searchInput.value = userId;
+            searchInput.dispatchEvent(new Event('input'));
+        }
+    };
+
+    window.filterTransactionsByUser = (userId) => {
+        window.switchTab('transactions');
+        const searchInput = document.getElementById('tx-search-input');
+        if (searchInput) {
+            searchInput.value = String(userId);
+            searchInput.dispatchEvent(new Event('input'));
+        }
+        showToast(`Transactions filtrées sur l'utilisateur ${userId}`, 'info');
+    };
+
+    window.filterPaymentsByUser = (userId) => {
+        window.switchTab('payments');
+        const searchInput = document.getElementById('payments-search-input');
+        if (searchInput) {
+            searchInput.value = String(userId);
+            searchInput.dispatchEvent(new Event('input'));
+        }
+        showToast(`Rechargements filtrés sur l'utilisateur ${userId}`, 'info');
+    };
+
+    modalCloseBtn.addEventListener('click', closeModal);
+    modalCancelBtn.addEventListener('click', closeModal);
+    modalConfirmBtn.addEventListener('click', async () => {
+        if (modalOnConfirmCallback) {
+            await modalOnConfirmCallback();
+        }
+        closeModal();
+    });
+
+    async function apiRequest(endpoint, method = 'GET', body = null) {
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+        };
+        const options = { method, headers };
+        if (body) options.body = JSON.stringify(body);
+
+        try {
+            const response = await fetch(`/api/admin${endpoint}`, options);
+            if (response.status === 401) {
+                logout();
+                showToast('Session expirée ou clé invalide.', 'danger');
+                return null;
+            }
+            return await response.json();
+        } catch (err) {
+            showToast('Erreur de connexion au serveur API', 'danger');
+            return null;
+        }
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const pwd = tokenInput.value.trim();
+        if (!pwd) return;
+
+        const res = await apiRequest('/login', 'POST', { password: pwd });
+        if (res && res.success && res.token) {
+            authToken = res.token;
+            localStorage.setItem('admin_auth_token', res.token);
+            localStorage.setItem('admin_auth_token_time', Date.now().toString());
+            showToast('Connexion réussie (Session 24h) !', 'success');
+            initApp();
+        } else {
+            authToken = '';
+            showToast('Mot de passe ou token incorrect.', 'danger');
+        }
+    });
+
+    function logout() {
+        authToken = '';
+        localStorage.removeItem('admin_auth_token');
+        localStorage.removeItem('admin_auth_token_time');
+        appView.style.display = 'none';
+        loginView.style.display = 'flex';
+    }
+
+    logoutBtn.addEventListener('click', logout);
+
+    function initApp() {
+        loginView.style.display = 'none';
+        appView.style.display = 'flex';
+
+        const hash = (window.location.hash || '').replace('#', '').trim();
+        const savedTab = localStorage.getItem('admin_active_tab') || 'dashboard';
+        const validTabs = ['dashboard', 'metrics', 'users', 'stock', 'payments', 'transactions', 'settings'];
+        const activeTab = validTabs.includes(hash) ? hash : (validTabs.includes(savedTab) ? savedTab : 'dashboard');
+
+        window.switchTab(activeTab);
+    }
+
+
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tab = item.getAttribute('data-tab');
+
+            localStorage.setItem('admin_active_tab', tab);
+            window.location.hash = tab;
+            
+            navItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+
+            tabContents.forEach(content => content.style.display = 'none');
+            const target = document.getElementById(`tab-${tab}`);
+            if (target) target.style.display = 'block';
+
+            const titleMap = {
+                'dashboard': 'Vue d\'Ensemble',
+                'metrics': '⚡ Métriques & Trafic Système',
+                'users': 'Gestion des Utilisateurs',
+                'stock': 'Gestion du Stock Carrefour',
+                'payments': 'Rechargements (CB & Crypto)',
+                'transactions': 'Historique des Achats',
+                'settings': 'Configuration du Bot'
+            };
+            pageTitleHeading.innerText = titleMap[tab] || 'Administration';
+
+            if (tab === 'dashboard') loadDashboardData();
+            else if (tab === 'metrics') startMetricsLivePolling();
+            else if (tab === 'users') loadUsersData();
+            else if (tab === 'stock') loadStockData();
+            else if (tab === 'payments') loadPaymentsData();
+            else if (tab === 'transactions') loadTransactionsData();
+            else if (tab === 'settings') loadSettingsData();
+        });
+    });
+
+    window.switchTab = function(tabName) {
+        const targetNav = document.querySelector(`.nav-item[data-tab="${tabName}"]`);
+        if (targetNav) {
+            targetNav.click();
+        }
+    };
+
+    // Mobile Menu Toggle Logic
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+    function toggleMobileMenu() {
+        if (!sidebar) return;
+        const isActive = sidebar.classList.toggle('active');
+        if (sidebarOverlay) {
+            if (isActive) sidebarOverlay.classList.add('active');
+            else sidebarOverlay.classList.remove('active');
+        }
+    }
+
+    function closeMobileMenu() {
+        if (!sidebar || window.innerWidth > 768) return;
+        sidebar.classList.remove('active');
+        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+    }
+
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', toggleMobileMenu);
+    }
+
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', closeMobileMenu);
+    }
+
+    navItems.forEach(item => {
+        item.addEventListener('click', closeMobileMenu);
+    });
+    let currentMaintenanceState = false;
+    const maintenanceBadge = document.getElementById('maintenance-badge');
+    const toggleMaintenanceBtn = document.getElementById('toggle-maintenance-btn');
+
+    function updateMaintenanceUI(isMtn) {
+        currentMaintenanceState = isMtn;
+        if (!maintenanceBadge) return;
+        if (isMtn) {
+            maintenanceBadge.className = 'badge badge-danger';
+            maintenanceBadge.innerText = '🛠️ Maintenance Active';
+        } else {
+            maintenanceBadge.className = 'badge badge-success';
+            maintenanceBadge.innerText = '🟢 Mode Normal';
+        }
+    }
+
+    if (toggleMaintenanceBtn) {
+        toggleMaintenanceBtn.addEventListener('click', () => {
+            const nextState = !currentMaintenanceState;
+            openModal('Mode Maintenance', `<p>Voulez-vous <strong>${nextState ? 'ACTIVER' : 'DÉSACTIVER'}</strong> le mode maintenance ?<br><br><small style="color: var(--text-secondary);">Toutes les actions Telegram non-admin seront immédiatement bloquées.</small></p>`, async () => {
+                const res = await apiRequest('/maintenance', 'POST', { maintenance: nextState });
+                if (res && res.success) {
+                    updateMaintenanceUI(res.maintenance);
+                    showToast(`Mode maintenance ${res.maintenance ? 'activé 🔴' : 'désactivé 🟢'} !`, res.maintenance ? 'danger' : 'success');
+                }
+            });
+        });
+    }
+
+    let rawRecentSales = [];
+    let currentRecentSalesPage = 1;
+    let recentSalesPerPage = '10';
+    let currentRecentSalesSortField = 'id';
+    let currentRecentSalesSortDir = 'desc';
+
+    function renderRecentSalesTable() {
+        const tbody = document.getElementById('recent-sales-table');
+        if (!tbody) return;
+
+        const searchInput = document.getElementById('recent-sales-search-input');
+        const clearBtn = document.getElementById('recent-sales-search-clear');
+        const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+        if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+
+        let filtered = rawRecentSales.filter(tx => {
+            if (!query) return true;
+            return String(tx.id || '').toLowerCase().includes(query) ||
+                   String(tx.userId || '').toLowerCase().includes(query) ||
+                   String(tx.brand || '').toLowerCase().includes(query) ||
+                   String(tx.price || '').toLowerCase().includes(query) ||
+                   String(tx.createdAt || '').toLowerCase().includes(query);
+        });
+
+        filtered.sort((a, b) => {
+            let valA = a[currentRecentSalesSortField];
+            let valB = b[currentRecentSalesSortField];
+            if (valA === undefined || valA === null) valA = '';
+            if (valB === undefined || valB === null) valB = '';
+
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                return currentRecentSalesSortDir === 'asc' ? valA - valB : valB - valA;
+            }
+            const strA = String(valA).toLowerCase();
+            const strB = String(valB).toLowerCase();
+            if (strA < strB) return currentRecentSalesSortDir === 'asc' ? -1 : 1;
+            if (strA > strB) return currentRecentSalesSortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        ['id', 'userId', 'brand', 'price', 'createdAt'].forEach(field => {
+            const arrowEl = document.getElementById(`sort-arrow-sales-${field}`);
+            if (arrowEl) {
+                if (field === currentRecentSalesSortField) {
+                    arrowEl.innerText = currentRecentSalesSortDir === 'asc' ? '▲' : '▼';
+                    arrowEl.style.color = 'var(--accent-primary)';
+                } else {
+                    arrowEl.innerText = '↕';
+                    arrowEl.style.color = 'var(--text-secondary)';
+                }
+            }
+        });
+
+        const totalItems = filtered.length;
+        let perPage = recentSalesPerPage === 'all' ? totalItems : parseInt(recentSalesPerPage, 10);
+        if (isNaN(perPage) || perPage <= 0) perPage = totalItems || 1;
+
+        const totalPages = Math.ceil(totalItems / perPage) || 1;
+        if (currentRecentSalesPage > totalPages) currentRecentSalesPage = totalPages;
+        if (currentRecentSalesPage < 1) currentRecentSalesPage = 1;
+
+        const startIdx = (currentRecentSalesPage - 1) * perPage;
+        const endIdx = recentSalesPerPage === 'all' ? totalItems : Math.min(startIdx + perPage, totalItems);
+        const pageItems = filtered.slice(startIdx, endIdx);
+
+        tbody.innerHTML = '';
+        if (pageItems.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 24px;">Aucune vente trouvée</td></tr>`;
+        } else {
+            pageItems.forEach(tx => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>#${tx.id}</td>
+                    <td style="cursor: pointer; color: var(--accent-primary);" onclick="window.redirectToUser('${tx.userId}')"><code>${tx.userId}</code></td>
+                    <td>${escapeHtml(tx.brand)}</td>
+                    <td><strong>${tx.price} €</strong></td>
+                    <td>${formatParisDate(tx.createdAt)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        const infoEl = document.getElementById('recent-sales-pagination-info');
+        if (infoEl) {
+            infoEl.innerText = totalItems === 0 
+                ? 'Affichage 0 sur 0 vente(s)' 
+                : `Affichage ${startIdx + 1}-${endIdx} sur ${totalItems} vente(s)`;
+        }
+
+        const indicatorEl = document.getElementById('recent-sales-page-indicator');
+        if (indicatorEl) indicatorEl.innerText = `Page ${currentRecentSalesPage} / ${totalPages}`;
+
+        const prevBtn = document.getElementById('btn-recent-sales-prev');
+        const nextBtn = document.getElementById('btn-recent-sales-next');
+        if (prevBtn) prevBtn.disabled = currentRecentSalesPage <= 1;
+        if (nextBtn) nextBtn.disabled = currentRecentSalesPage >= totalPages;
+    }
+
+    function initRecentSalesListeners() {
+        const searchInput = document.getElementById('recent-sales-search-input');
+        const clearBtn = document.getElementById('recent-sales-search-clear');
+        const perPageSelect = document.getElementById('recent-sales-per-page-select');
+        const prevBtn = document.getElementById('btn-recent-sales-prev');
+        const nextBtn = document.getElementById('btn-recent-sales-next');
+
+        if (searchInput && !searchInput.dataset.initialized) {
+            searchInput.dataset.initialized = 'true';
+            searchInput.addEventListener('input', () => {
+                currentRecentSalesPage = 1;
+                renderRecentSalesTable();
+            });
+        }
+
+        if (clearBtn && !clearBtn.dataset.initialized) {
+            clearBtn.dataset.initialized = 'true';
+            clearBtn.addEventListener('click', () => {
+                if (searchInput) searchInput.value = '';
+                currentRecentSalesPage = 1;
+                renderRecentSalesTable();
+            });
+        }
+
+        if (perPageSelect && !perPageSelect.dataset.initialized) {
+            perPageSelect.dataset.initialized = 'true';
+            perPageSelect.addEventListener('change', (e) => {
+                recentSalesPerPage = e.target.value;
+                currentRecentSalesPage = 1;
+                renderRecentSalesTable();
+            });
+        }
+
+        if (prevBtn && !prevBtn.dataset.initialized) {
+            prevBtn.dataset.initialized = 'true';
+            prevBtn.addEventListener('click', () => {
+                if (currentRecentSalesPage > 1) {
+                    currentRecentSalesPage--;
+                    renderRecentSalesTable();
+                }
+            });
+        }
+
+        if (nextBtn && !nextBtn.dataset.initialized) {
+            nextBtn.dataset.initialized = 'true';
+            nextBtn.addEventListener('click', () => {
+                currentRecentSalesPage++;
+                renderRecentSalesTable();
+            });
+        }
+
+        document.querySelectorAll('.sortable-th[data-table="recent-sales"]').forEach(th => {
+            if (!th.dataset.initialized) {
+                th.dataset.initialized = 'true';
+                th.addEventListener('click', () => {
+                    const sortField = th.dataset.sort;
+                    if (currentRecentSalesSortField === sortField) {
+                        currentRecentSalesSortDir = currentRecentSalesSortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentRecentSalesSortField = sortField;
+                        currentRecentSalesSortDir = 'asc';
+                    }
+                    renderRecentSalesTable();
+                });
+            }
+        });
+    }
+
+    async function loadDashboardData() {
+        const stats = await apiRequest('/stats');
+        if (!stats) return;
+
+        updateMaintenanceUI(stats.maintenance);
+
+        document.getElementById('stat-total-ca').innerText = `${stats.totalCa.toFixed(2)} €`;
+        document.getElementById('stat-total-sales').innerText = stats.totalSales;
+        document.getElementById('stat-total-users').innerText = stats.totalUsers;
+        document.getElementById('stat-total-stock').innerText = stats.totalStock;
+
+        rawRecentSales = stats.recentSales || [];
+        initRecentSalesListeners();
+        renderRecentSalesTable();
+    }
+
+    let metricsLiveInterval = null;
+
+    function startMetricsLivePolling() {
+        if (metricsLiveInterval) clearInterval(metricsLiveInterval);
+        loadMetricsData();
+        metricsLiveInterval = setInterval(() => {
+            const activeTab = localStorage.getItem('admin_active_tab');
+            if (activeTab === 'metrics') {
+                loadMetricsData();
+            } else {
+                clearInterval(metricsLiveInterval);
+                metricsLiveInterval = null;
+            }
+        }, 2000);
+    }
+
+    function updateCounter(elementId, value) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        const newVal = String(value || 0);
+        if (el.innerText !== newVal) {
+            el.innerText = newVal;
+            el.classList.add('counter-pulse');
+            setTimeout(() => el.classList.remove('counter-pulse'), 400);
+        }
+    }
+
+    // [ ADVANCED METRICS CHARTS SYSTEM ] =====================================
+    let chartGlobalVolume = null;
+    const individualCharts = {};
+
+    const metricsHistory = {
+        labels: [],
+        totalTraffic: [],
+        tgRec: [],
+        tgSent: [],
+        cmdExec: [],
+        sumupRec: [],
+        sumupSent: [],
+        oxapayRec: [],
+        oxapaySent: [],
+        adminLogins: [],
+        errorsCount: []
+    };
+    const MAX_HISTORY_POINTS = 15;
+
+    function initMetricsViewMode() {
+        const btnCards = document.getElementById('btn-mode-cards');
+        const btnCharts = document.getElementById('btn-mode-charts');
+        const cardsView = document.getElementById('metrics-cards-view');
+        const chartsView = document.getElementById('metrics-charts-view');
+
+        if (!btnCards || !btnCharts || !cardsView || !chartsView) return;
+
+        function setViewMode(mode) {
+            localStorage.setItem('metrics_view_mode', mode);
+            if (mode === 'cards') {
+                cardsView.style.display = 'block';
+                chartsView.style.display = 'none';
+                btnCards.style.background = 'var(--accent-primary)';
+                btnCards.style.color = '#ffffff';
+                btnCharts.style.background = 'transparent';
+                btnCharts.style.color = 'var(--text-secondary)';
+            } else {
+                cardsView.style.display = 'none';
+                chartsView.style.display = 'grid';
+                btnCharts.style.background = 'var(--accent-primary)';
+                btnCharts.style.color = '#ffffff';
+                btnCards.style.background = 'transparent';
+                btnCards.style.color = 'var(--text-secondary)';
+            }
+        }
+
+        btnCards.addEventListener('click', () => setViewMode('cards'));
+        btnCharts.addEventListener('click', () => setViewMode('charts'));
+
+        const savedMode = localStorage.getItem('metrics_view_mode') || 'charts';
+        setViewMode(savedMode);
+    }
+
+    let selectedTimeframe = 'live';
+
+    function createSparklineChart(canvasId, mainColor, fillHex) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return null;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+        gradient.addColorStop(0, fillHex);
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.02)');
+
+        return new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: metricsHistory.labels,
+                datasets: [{
+                    label: 'Volume',
+                    data: [],
+                    borderColor: mainColor,
+                    borderWidth: 2.5,
+                    backgroundColor: gradient,
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    pointBackgroundColor: mainColor,
+                    pointHoverBackgroundColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { 
+                        mode: 'index', 
+                        intersect: false,
+                        padding: 10,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: '#ffffff',
+                        bodyColor: mainColor,
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                        ticks: { 
+                            font: { size: 9 }, 
+                            color: '#94a3b8', 
+                            maxRotation: 0,
+                            maxTicksLimit: 5,
+                            autoSkip: true 
+                        }
+                    },
+                    y: {
+                        display: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                        beginAtZero: true,
+                        suggestedMax: 5,
+                        ticks: { font: { size: 9 }, color: '#94a3b8', precision: 0 }
+                    }
+                }
+            }
+        });
+    }
+
+    function initMetricsCharts() {
+        if (typeof Chart === 'undefined') return;
+
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+        const ctxGlobal = document.getElementById('chart-global-volume')?.getContext('2d');
+        if (ctxGlobal && !chartGlobalVolume) {
+            const gradGlobal = ctxGlobal.createLinearGradient(0, 0, 0, 240);
+            gradGlobal.addColorStop(0, 'rgba(99, 102, 241, 0.4)');
+            gradGlobal.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+
+            chartGlobalVolume = new Chart(ctxGlobal, {
+                type: 'line',
+                data: {
+                    labels: metricsHistory.labels,
+                    datasets: [
+                        { 
+                            label: 'Volume Réseau Global', 
+                            data: metricsHistory.totalTraffic, 
+                            borderColor: '#6366f1', 
+                            backgroundColor: gradGlobal, 
+                            fill: true, 
+                            tension: 0.1, 
+                            borderWidth: 3,
+                            pointBackgroundColor: '#818cf8',
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        if (!individualCharts.tgRec) individualCharts.tgRec = createSparklineChart('chart-tg-rec', '#06b6d4', 'rgba(6, 182, 212, 0.35)');
+        if (!individualCharts.tgSent) individualCharts.tgSent = createSparklineChart('chart-tg-sent', '#a855f7', 'rgba(168, 85, 247, 0.35)');
+        if (!individualCharts.cmdExec) individualCharts.cmdExec = createSparklineChart('chart-commands-exec', '#10b981', 'rgba(16, 185, 129, 0.35)');
+        if (!individualCharts.sumupRec) individualCharts.sumupRec = createSparklineChart('chart-sumup-rec', '#3b82f6', 'rgba(59, 130, 246, 0.35)');
+        if (!individualCharts.sumupSent) individualCharts.sumupSent = createSparklineChart('chart-sumup-sent', '#38bdf8', 'rgba(56, 189, 248, 0.35)');
+        if (!individualCharts.oxapayRec) individualCharts.oxapayRec = createSparklineChart('chart-oxapay-rec', '#f59e0b', 'rgba(245, 158, 11, 0.35)');
+        if (!individualCharts.oxapaySent) individualCharts.oxapaySent = createSparklineChart('chart-oxapay-sent', '#f97316', 'rgba(249, 115, 22, 0.35)');
+        if (!individualCharts.adminLogins) individualCharts.adminLogins = createSparklineChart('chart-admin-logins', '#8b5cf6', 'rgba(139, 92, 246, 0.35)');
+        if (!individualCharts.errorsCount) individualCharts.errorsCount = createSparklineChart('chart-errors-count', '#ef4444', 'rgba(239, 68, 68, 0.35)');
+
+        const segmentedBar = document.getElementById('timeframe-segmented-bar');
+        const customContainer = document.getElementById('custom-date-picker-container');
+        const startDateInput = document.getElementById('chart-start-date');
+        const endDateInput = document.getElementById('chart-end-date');
+        const applyCustomBtn = document.getElementById('btn-apply-custom-date');
+
+        if (segmentedBar && !segmentedBar.dataset.initialized) {
+            segmentedBar.dataset.initialized = 'true';
+            
+            const todayStr = new Date().toISOString().split('T')[0];
+            const past7Str = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+            if (startDateInput) startDateInput.value = past7Str;
+            if (endDateInput) endDateInput.value = todayStr;
+
+            const buttons = segmentedBar.querySelectorAll('.timeframe-btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    buttons.forEach(b => {
+                        b.style.background = 'transparent';
+                        b.style.color = 'var(--text-secondary)';
+                        b.classList.remove('active');
+                    });
+                    btn.style.background = 'var(--accent-primary)';
+                    btn.style.color = '#ffffff';
+                    btn.classList.add('active');
+
+                    selectedTimeframe = btn.dataset.value;
+                    if (customContainer) {
+                        customContainer.style.display = selectedTimeframe === 'custom' ? 'flex' : 'none';
+                    }
+                    if (selectedTimeframe === 'custom') {
+                        await fetchAndRenderCustomStats();
+                    } else if (lastStatsResponse) {
+                        renderMainVolumeChart(lastStatsResponse);
+                    }
+                });
+            });
+
+            if (applyCustomBtn) {
+                applyCustomBtn.addEventListener('click', async () => {
+                    await fetchAndRenderCustomStats();
+                });
+            }
+        }
+    }
+
+    async function fetchAndRenderCustomStats() {
+        const sDate = document.getElementById('chart-start-date')?.value || '';
+        const eDate = document.getElementById('chart-end-date')?.value || '';
+        if (!sDate || !eDate) return;
+        const res = await apiRequest(`/stats?startDate=${sDate}&endDate=${eDate}`);
+        if (res && res.history) {
+            lastStatsResponse = res;
+            renderMainVolumeChart(res);
+        }
+    }
+
+    let lastStatsResponse = null;
+
+    function renderMainVolumeChart() {
+        if (!chartGlobalVolume) return;
+        const subTitle = document.getElementById('main-chart-subtitle');
+
+        chartGlobalVolume.data.labels = [...metricsHistory.labels];
+        chartGlobalVolume.data.datasets[0].data = [...metricsHistory.totalTraffic];
+        chartGlobalVolume.data.datasets[0].label = 'Volume Réseau Global (En Direct)';
+        if (subTitle) subTitle.textContent = "Évolution globale du trafic et des requêtes réseau en temps réel";
+
+        chartGlobalVolume.update('none');
+    }
+
+    function updateChartsWithMetrics(m, totalTraffic, stats) {
+        initMetricsCharts();
+        initMetricsViewMode();
+        lastStatsResponse = stats;
+
+        const nowTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        if (metricsHistory.labels.length === 0) {
+            const now = new Date();
+            for (let i = 9; i >= 0; i--) {
+                const pastTime = new Date(now.getTime() - i * 2000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                metricsHistory.labels.push(pastTime);
+                metricsHistory.totalTraffic.push(totalTraffic || 0);
+                metricsHistory.tgRec.push(m.telegramReceived || 0);
+                metricsHistory.tgSent.push(m.telegramSent || 0);
+                metricsHistory.cmdExec.push(m.commandsExecuted || 0);
+                metricsHistory.sumupRec.push(m.sumupReceived || 0);
+                metricsHistory.sumupSent.push(m.sumupSent || 0);
+                metricsHistory.oxapayRec.push(m.oxapayReceived || 0);
+                metricsHistory.oxapaySent.push(m.oxapaySent || 0);
+                metricsHistory.adminLogins.push(m.adminLogins || 0);
+                metricsHistory.errorsCount.push(m.errorsCount || 0);
+            }
+        } else {
+            if (metricsHistory.labels.length >= 10) {
+                metricsHistory.labels.shift();
+                metricsHistory.totalTraffic.shift();
+                metricsHistory.tgRec.shift();
+                metricsHistory.tgSent.shift();
+                metricsHistory.cmdExec.shift();
+                metricsHistory.sumupRec.shift();
+                metricsHistory.sumupSent.shift();
+                metricsHistory.oxapayRec.shift();
+                metricsHistory.oxapaySent.shift();
+                metricsHistory.adminLogins.shift();
+                metricsHistory.errorsCount.shift();
+            }
+            metricsHistory.labels.push(nowTime);
+            metricsHistory.totalTraffic.push(totalTraffic || 0);
+            metricsHistory.tgRec.push(m.telegramReceived || 0);
+            metricsHistory.tgSent.push(m.telegramSent || 0);
+            metricsHistory.cmdExec.push(m.commandsExecuted || 0);
+            metricsHistory.sumupRec.push(m.sumupReceived || 0);
+            metricsHistory.sumupSent.push(m.sumupSent || 0);
+            metricsHistory.oxapayRec.push(m.oxapayReceived || 0);
+            metricsHistory.oxapaySent.push(m.oxapaySent || 0);
+            metricsHistory.adminLogins.push(m.adminLogins || 0);
+            metricsHistory.errorsCount.push(m.errorsCount || 0);
+        }
+
+        renderMainVolumeChart(stats);
+
+        updateCounter('chart-val-tg-rec', m.telegramReceived);
+        updateCounter('chart-val-tg-sent', m.telegramSent);
+        updateCounter('chart-val-commands-exec', m.commandsExecuted);
+        updateCounter('chart-val-sumup-rec', m.sumupReceived);
+        updateCounter('chart-val-sumup-sent', m.sumupSent);
+        updateCounter('chart-val-oxapay-rec', m.oxapayReceived);
+        updateCounter('chart-val-oxapay-sent', m.oxapaySent);
+        updateCounter('chart-val-admin-logins', m.adminLogins);
+        updateCounter('chart-val-errors-count', m.errorsCount);
+
+        const updateSpark = (chartObj, dataArr) => {
+            if (chartObj) {
+                chartObj.data.labels = metricsHistory.labels;
+                chartObj.data.datasets[0].data = dataArr;
+                chartObj.update('none');
+            }
+        };
+
+        updateSpark(individualCharts.tgRec, metricsHistory.tgRec);
+        updateSpark(individualCharts.tgSent, metricsHistory.tgSent);
+        updateSpark(individualCharts.cmdExec, metricsHistory.cmdExec);
+        updateSpark(individualCharts.sumupRec, metricsHistory.sumupRec);
+        updateSpark(individualCharts.sumupSent, metricsHistory.sumupSent);
+        updateSpark(individualCharts.oxapayRec, metricsHistory.oxapayRec);
+        updateSpark(individualCharts.oxapaySent, metricsHistory.oxapaySent);
+        updateSpark(individualCharts.adminLogins, metricsHistory.adminLogins);
+        updateSpark(individualCharts.errorsCount, metricsHistory.errorsCount);
+    }
+
+    async function loadMetricsData() {
+        const stats = await apiRequest('/stats');
+        if (!stats || !stats.metrics) return;
+
+        const m = stats.metrics;
+        updateCounter('metric-tg-rec', m.telegramReceived);
+        updateCounter('metric-tg-sent', m.telegramSent);
+        updateCounter('metric-sumup-rec', m.sumupReceived);
+        updateCounter('metric-sumup-sent', m.sumupSent);
+        updateCounter('metric-oxapay-rec', m.oxapayReceived);
+        updateCounter('metric-oxapay-sent', m.oxapaySent);
+        updateCounter('metric-commands-exec', m.commandsExecuted);
+        updateCounter('metric-errors-count', m.errorsCount);
+        updateCounter('metric-admin-logins', m.adminLogins);
+
+        const totalTraffic = (m.telegramReceived || 0) + (m.telegramSent || 0) + (m.sumupReceived || 0) + (m.sumupSent || 0) + (m.oxapayReceived || 0) + (m.oxapaySent || 0);
+        updateCounter('metric-total-traffic', totalTraffic);
+
+        updateChartsWithMetrics(m, totalTraffic, stats);
+    }
+
+    const resetMetricsBtn = document.getElementById('reset-metrics-btn');
+    if (resetMetricsBtn) {
+        resetMetricsBtn.addEventListener('click', () => {
+            openModal(
+                '🧹 Réinitialiser les compteurs',
+                '<p>Êtes-vous sûr de vouloir réinitialiser l\'intégralité des compteurs de métriques et de statistiques à 0 ?</p><p style="color: var(--text-secondary); font-size: 13px; margin-top: 8px;">Cette action effacera l\'historique enregistré en BDD et remettra les valeurs à zéro.</p>',
+                async () => {
+                    closeModal();
+                    const res = await apiRequest('/metrics/reset', 'POST');
+                    if (res && res.success) {
+                        showToast('Compteurs réinitialisés à 0', 'success');
+                        metricsHistory.labels.length = 0;
+                        metricsHistory.tgRec.length = 0;
+                        metricsHistory.tgSent.length = 0;
+                        metricsHistory.cmdExec.length = 0;
+                        metricsHistory.sumupRec.length = 0;
+                        metricsHistory.oxapaySent.length = 0;
+                        metricsHistory.errorsCount.length = 0;
+                        await loadMetricsData();
+                    } else {
+                        showToast('Erreur lors de la réinitialisation', 'error');
+                    }
+                }
+            );
+        });
+    }
+
+    let allUsers = [];
+    let userSortField = 'userNumber';
+    let userSortDir = 'asc';
+    let usersCurrentPage = 1;
+    let usersPerPage = 10;
+
+    async function loadUsersData() {
+        const data = await apiRequest('/users');
+        if (!data) return;
+
+        allUsers = data.users || [];
+        applyUsersFilterAndSort();
+    }
+
+    function applyUsersFilterAndSort() {
+        const searchInput = document.getElementById('user-search-input');
+        const clearBtn = document.getElementById('user-search-clear');
+        const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+        if (clearBtn) {
+            clearBtn.style.display = q ? 'block' : 'none';
+        }
+
+        let filtered = allUsers.filter(u => {
+            if (!q) return true;
+            return String(u.id).includes(q) ||
+                   String(u.userNumber).includes(q) ||
+                   (u.username && u.username.toLowerCase().includes(q)) ||
+                   String(u.solde).includes(q) ||
+                   (u.banReason && u.banReason.toLowerCase().includes(q));
+        });
+
+        filtered.sort((a, b) => {
+            let valA = a[userSortField];
+            let valB = b[userSortField];
+
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
+
+            if (valA < valB) return userSortDir === 'asc' ? -1 : 1;
+            if (valA > valB) return userSortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        // Update Sort Arrow Indicators
+        document.querySelectorAll('.sortable-th').forEach(th => {
+            const field = th.getAttribute('data-sort');
+            const arrowSpan = th.querySelector('.sort-arrow');
+            if (arrowSpan) {
+                if (field === userSortField) {
+                    arrowSpan.innerText = userSortDir === 'asc' ? '▲' : '▼';
+                    th.style.color = 'var(--accent-primary)';
+                } else {
+                    arrowSpan.innerText = '↕';
+                    th.style.color = '';
+                }
+            }
+        });
+
+        // Pagination Slice
+        const totalItems = filtered.length;
+        let perPage = usersPerPage === 'all' ? totalItems : parseInt(usersPerPage) || 10;
+        if (perPage <= 0) perPage = 10;
+
+        const totalPages = Math.ceil(totalItems / perPage) || 1;
+        if (usersCurrentPage > totalPages) usersCurrentPage = totalPages;
+        if (usersCurrentPage < 1) usersCurrentPage = 1;
+
+        const startIdx = (usersCurrentPage - 1) * perPage;
+        const endIdx = usersPerPage === 'all' ? totalItems : Math.min(startIdx + perPage, totalItems);
+        const pageItems = filtered.slice(startIdx, endIdx);
+
+        // Update Pagination Info UI
+        const infoElem = document.getElementById('users-pagination-info');
+        if (infoElem) {
+            infoElem.innerText = totalItems > 0 
+                ? `Affichage ${startIdx + 1}-${endIdx} sur ${totalItems} utilisateur(s)`
+                : `Aucun utilisateur trouvé`;
+        }
+
+        const pageIndicator = document.getElementById('users-page-indicator');
+        if (pageIndicator) {
+            pageIndicator.innerText = `Page ${usersCurrentPage} / ${totalPages}`;
+        }
+
+        const btnPrev = document.getElementById('btn-users-prev');
+        const btnNext = document.getElementById('btn-users-next');
+        if (btnPrev) btnPrev.disabled = usersCurrentPage <= 1;
+        if (btnNext) btnNext.disabled = usersCurrentPage >= totalPages;
+
+        renderUsersTable(pageItems);
+    }
+
+    function renderUsersTable(users) {
+        const tbody = document.getElementById('users-table');
+        tbody.innerHTML = '';
+        if (users.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 24px;">Aucun utilisateur trouvé.</td></tr>`;
+            return;
+        }
+
+        users.forEach(user => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = 'context-menu';
+            const statusBadge = user.isBanned 
+                ? `<span class="badge badge-danger">Banni</span>` 
+                : `<span class="badge badge-success">Actif</span>`;
+            
+            const unameBadge = user.username 
+                ? `<span style="color: #6366f1; font-weight: 600;">${escapeHtml(user.username)}</span>` 
+                : `<span style="color: var(--text-secondary); font-style: italic; opacity: 0.6;">-</span>`;
+
+            const idHtml = user.isAdmin 
+                ? `<code style="color: #ef4444; font-weight: 700; background: rgba(239, 68, 68, 0.18); border: 1px solid rgba(239, 68, 68, 0.4); padding: 2px 8px; border-radius: 4px;">${user.id} 👑 ADMIN</code>` 
+                : `<code>${user.id}</code>`;
+
+            tr.innerHTML = `
+                <td><span class="badge badge-info" style="font-weight: 700; background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);">#${user.userNumber || '?'}</span></td>
+                <td>${idHtml}</td>
+                <td>${unameBadge}</td>
+                <td><strong>${user.solde.toFixed(2)} €</strong></td>
+                <td>${user.achats}</td>
+                <td>${statusBadge}</td>
+                <td>${user.banReason ? escapeHtml(user.banReason) : '-'}</td>
+                <td>
+                    <button class="action-btn" onclick="btnEditSolde('${user.id}', ${user.solde})">💳 Solde</button>
+                    ${user.isBanned 
+                        ? `<button class="action-btn action-btn-danger" onclick="btnDebanUser('${user.id}')">Débannir</button>` 
+                        : `<button class="action-btn action-btn-danger" onclick="btnBanUser('${user.id}')">Bannir</button>`}
+                    <button class="action-btn action-btn-danger" style="background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3);" onclick="btnDeleteUser('${user.id}')">🗑️ Supprimer</button>
+                </td>
+            `;
+
+            tr.addEventListener('contextmenu', (e) => {
+                showDynamicContextMenu(e, [
+                    { label: '💳 Modifier le Solde', action: () => btnEditSolde(user.id, user.solde) },
+                    { label: user.isBanned ? '🔓 Débannir l\'Utilisateur' : '🚫 Bannir l\'Utilisateur', action: () => user.isBanned ? btnDebanUser(user.id) : btnBanUser(user.id) },
+                    { divider: true },
+                    { label: '📋 Copier l\'ID Telegram', action: () => { navigator.clipboard.writeText(String(user.id)); showToast(`ID ${user.id} copié !`, 'info'); } },
+                    { label: '💬 Copier le Username', action: () => { if (user.username) { navigator.clipboard.writeText(user.username); showToast(`@${user.username} copié !`, 'info'); } else showToast('Aucun username à copier', 'warning'); } },
+                    { divider: true },
+                    { label: '🛒 Historique des Achats', action: () => window.filterTransactionsByUser(user.id) },
+                    { label: '💰 Historique des Rechargements', action: () => window.filterPaymentsByUser(user.id) },
+                    { divider: true },
+                    { label: '🗑️ Supprimer l\'Utilisateur', danger: true, action: () => btnDeleteUser(user.id) }
+                ]);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    // [ DYNAMIC CONTEXT MENU SYSTEM ] ========================================
+    const ctxMenu = document.getElementById('custom-context-menu');
+
+    function showDynamicContextMenu(e, items) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!ctxMenu) return;
+
+        ctxMenu.innerHTML = '';
+        items.forEach(item => {
+            if (item.divider) {
+                const div = document.createElement('div');
+                div.className = 'context-menu-divider';
+                ctxMenu.appendChild(div);
+            } else {
+                const div = document.createElement('div');
+                div.className = `context-menu-item ${item.danger ? 'danger' : ''}`;
+                div.innerHTML = item.label;
+                div.addEventListener('click', (evt) => {
+                    evt.stopPropagation();
+                    hideContextMenu();
+                    if (item.action) item.action();
+                });
+                ctxMenu.appendChild(div);
+            }
+        });
+
+        ctxMenu.style.display = 'block';
+
+        let x = e.pageX;
+        let y = e.pageY;
+        const menuWidth = 240;
+        const menuHeight = ctxMenu.offsetHeight || 260;
+
+        if (x + menuWidth > window.innerWidth + window.scrollX) {
+            x = window.innerWidth + window.scrollX - menuWidth - 10;
+        }
+        if (y + menuHeight > window.innerHeight + window.scrollY) {
+            y = window.innerHeight + window.scrollY - menuHeight - 10;
+        }
+
+        ctxMenu.style.left = `${Math.max(10, x)}px`;
+        ctxMenu.style.top = `${Math.max(10, y)}px`;
+    }
+
+    function hideContextMenu() {
+        if (ctxMenu) ctxMenu.style.display = 'none';
+    }
+
+    document.addEventListener('click', hideContextMenu);
+    document.addEventListener('scroll', hideContextMenu);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') hideContextMenu();
+    });
+
+    // Attach Event Listeners for Search, Clear, Sorting & Pagination
+    const searchInputElem = document.getElementById('user-search-input');
+    if (searchInputElem) {
+        searchInputElem.addEventListener('input', () => {
+            usersCurrentPage = 1;
+            applyUsersFilterAndSort();
+        });
+    }
+
+    const clearBtnElem = document.getElementById('user-search-clear');
+    if (clearBtnElem) {
+        clearBtnElem.addEventListener('click', () => {
+            if (searchInputElem) searchInputElem.value = '';
+            usersCurrentPage = 1;
+            applyUsersFilterAndSort();
+        });
+    }
+
+    document.querySelectorAll('.sortable-th').forEach(th => {
+        th.addEventListener('click', () => {
+            const field = th.getAttribute('data-sort');
+            if (userSortField === field) {
+                userSortDir = userSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                userSortField = field;
+                userSortDir = 'asc';
+            }
+            applyUsersFilterAndSort();
+        });
+    });
+
+    const perPageSelect = document.getElementById('users-per-page-select');
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', (e) => {
+            usersPerPage = e.target.value;
+            usersCurrentPage = 1;
+            applyUsersFilterAndSort();
+        });
+    }
+
+    const btnPrevElem = document.getElementById('btn-users-prev');
+    if (btnPrevElem) {
+        btnPrevElem.addEventListener('click', () => {
+            if (usersCurrentPage > 1) {
+                usersCurrentPage--;
+                applyUsersFilterAndSort();
+            }
+        });
+    }
+
+    const btnNextElem = document.getElementById('btn-users-next');
+    if (btnNextElem) {
+        btnNextElem.addEventListener('click', () => {
+            usersCurrentPage++;
+            applyUsersFilterAndSort();
+        });
+    }
+
+    const btnSyncElem = document.getElementById('btn-sync-usernames');
+    if (btnSyncElem) {
+        btnSyncElem.addEventListener('click', async () => {
+            const listToSync = (allUsers || []).filter(u => !u.username || u.username.trim() === '' || u.username === 'N/A');
+            const targetList = listToSync.length > 0 ? listToSync : (allUsers || []);
+
+            if (targetList.length === 0) {
+                showToast('Aucun utilisateur à synchroniser', 'info');
+                return;
+            }
+
+            const modalHtml = `
+                <div style="margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 13px; font-weight: 600;">
+                        <span>Progression de la synchronisation</span>
+                        <span id="sync-progress-text">0 / ${targetList.length} (0%)</span>
+                    </div>
+                    <div style="width: 100%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden;">
+                        <div id="sync-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #10b981); transition: width 0.2s ease;"></div>
+                    </div>
+                </div>
+                <div id="sync-log-box" style="background: #090d16; border: 1px solid rgba(255,255,255,0.1); font-family: monospace; font-size: 12px; color: #10b981; padding: 12px; height: 220px; overflow-y: auto; border-radius: 8px; line-height: 1.5; white-space: pre-wrap;">
+                </div>
+            `;
+
+            openModal('Synchronisation des Pseudos Telegram', modalHtml, null);
+
+            const modalCancelBtn = document.getElementById('modal-cancel-btn');
+            if (modalCancelBtn) modalCancelBtn.style.display = 'none';
+
+            const logBox = document.getElementById('sync-log-box');
+            const progressBar = document.getElementById('sync-progress-bar');
+            const progressText = document.getElementById('sync-progress-text');
+
+            const addLog = (msg, color = '#10b981') => {
+                if (!logBox) return;
+                const time = new Date().toLocaleTimeString();
+                const div = document.createElement('div');
+                div.style.color = color;
+                div.textContent = `[${time}] ${msg}`;
+                logBox.appendChild(div);
+                logBox.scrollTop = logBox.scrollHeight;
+            };
+
+            addLog(`Démarrage de la synchronisation pour ${targetList.length} utilisateur(s)...`, '#3b82f6');
+
+            let processed = 0;
+            let successCount = 0;
+
+            for (const user of targetList) {
+                try {
+                    const res = await apiRequest('/users/sync-user', 'POST', { userId: user.id });
+                    processed++;
+                    const pct = Math.round((processed / targetList.length) * 100);
+                    if (progressBar) progressBar.style.width = `${pct}%`;
+                    if (progressText) progressText.textContent = `${processed} / ${targetList.length} (${pct}%)`;
+
+                    if (res && res.success) {
+                        if (res.username && res.username !== 'N/A') {
+                            successCount++;
+                            addLog(`User ${user.id} -> ${res.username} (${res.message})`, '#10b981');
+                        } else {
+                            addLog(`User ${user.id} -> ${res.message}`, '#f59e0b');
+                        }
+                    } else {
+                        addLog(`User ${user.id} -> Échec (${res ? res.message : 'Erreur réseau'})`, '#ef4444');
+                    }
+                } catch (err) {
+                    processed++;
+                    addLog(`User ${user.id} -> Erreur: ${err.message}`, '#ef4444');
+                }
+            }
+
+            addLog(`Synchronisation terminée ! ${successCount} pseudo(s) récupéré(s).`, '#3b82f6');
+            showToast('Synchronisation terminée', 'success');
+            loadUsersData();
+
+            if (modalCancelBtn) {
+                modalCancelBtn.style.display = 'inline-block';
+                modalCancelBtn.textContent = 'Fermer';
+            }
+        });
+    }
+
+    window.btnDeleteUser = (userId) => {
+        openModal(`Supprimer ${userId}`, `<p style="color: var(--text-secondary);">Êtes-vous sûr de vouloir <strong>supprimer définitivement</strong> l'utilisateur <code>${userId}</code> ?<br><br><span style="color:#ef4444; font-size:13px; font-weight:600;">⚠️ Cette action effacera toutes ses données comme s'il n'avait jamais rejoint le bot.</span></p>`, async () => {
+            const res = await apiRequest('/users/delete', 'POST', { userId: parseInt(userId) });
+            if (res && res.success) {
+                showToast('Utilisateur supprimé définitivement', 'success');
+                loadUsersData();
+            } else {
+                showToast('Erreur lors de la suppression', 'danger');
+            }
+        });
+    };
+
+    window.btnEditSolde = (userId, currentSolde) => {
+        const html = `
+            <p style="margin-bottom: 12px; color: var(--text-secondary);">Modifier le solde de l'utilisateur <code>${userId}</code> (Solde actuel: ${currentSolde}€) :</p>
+            <div class="form-group">
+                <label class="form-label">Action</label>
+                <select id="modal-solde-action" class="form-input">
+                    <option value="add">Ajouter (+)</option>
+                    <option value="remove">Retirer (-)</option>
+                    <option value="set">Définir un solde fixe (=)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Montant (€)</label>
+                <input type="number" step="0.1" id="modal-solde-amount" class="form-input" placeholder="Ex: 10" required>
+            </div>
+            <div style="margin-top: 10px;">
+                <button type="button" style="width: 100%; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer;" onclick="document.getElementById('modal-solde-action').value='set'; document.getElementById('modal-solde-amount').value='0';">🗑️ Remettre le solde à 0€</button>
+            </div>
+        `;
+        openModal(`Gestion Solde ${userId}`, html, async () => {
+            const act = document.getElementById('modal-solde-action').value;
+            const amt = parseFloat(document.getElementById('modal-solde-amount').value);
+            if (isNaN(amt) || amt < 0) {
+                showToast('Montant invalide (doit être supérieur ou égal à 0)', 'danger');
+                return;
+            }
+            const res = await apiRequest('/users/solde', 'POST', { userId, action: act, amount: amt });
+            if (res && res.success) {
+                showToast('Solde mis à jour avec succès', 'success');
+                loadUsersData();
+            }
+        });
+    };
+
+    window.btnBanUser = (userId) => {
+        const html = `
+            <p style="margin-bottom: 12px; color: var(--text-secondary);">Bannir l'utilisateur <code>${userId}</code> :</p>
+            <div class="form-group">
+                <label class="form-label">Raison du bannissement (Optionnel)</label>
+                <input type="text" id="modal-ban-reason" class="form-input" placeholder="Ex: Spam / Arnaque">
+            </div>
+        `;
+        openModal(`Bannir ${userId}`, html, async () => {
+            const reason = document.getElementById('modal-ban-reason').value.trim();
+            const res = await apiRequest('/users/ban', 'POST', { userId, ban: true, reason });
+            if (res && res.success) {
+                showToast('Utilisateur banni', 'success');
+                loadUsersData();
+            }
+        });
+    };
+
+    window.btnDebanUser = (userId) => {
+        openModal(`Débannir ${userId}`, `<p>Confirmer le débannissement de l'utilisateur <code>${userId}</code> ?</p>`, async () => {
+            const res = await apiRequest('/users/ban', 'POST', { userId, ban: false });
+            if (res && res.success) {
+                showToast('Utilisateur débanni', 'success');
+                loadUsersData();
+            }
+        });
+    };
+
+    // [ STOCK PAGINATION LOGIC ] =============================================
+    let rawStockData = [];
+    let stockCurrentPage = 1;
+    let stockPerPage = '10';
+    let currentStockSortField = 'id';
+    let currentStockSortDir = 'desc';
+
+    async function loadStockData() {
+        const data = await apiRequest('/stock');
+        if (!data) return;
+        rawStockData = data.stock || [];
+        stockCurrentPage = 1;
+        initStockListeners();
+        applyStockPagination();
+    }
+
+    function initStockListeners() {
+        const searchInput = document.getElementById('stock-search-input');
+        const clearBtn = document.getElementById('stock-search-clear');
+
+        if (searchInput && !searchInput.dataset.initialized) {
+            searchInput.dataset.initialized = 'true';
+            searchInput.addEventListener('input', () => {
+                stockCurrentPage = 1;
+                applyStockPagination();
+            });
+        }
+
+        if (clearBtn && !clearBtn.dataset.initialized) {
+            clearBtn.dataset.initialized = 'true';
+            clearBtn.addEventListener('click', () => {
+                if (searchInput) searchInput.value = '';
+                stockCurrentPage = 1;
+                applyStockPagination();
+            });
+        }
+
+        const btnClear = document.getElementById('btn-clear-stock');
+        if (btnClear && !btnClear.dataset.initialized) {
+            btnClear.dataset.initialized = 'true';
+            btnClear.addEventListener('click', () => {
+                openModal('Vider le Stock Carrefour', '<p>Êtes-vous sûr de vouloir <strong>SUPPRIMER TOUTES LES CARTES</strong> du stock Carrefour ?<br><br><span style="color: var(--text-secondary);">Cette action est définitive et irréversible.</span></p>', async () => {
+                    const res = await apiRequest('/stock/clear', 'POST', { brand: 'carr' });
+                    if (res && res.success) {
+                        showToast(`🗑️ Stock Carrefour entièrement vidé (${res.count || 0} carte(s) supprimée(s)) !`, 'success');
+                        loadStockData();
+                    }
+                });
+            });
+        }
+
+        document.querySelectorAll('.sortable-th[data-table="stock"]').forEach(th => {
+            if (!th.dataset.initialized) {
+                th.dataset.initialized = 'true';
+                th.addEventListener('click', () => {
+                    const sortField = th.dataset.sort;
+                    if (currentStockSortField === sortField) {
+                        currentStockSortDir = currentStockSortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentStockSortField = sortField;
+                        currentStockSortDir = 'asc';
+                    }
+                    applyStockPagination();
+                });
+            }
+        });
+    }
+
+    function applyStockPagination() {
+        const searchInput = document.getElementById('stock-search-input');
+        const clearBtn = document.getElementById('stock-search-clear');
+        const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+        if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+
+        let filtered = rawStockData.filter(item => {
+            if (!query) return true;
+            return String(item.id || '').toLowerCase().includes(query) ||
+                   String(item.code || '').toLowerCase().includes(query) ||
+                   String(item.pin || '').toLowerCase().includes(query) ||
+                   String(item.value || '').toLowerCase().includes(query) ||
+                   String(item.price || '').toLowerCase().includes(query);
+        });
+
+        filtered.sort((a, b) => {
+            let valA = a[currentStockSortField === 'valeur' ? 'value' : currentStockSortField];
+            let valB = b[currentStockSortField === 'valeur' ? 'value' : currentStockSortField];
+            if (valA === undefined || valA === null) valA = '';
+            if (valB === undefined || valB === null) valB = '';
+
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                return currentStockSortDir === 'asc' ? valA - valB : valB - valA;
+            }
+            const strA = String(valA).toLowerCase();
+            const strB = String(valB).toLowerCase();
+            if (strA < strB) return currentStockSortDir === 'asc' ? -1 : 1;
+            if (strA > strB) return currentStockSortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        ['id', 'code', 'pin', 'valeur', 'price'].forEach(field => {
+            const arrowEl = document.getElementById(`sort-arrow-stock-${field}`);
+            if (arrowEl) {
+                if (field === currentStockSortField) {
+                    arrowEl.innerText = currentStockSortDir === 'asc' ? '▲' : '▼';
+                    arrowEl.style.color = 'var(--accent-primary)';
+                } else {
+                    arrowEl.innerText = '↕';
+                    arrowEl.style.color = 'var(--text-secondary)';
+                }
+            }
+        });
+
+        const totalItems = filtered.length;
+        let perPage = stockPerPage === 'all' ? totalItems : parseInt(stockPerPage) || 10;
+        if (perPage <= 0) perPage = 10;
+
+        const totalPages = Math.ceil(totalItems / perPage) || 1;
+        if (stockCurrentPage > totalPages) stockCurrentPage = totalPages;
+        if (stockCurrentPage < 1) stockCurrentPage = 1;
+
+        const startIdx = (stockCurrentPage - 1) * perPage;
+        const endIdx = stockPerPage === 'all' ? totalItems : Math.min(startIdx + perPage, totalItems);
+        const pageItems = filtered.slice(startIdx, endIdx);
+
+        const infoElem = document.getElementById('stock-pagination-info');
+        if (infoElem) {
+            infoElem.innerText = totalItems > 0 
+                ? `Affichage ${startIdx + 1}-${endIdx} sur ${totalItems} carte(s)`
+                : `Aucune carte disponible`;
+        }
+
+        const pageIndicator = document.getElementById('stock-page-indicator');
+        if (pageIndicator) {
+            pageIndicator.innerText = `Page ${stockCurrentPage} / ${totalPages}`;
+        }
+
+        const btnPrev = document.getElementById('btn-stock-prev');
+        const btnNext = document.getElementById('btn-stock-next');
+        if (btnPrev) btnPrev.disabled = stockCurrentPage <= 1;
+        if (btnNext) btnNext.disabled = stockCurrentPage >= totalPages;
+
+        renderStockTable(pageItems);
+    }
+
+    function renderStockTable(items) {
+        const tbody = document.getElementById('stock-table');
+        tbody.innerHTML = '';
+        if (items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 24px;">Aucun stock disponible.</td></tr>`;
+            return;
+        }
+
+        items.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = 'context-menu';
+            const valDisplay = (item.value != null && item.value > 0) ? `${item.value} €` : '-';
+            const pinDisplay = item.pin ? `<code>${escapeHtml(item.pin)}</code>` : `<span style="color: var(--text-secondary); font-style: italic; opacity: 0.5;">-</span>`;
+            tr.innerHTML = `
+                <td>#${item.id}</td>
+                <td><code>${item.code}</code></td>
+                <td>${pinDisplay}</td>
+                <td><strong>${valDisplay}</strong></td>
+                <td><strong>${item.price} €</strong></td>
+                <td>
+                    <button class="action-btn action-btn-danger" onclick="btnDeleteStock(${item.id})">Supprimer</button>
+                </td>
+            `;
+            tr.addEventListener('contextmenu', (e) => {
+                showDynamicContextMenu(e, [
+                    { label: '📋 Copier le Code Carte', action: () => { navigator.clipboard.writeText(item.code); showToast(`Code ${item.code} copié !`, 'info'); } },
+                    { label: '🔑 Copier le PIN', action: () => { if (item.pin) { navigator.clipboard.writeText(item.pin); showToast(`PIN ${item.pin} copié !`, 'info'); } else showToast('Aucun PIN sur cette carte', 'warning'); } },
+                    { label: '📌 Copier Ligne Complète (Code|PIN|Solde|Prix)', action: () => {
+                        const line = item.pin ? `${item.code}|${item.pin}|${item.value || 0}|${item.price || 0}` : `${item.code}|${item.value || 0}|${item.price || 0}`;
+                        navigator.clipboard.writeText(line);
+                        showToast('Ligne complète copiée !', 'info');
+                    } },
+                    { divider: true },
+                    { label: `💶 Solde Carte: ${valDisplay}`, action: () => {} },
+                    { label: `💰 Prix Vente: ${item.price} €`, action: () => {} },
+                    { divider: true },
+                    { label: '🗑️ Supprimer cette Carte', danger: true, action: () => btnDeleteStock(item.id) }
+                ]);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    const stockPerPageSelect = document.getElementById('stock-per-page-select');
+    if (stockPerPageSelect) {
+        stockPerPageSelect.addEventListener('change', (e) => {
+            stockPerPage = e.target.value;
+            stockCurrentPage = 1;
+            applyStockPagination();
+        });
+    }
+    const btnStockPrev = document.getElementById('btn-stock-prev');
+    if (btnStockPrev) {
+        btnStockPrev.addEventListener('click', () => {
+            if (stockCurrentPage > 1) {
+                stockCurrentPage--;
+                applyStockPagination();
+            }
+        });
+    }
+    const btnStockNext = document.getElementById('btn-stock-next');
+    if (btnStockNext) {
+        btnStockNext.addEventListener('click', () => {
+            stockCurrentPage++;
+            applyStockPagination();
+        });
+    }
+
+    document.getElementById('add-stock-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const text = document.getElementById('stock-bulk-textarea').value.trim();
+
+        if (!text) {
+            showToast('Veuillez saisir au moins un code carte.', 'danger');
+            return;
+        }
+
+        const lines = text.split('\n');
+        const items = [];
+
+        lines.forEach(line => {
+            const l = line.trim();
+            if (!l) return;
+
+            const parts = l.split('|');
+            if (parts.length >= 4) {
+                items.push({
+                    brand: 'carr',
+                    code: parts[0].trim(),
+                    pin: parts[1].trim(),
+                    value: parseInt(parts[2].trim()) || 0,
+                    price: parseFloat(parts[3].trim()) || 0.0
+                });
+            } else if (parts.length === 3) {
+                items.push({
+                    brand: 'carr',
+                    code: parts[0].trim(),
+                    pin: '',
+                    value: parseInt(parts[1].trim()) || 0,
+                    price: parseFloat(parts[2].trim()) || 0.0
+                });
+            } else if (parts.length === 2) {
+                items.push({
+                    brand: 'carr',
+                    code: parts[0].trim(),
+                    pin: '',
+                    value: parseInt(parts[1].trim()) || 0,
+                    price: 0.0
+                });
+            } else {
+                items.push({
+                    brand: 'carr',
+                    code: l,
+                    pin: '',
+                    value: 0,
+                    price: 0.0
+                });
+            }
+        });
+
+        if (items.length === 0) {
+            showToast('Aucun code valide trouvé.', 'danger');
+            return;
+        }
+
+        const res = await apiRequest('/stock/add', 'POST', { items });
+        if (res && res.success) {
+            showToast(`✅ ${res.count || items.length} carte(s) Carrefour ajoutée(s) au stock !`, 'success');
+            document.getElementById('stock-bulk-textarea').value = '';
+            loadStockData();
+        }
+    });
+
+    window.btnDeleteStock = (id) => {
+        openModal('Supprimer Carte', `<p>Supprimer la carte #${id} du stock ?</p>`, async () => {
+            const res = await apiRequest('/stock/delete', 'POST', { id });
+            if (res && res.success) {
+                showToast('Carte supprimée', 'success');
+                loadStockData();
+            }
+        });
+    };
+
+    // [ TRANSACTIONS PAGINATION LOGIC ] =======================================
+    let rawTransactionsData = [];
+    let transactionsCurrentPage = 1;
+    let transactionsPerPage = '10';
+    let currentTransactionsSortField = 'id';
+    let currentTransactionsSortDir = 'desc';
+
+    async function loadTransactionsData() {
+        const data = await apiRequest('/transactions');
+        if (!data) return;
+        rawTransactionsData = data.transactions || [];
+        transactionsCurrentPage = 1;
+        initTransactionsListeners();
+        applyTransactionsPagination();
+    }
+
+    function initTransactionsListeners() {
+        document.querySelectorAll('.sortable-th[data-table="transactions"]').forEach(th => {
+            if (!th.dataset.initialized) {
+                th.dataset.initialized = 'true';
+                th.addEventListener('click', () => {
+                    const sortField = th.dataset.sort;
+                    if (currentTransactionsSortField === sortField) {
+                        currentTransactionsSortDir = currentTransactionsSortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentTransactionsSortField = sortField;
+                        currentTransactionsSortDir = 'asc';
+                    }
+                    applyTransactionsPagination();
+                });
+            }
+        });
+    }
+
+    function applyTransactionsPagination() {
+        const query = (document.getElementById('tx-search-input')?.value || '').trim().toLowerCase();
+        const clearBtn = document.getElementById('tx-search-clear');
+        if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+
+        let filtered = rawTransactionsData;
+        if (query) {
+            filtered = rawTransactionsData.filter(t => 
+                String(t.userId || '').toLowerCase().includes(query) ||
+                String(t.brand || '').toLowerCase().includes(query) ||
+                String(t.code || '').toLowerCase().includes(query) ||
+                String(t.valeur || t.value || '').toLowerCase().includes(query) ||
+                String(t.price || '').toLowerCase().includes(query) ||
+                String(t.id || '').toLowerCase().includes(query)
+            );
+        }
+
+        filtered.sort((a, b) => {
+            let valA = a[currentTransactionsSortField === 'valeur' ? 'value' : currentTransactionsSortField];
+            let valB = b[currentTransactionsSortField === 'valeur' ? 'value' : currentTransactionsSortField];
+            if (valA === undefined || valA === null) valA = '';
+            if (valB === undefined || valB === null) valB = '';
+
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                return currentTransactionsSortDir === 'asc' ? valA - valB : valB - valA;
+            }
+            const strA = String(valA).toLowerCase();
+            const strB = String(valB).toLowerCase();
+            if (strA < strB) return currentTransactionsSortDir === 'asc' ? -1 : 1;
+            if (strA > strB) return currentTransactionsSortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        ['id', 'userId', 'brand', 'code', 'valeur', 'price', 'createdAt'].forEach(field => {
+            const arrowEl = document.getElementById(`sort-arrow-transactions-${field}`);
+            if (arrowEl) {
+                if (field === currentTransactionsSortField) {
+                    arrowEl.innerText = currentTransactionsSortDir === 'asc' ? '▲' : '▼';
+                    arrowEl.style.color = 'var(--accent-primary)';
+                } else {
+                    arrowEl.innerText = '↕';
+                    arrowEl.style.color = 'var(--text-secondary)';
+                }
+            }
+        });
+
+        const totalItems = filtered.length;
+        let perPage = transactionsPerPage === 'all' ? totalItems : parseInt(transactionsPerPage) || 10;
+        if (perPage <= 0) perPage = 10;
+
+        const totalPages = Math.ceil(totalItems / perPage) || 1;
+        if (transactionsCurrentPage > totalPages) transactionsCurrentPage = totalPages;
+        if (transactionsCurrentPage < 1) transactionsCurrentPage = 1;
+
+        const startIdx = (transactionsCurrentPage - 1) * perPage;
+        const endIdx = transactionsPerPage === 'all' ? totalItems : Math.min(startIdx + perPage, totalItems);
+        const pageItems = filtered.slice(startIdx, endIdx);
+
+        const infoElem = document.getElementById('transactions-pagination-info');
+        if (infoElem) {
+            infoElem.innerText = totalItems > 0 
+                ? `Affichage ${startIdx + 1}-${endIdx} sur ${totalItems} achat(s)`
+                : `Aucun achat trouvé`;
+        }
+
+        const pageIndicator = document.getElementById('transactions-page-indicator');
+        if (pageIndicator) {
+            pageIndicator.innerText = `Page ${transactionsCurrentPage} / ${totalPages}`;
+        }
+
+        const btnPrev = document.getElementById('btn-transactions-prev');
+        const btnNext = document.getElementById('btn-transactions-next');
+        if (btnPrev) btnPrev.disabled = transactionsCurrentPage <= 1;
+        if (btnNext) btnNext.disabled = transactionsCurrentPage >= totalPages;
+
+        renderTransactionsTable(pageItems);
+    }
+
+    function renderTransactionsTable(transactions) {
+        const tbody = document.getElementById('all-transactions-table');
+        tbody.innerHTML = '';
+        if (transactions.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 24px;">Aucune transaction enregistrée.</td></tr>`;
+            return;
+        }
+
+        transactions.forEach(tx => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = 'context-menu';
+            const isIptv = (tx.brand || '').toLowerCase() === 'iptv';
+            const valueFormatted = (!isIptv && tx.value != null && tx.value > 0) ? `${tx.value} €` : '-';
+            tr.innerHTML = `
+                <td>#${tx.id}</td>
+                <td style="cursor: pointer; color: var(--accent-primary);" onclick="window.redirectToUser('${tx.userId}')"><code>${tx.userId}</code></td>
+                <td>${escapeHtml(tx.brand)}</td>
+                <td><code>${escapeHtml(tx.code)}</code></td>
+                <td>${valueFormatted}</td>
+                <td><strong>${tx.price} €</strong></td>
+                <td>${formatParisDate(tx.createdAt)}</td>
+            `;
+            tr.addEventListener('contextmenu', (e) => {
+                showDynamicContextMenu(e, [
+                    { label: '👤 Inspecter cet Utilisateur', action: () => window.redirectToUser(tx.userId) },
+                    { label: '💰 Voir ses Rechargements', action: () => window.filterPaymentsByUser(tx.userId) },
+                    { divider: true },
+                    { label: '📦 Copier Code / Info', action: () => { navigator.clipboard.writeText(tx.code); showToast(`Code ${tx.code} copié !`, 'info'); } },
+                    { label: '🏷️ Copier la Marque', action: () => { navigator.clipboard.writeText(tx.brand); showToast(`Marque ${tx.brand} copiée !`, 'info'); } },
+                    { label: '📋 Copier ID Telegram', action: () => { navigator.clipboard.writeText(String(tx.userId)); showToast(`ID ${tx.userId} copié !`, 'info'); } }
+                ]);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    const txSearchInput = document.getElementById('tx-search-input');
+    if (txSearchInput) {
+        txSearchInput.addEventListener('input', () => {
+            transactionsCurrentPage = 1;
+            applyTransactionsPagination();
+        });
+    }
+    const txSearchClear = document.getElementById('tx-search-clear');
+    if (txSearchClear) {
+        txSearchClear.addEventListener('click', () => {
+            if (txSearchInput) txSearchInput.value = '';
+            transactionsCurrentPage = 1;
+            applyTransactionsPagination();
+        });
+    }
+
+    const txPerPageSelect = document.getElementById('transactions-per-page-select');
+    if (txPerPageSelect) {
+        txPerPageSelect.addEventListener('change', (e) => {
+            transactionsPerPage = e.target.value;
+            transactionsCurrentPage = 1;
+            applyTransactionsPagination();
+        });
+    }
+    const btnTxPrev = document.getElementById('btn-transactions-prev');
+    if (btnTxPrev) {
+        btnTxPrev.addEventListener('click', () => {
+            if (transactionsCurrentPage > 1) {
+                transactionsCurrentPage--;
+                applyTransactionsPagination();
+            }
+        });
+    }
+    const btnTxNext = document.getElementById('btn-transactions-next');
+    if (btnTxNext) {
+        btnTxNext.addEventListener('click', () => {
+            transactionsCurrentPage++;
+            applyTransactionsPagination();
+        });
+    }
+
+    async function loadSettingsData() {
+        const data = await apiRequest('/settings');
+        if (!data) return;
+
+        const iptv = data.iptv || {};
+        if (document.getElementById('setting-iptv-host')) document.getElementById('setting-iptv-host').value = iptv.host || '';
+        if (document.getElementById('setting-iptv-type')) document.getElementById('setting-iptv-type').value = iptv.type || '';
+        if (document.getElementById('setting-iptv-footer')) document.getElementById('setting-iptv-footer').value = iptv.message_footer || '';
+        document.getElementById('setting-iptv-1m').value = iptv.price_1m || '';
+        document.getElementById('setting-iptv-3m').value = iptv.price_3m || '';
+        document.getElementById('setting-iptv-6m').value = iptv.price_6m || '';
+        document.getElementById('setting-iptv-12m').value = iptv.price_12m || '';
+        renderIptvAccounts(iptv.accounts || []);
+        renderIptvPanelAccounts(iptv.panel_accounts || []);
+
+        if (data.telegramMode) {
+            const tgSelect = document.getElementById('setting-telegram-mode');
+            if (tgSelect) tgSelect.value = data.telegramMode;
+        }
+        if (data.sumupMode) {
+            const suSelect = document.getElementById('setting-sumup-mode');
+            if (suSelect) suSelect.value = data.sumupMode;
+        }
+        const sumup = data.sumup || {};
+        const banks = sumup.banks || {};
+        const b1 = banks.sumup || {};
+        const b2 = banks.sumup_bank2 || {};
+        const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+        setVal('sumup-expiration', sumup.expiration_minutes);
+        setVal('sumup1-name', b1.name);
+        setVal('sumup1-email', b1.pay_to_email);
+        setVal('sumup1-api-key', b1.api_key);
+        setVal('sumup1-client-id', b1.client_id);
+        setVal('sumup1-client-secret', b1.client_secret);
+        setVal('sumup2-name', b2.name);
+        setVal('sumup2-email', b2.pay_to_email);
+        setVal('sumup2-api-key', b2.api_key);
+        setVal('sumup2-client-id', b2.client_id);
+        setVal('sumup2-client-secret', b2.client_secret);
+        const active = sumup.active === 'sumup_bank2' ? 'sumup-active-2' : 'sumup-active-1';
+        const activeEl = document.getElementById(active);
+        if (activeEl) activeEl.checked = true;
+        const oxaKey = document.getElementById('setting-oxapay-key');
+        if (oxaKey) oxaKey.value = data.oxapayApiKey || '';
+    }
+
+    // [ PAYMENTS PAGINATION LOGIC ] ==========================================
+    let rawPaymentsData = [];
+    let paymentsCurrentPage = 1;
+    let paymentsPerPage = '10';
+
+    let currentPaymentsSortField = 'id';
+    let currentPaymentsSortDir = 'desc';
+
+    async function loadPaymentsData() {
+        const data = await apiRequest('/payments');
+        if (!data) return;
+        rawPaymentsData = data.payments || [];
+        paymentsCurrentPage = 1;
+        initPaymentsListeners();
+        applyPaymentsPagination();
+    }
+
+    function initPaymentsListeners() {
+        document.querySelectorAll('.sortable-th[data-table="payments"]').forEach(th => {
+            if (!th.dataset.initialized) {
+                th.dataset.initialized = 'true';
+                th.addEventListener('click', () => {
+                    const sortField = th.dataset.sort;
+                    if (currentPaymentsSortField === sortField) {
+                        currentPaymentsSortDir = currentPaymentsSortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentPaymentsSortField = sortField;
+                        currentPaymentsSortDir = 'asc';
+                    }
+                    applyPaymentsPagination();
+                });
+            }
+        });
+    }
+
+    window.filterPayments = function() {
+        paymentsCurrentPage = 1;
+        applyPaymentsPagination();
+    };
+
+    function applyPaymentsPagination() {
+        const query = (document.getElementById('payments-search-input')?.value || '').trim().toLowerCase();
+        const filterValue = (document.getElementById('filter-payments-method')?.value || '').toUpperCase();
+        
+        const clearBtn = document.getElementById('payments-search-clear');
+        if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+
+        let filtered = rawPaymentsData;
+        if (filterValue) {
+            filtered = filtered.filter(p => (p.method || '').toUpperCase() === filterValue);
+        }
+        if (query) {
+            filtered = filtered.filter(p => 
+                String(p.chatId || '').toLowerCase().includes(query) ||
+                String(p.trackId || '').toLowerCase().includes(query) ||
+                String(p.method || '').toLowerCase().includes(query) ||
+                String(p.status || '').toLowerCase().includes(query) ||
+                String(p.amount || '').toLowerCase().includes(query) ||
+                String(p.id || '').toLowerCase().includes(query)
+            );
+        }
+
+        filtered.sort((a, b) => {
+            let valA = a[currentPaymentsSortField];
+            let valB = b[currentPaymentsSortField];
+            if (valA === undefined || valA === null) valA = '';
+            if (valB === undefined || valB === null) valB = '';
+
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                return currentPaymentsSortDir === 'asc' ? valA - valB : valB - valA;
+            }
+            const strA = String(valA).toLowerCase();
+            const strB = String(valB).toLowerCase();
+            if (strA < strB) return currentPaymentsSortDir === 'asc' ? -1 : 1;
+            if (strA > strB) return currentPaymentsSortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        ['id', 'chatId', 'method', 'amount', 'status', 'trackId', 'createdAt'].forEach(field => {
+            const arrowEl = document.getElementById(`sort-arrow-payments-${field}`);
+            if (arrowEl) {
+                if (field === currentPaymentsSortField) {
+                    arrowEl.innerText = currentPaymentsSortDir === 'asc' ? '▲' : '▼';
+                    arrowEl.style.color = 'var(--accent-primary)';
+                } else {
+                    arrowEl.innerText = '↕';
+                    arrowEl.style.color = 'var(--text-secondary)';
+                }
+            }
+        });
+
+        const totalItems = filtered.length;
+        let perPage = paymentsPerPage === 'all' ? totalItems : parseInt(paymentsPerPage) || 10;
+        if (perPage <= 0) perPage = 10;
+
+        const totalPages = Math.ceil(totalItems / perPage) || 1;
+        if (paymentsCurrentPage > totalPages) paymentsCurrentPage = totalPages;
+        if (paymentsCurrentPage < 1) paymentsCurrentPage = 1;
+
+        const startIdx = (paymentsCurrentPage - 1) * perPage;
+        const endIdx = paymentsPerPage === 'all' ? totalItems : Math.min(startIdx + perPage, totalItems);
+        const pageItems = filtered.slice(startIdx, endIdx);
+
+        const infoElem = document.getElementById('payments-pagination-info');
+        if (infoElem) {
+            infoElem.innerText = totalItems > 0 
+                ? `Affichage ${startIdx + 1}-${endIdx} sur ${totalItems} rechargement(s)`
+                : `Aucun rechargement trouvé`;
+        }
+
+        const pageIndicator = document.getElementById('payments-page-indicator');
+        if (pageIndicator) {
+            pageIndicator.innerText = `Page ${paymentsCurrentPage} / ${totalPages}`;
+        }
+
+        const btnPrev = document.getElementById('btn-payments-prev');
+        const btnNext = document.getElementById('btn-payments-next');
+        if (btnPrev) btnPrev.disabled = paymentsCurrentPage <= 1;
+        if (btnNext) btnNext.disabled = paymentsCurrentPage >= totalPages;
+
+        renderPaymentsTable(pageItems);
+    }
+
+    const pmSearchInput = document.getElementById('payments-search-input');
+    if (pmSearchInput) {
+        pmSearchInput.addEventListener('input', () => {
+            paymentsCurrentPage = 1;
+            applyPaymentsPagination();
+        });
+    }
+    const pmSearchClear = document.getElementById('payments-search-clear');
+    if (pmSearchClear) {
+        pmSearchClear.addEventListener('click', () => {
+            if (pmSearchInput) pmSearchInput.value = '';
+            paymentsCurrentPage = 1;
+            applyPaymentsPagination();
+        });
+    }
+
+    const pmFilterSelect = document.getElementById('filter-payments-method');
+    if (pmFilterSelect) {
+        pmFilterSelect.addEventListener('change', () => {
+            paymentsCurrentPage = 1;
+            applyPaymentsPagination();
+        });
+    }
+
+    function renderPaymentsTable(payments) {
+        const tbody = document.getElementById('all-payments-table');
+        tbody.innerHTML = '';
+        if (payments.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 24px;">Aucun rechargement trouvé.</td></tr>`;
+            return;
+        }
+
+        payments.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = 'context-menu';
+            const statusStr = p.status ? p.status.toUpperCase() : 'INCONNU';
+            let statusBadge = `<span class="badge badge-warning">${p.status || 'INCONNU'}</span>`;
+            if (statusStr === 'PAID') statusBadge = `<span class="badge badge-success">PAYÉ</span>`;
+            else if (statusStr === 'FAILED' || statusStr === 'CANCELED') statusBadge = `<span class="badge badge-danger">ÉCHOUÉ</span>`;
+            else if (statusStr === 'EXPIRED') statusBadge = `<span class="badge badge-muted">EXPIRÉ</span>`;
+
+            const amountSafe = Number(p.amount || 0).toFixed(2);
+            
+            tr.innerHTML = `
+                <td>#${p.id}</td>
+                <td style="cursor: pointer; color: var(--accent-primary);" onclick="window.redirectToUser('${p.chatId}')"><code>${p.chatId || 'N/A'}</code></td>
+                <td><strong>${p.method || 'N/A'}</strong></td>
+                <td><strong>${amountSafe} €</strong></td>
+                <td>${statusBadge}</td>
+                <td><code>${p.trackId || 'N/A'}</code></td>
+                <td>${p.createdAt ? formatParisDate(p.createdAt) : 'N/A'}</td>
+            `;
+            tr.addEventListener('contextmenu', (e) => {
+                showDynamicContextMenu(e, [
+                    { label: '👤 Inspecter cet Utilisateur', action: () => window.redirectToUser(p.chatId) },
+                    { label: '🛒 Voir ses Achats', action: () => window.filterTransactionsByUser(p.chatId) },
+                    { divider: true },
+                    { label: '📋 Copier ID Telegram', action: () => { if (p.chatId) { navigator.clipboard.writeText(String(p.chatId)); showToast(`ID ${p.chatId} copié !`, 'info'); } } },
+                    { label: '💳 Copier le Track ID', action: () => { if (p.trackId) { navigator.clipboard.writeText(p.trackId); showToast(`Track ID ${p.trackId} copié !`, 'info'); } } },
+                    { label: '💰 Copier le Montant', action: () => { navigator.clipboard.writeText(`${amountSafe} €`); showToast(`Montant ${amountSafe} € copié !`, 'info'); } }
+                ]);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    const pmPerPageSelect = document.getElementById('payments-per-page-select');
+    if (pmPerPageSelect) {
+        pmPerPageSelect.addEventListener('change', (e) => {
+            paymentsPerPage = e.target.value;
+            paymentsCurrentPage = 1;
+            applyPaymentsPagination();
+        });
+    }
+    const btnPmPrev = document.getElementById('btn-payments-prev');
+    if (btnPmPrev) {
+        btnPmPrev.addEventListener('click', () => {
+            if (paymentsCurrentPage > 1) {
+                paymentsCurrentPage--;
+                applyPaymentsPagination();
+            }
+        });
+    }
+    const btnPmNext = document.getElementById('btn-payments-next');
+    if (btnPmNext) {
+        btnPmNext.addEventListener('click', () => {
+            paymentsCurrentPage++;
+            applyPaymentsPagination();
+        });
+    }
+
+    const tgModeForm = document.getElementById('settings-telegram-mode-form');
+    if (tgModeForm) {
+        tgModeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const mode = document.getElementById('setting-telegram-mode').value;
+            const res = await apiRequest('/settings/telegram', 'POST', { mode });
+            if (res && res.success) {
+                showToast(`Mode Telegram basculé sur ${res.mode === 'webhook' ? 'Webhook ⚡' : 'Long Polling 🔄'} avec succès !`, 'success');
+            }
+        });
+    }
+
+    const sumupModeForm = document.getElementById('settings-sumup-mode-form');
+    if (sumupModeForm) {
+        sumupModeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const mode = document.getElementById('setting-sumup-mode').value;
+            const res = await apiRequest('/settings/sumup/mode', 'POST', { mode });
+            if (res && res.success) {
+                showToast(`Mode SumUp basculé sur ${res.mode === 'webhook' ? 'Webhook ⚡' : 'Long Polling 🔄'} avec succès !`, 'success');
+            }
+        });
+    }
+
+    const sumupForm = document.getElementById('settings-sumup-form');
+    if (sumupForm) {
+        sumupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const val = (id) => (document.getElementById(id)?.value || '').trim();
+            const active = document.querySelector('input[name="sumup-active"]:checked')?.value || '';
+            const payload = {
+                active,
+                expiration_minutes: val('sumup-expiration'),
+                banks: {
+                    sumup: {
+                        name: val('sumup1-name'),
+                        pay_to_email: val('sumup1-email'),
+                        api_key: val('sumup1-api-key'),
+                        client_id: val('sumup1-client-id'),
+                        client_secret: val('sumup1-client-secret')
+                    },
+                    sumup_bank2: {
+                        name: val('sumup2-name'),
+                        pay_to_email: val('sumup2-email'),
+                        api_key: val('sumup2-api-key'),
+                        client_id: val('sumup2-client-id'),
+                        client_secret: val('sumup2-client-secret')
+                    }
+                }
+            };
+            const champs = [
+                payload.active,
+                payload.expiration_minutes,
+                payload.banks.sumup.name, payload.banks.sumup.pay_to_email, payload.banks.sumup.api_key, payload.banks.sumup.client_id, payload.banks.sumup.client_secret,
+                payload.banks.sumup_bank2.name, payload.banks.sumup_bank2.pay_to_email, payload.banks.sumup_bank2.api_key, payload.banks.sumup_bank2.client_id, payload.banks.sumup_bank2.client_secret
+            ];
+            if (champs.some(x => !x) || (payload.active !== 'sumup' && payload.active !== 'sumup_bank2') || !(Number(payload.expiration_minutes) > 0)) {
+                showToast('Tous les champs SumUp des deux banques sont obligatoires.', 'danger');
+                return;
+            }
+            const res = await apiRequest('/settings/sumup', 'POST', payload);
+            if (res && res.success) {
+                showToast('Comptes SumUp enregistrés.', 'success');
+            }
+        });
+    }
+
+    const oxapayForm = document.getElementById('settings-oxapay-form');
+    if (oxapayForm) {
+        oxapayForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const api_key = (document.getElementById('setting-oxapay-key')?.value || '').trim();
+            if (!api_key) {
+                showToast('La clé OxaPay ne peut pas être vide.', 'danger');
+                return;
+            }
+            const res = await apiRequest('/settings/oxapay', 'POST', { api_key });
+            if (res && res.success) {
+                showToast('Clé OxaPay enregistrée.', 'success');
+            }
+        });
+    }
+
+    function iptvAccountComplet(acc) {
+        return !!(acc && String(acc.api_key || '').trim() && String(acc.api_url || '').trim() && String(acc.pack || '').trim());
+    }
+
+    function renderIptvAccounts(accounts) {
+        const list = document.getElementById('iptv-accounts-list');
+        if (!list) return;
+        list.innerHTML = '';
+        const complets = Array.isArray(accounts) ? accounts.filter(iptvAccountComplet) : [];
+        const rows = complets.length ? complets : [{ name: '', api_key: '', api_url: '', pack: '', active: true }];
+        rows.forEach((acc) => list.appendChild(createIptvAccountRow(acc)));
+        if (!list.querySelector('.iptv-acc-active:checked')) {
+            const first = list.querySelector('.iptv-acc-active');
+            if (first) first.checked = true;
+        }
+    }
+
+    function createIptvAccountRow(acc) {
+        const wrap = document.createElement('div');
+        wrap.className = 'iptv-account-row';
+        wrap.style.cssText = 'border: 1px solid var(--border, #2a2a3a); border-radius: 10px; padding: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;';
+        wrap.innerHTML = `
+            <div class="form-group" style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px;">
+                <label class="form-label" style="margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="iptv-acc-active" class="iptv-acc-active">
+                    Compte actif (utilisé pour les achats)
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Nom</label>
+                <input type="text" class="form-input iptv-acc-name" placeholder="Compte 1" value="">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Pack</label>
+                <input type="text" class="form-input iptv-acc-pack" placeholder="43551" value="">
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">API Key</label>
+                <input type="text" class="form-input iptv-acc-key" placeholder="api_key" value="">
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">API URL</label>
+                <input type="text" class="form-input iptv-acc-url" placeholder="https://4k.cms-only.ru/api/api.php" value="">
+            </div>
+            <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end;">
+                <button type="button" class="btn iptv-acc-remove" style="background: transparent; color: #f87171; border: 1px solid rgba(248,113,113,0.4);">Supprimer</button>
+            </div>
+        `;
+        wrap.querySelector('.iptv-acc-name').value = acc.name || '';
+        wrap.querySelector('.iptv-acc-pack').value = acc.pack || '';
+        wrap.querySelector('.iptv-acc-key').value = acc.api_key || '';
+        wrap.querySelector('.iptv-acc-url').value = acc.api_url || '';
+        wrap.querySelector('.iptv-acc-active').checked = !!acc.active;
+        wrap.querySelector('.iptv-acc-remove').addEventListener('click', () => {
+            const list = document.getElementById('iptv-accounts-list');
+            if (list && list.children.length > 1) wrap.remove();
+            else showToast('Garde au moins un compte, ou vide les champs.', 'warning');
+        });
+        return wrap;
+    }
+
+    function collectIptvAccounts() {
+        return Array.from(document.querySelectorAll('.iptv-account-row')).map((row) => ({
+            name: row.querySelector('.iptv-acc-name')?.value.trim() || '',
+            api_key: row.querySelector('.iptv-acc-key')?.value.trim() || '',
+            api_url: row.querySelector('.iptv-acc-url')?.value.trim() || '',
+            pack: row.querySelector('.iptv-acc-pack')?.value.trim() || '',
+            active: !!row.querySelector('.iptv-acc-active')?.checked
+        })).filter(iptvAccountComplet);
+    }
+
+    const btnAddIptvAccount = document.getElementById('btn-add-iptv-account');
+    if (btnAddIptvAccount) {
+        btnAddIptvAccount.addEventListener('click', () => {
+            const list = document.getElementById('iptv-accounts-list');
+            if (list) list.appendChild(createIptvAccountRow({ name: '', api_key: '', api_url: '', pack: '' }));
+        });
+    }
+
+    const btnTestIptvApi = document.getElementById('btn-test-iptv-api');
+    if (btnTestIptvApi) {
+        btnTestIptvApi.addEventListener('click', async () => {
+            const resultEl = document.getElementById('iptv-api-test-result');
+            if (resultEl) resultEl.textContent = 'Connexion en cours…';
+            const res = await apiRequest('/iptv/api-test', 'POST', {});
+            if (res && res.success) {
+                const name = res.stats?.name || '?';
+                const pack = res.stats?.pack || '?';
+                const type = res.stats?.type || '?';
+                const credits = res.stats?.credits;
+                let msg = `Connecté. Compte : ${name} — Pack : ${pack} — Type : ${type}`;
+                if (credits) msg += ` — Crédits : ${credits}`;
+                if (resultEl) resultEl.textContent = msg;
+                showToast('Connexion API OK', 'success');
+            } else if (resultEl) {
+                resultEl.textContent = res?.message || 'Échec de la connexion API';
+            }
+        });
+    }
+
+    function renderIptvPanelAccounts(accounts) {
+        const list = document.getElementById('iptv-panel-accounts-list');
+        if (!list) return;
+        list.innerHTML = '';
+        const rows = Array.isArray(accounts) && accounts.length ? accounts : [{ name: '', username: '', password: '', active: true }];
+        rows.forEach((acc) => list.appendChild(createIptvPanelAccountRow(acc)));
+        if (!list.querySelector('.iptv-panel-acc-active:checked')) {
+            const first = list.querySelector('.iptv-panel-acc-active');
+            if (first) first.checked = true;
+        }
+    }
+
+    function createIptvPanelAccountRow(acc) {
+        const wrap = document.createElement('div');
+        wrap.className = 'iptv-panel-account-row';
+        wrap.style.cssText = 'border: 1px solid var(--border, #2a2a3a); border-radius: 10px; padding: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;';
+        wrap.innerHTML = `
+            <div class="form-group" style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px;">
+                <label class="form-label" style="margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="iptv-panel-acc-active" class="iptv-panel-acc-active">
+                    Compte actif (connexion panel)
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Nom</label>
+                <input type="text" class="form-input iptv-panel-acc-name" placeholder="ChezRheyy" value="">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Utilisateur</label>
+                <input type="text" class="form-input iptv-panel-acc-user" placeholder="username" value="">
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">Mot de passe</label>
+                <input type="text" class="form-input iptv-panel-acc-pass" placeholder="mot de passe" autocomplete="off" value="">
+            </div>
+            <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end;">
+                <button type="button" class="btn iptv-panel-acc-remove" style="background: transparent; color: #f87171; border: 1px solid rgba(248,113,113,0.4);">Supprimer</button>
+            </div>
+        `;
+        wrap.querySelector('.iptv-panel-acc-name').value = acc.name || '';
+        wrap.querySelector('.iptv-panel-acc-user').value = acc.username || '';
+        wrap.querySelector('.iptv-panel-acc-pass').value = acc.password || '';
+        wrap.querySelector('.iptv-panel-acc-active').checked = !!acc.active;
+        wrap.querySelector('.iptv-panel-acc-remove').addEventListener('click', () => {
+            const list = document.getElementById('iptv-panel-accounts-list');
+            if (list && list.children.length > 1) wrap.remove();
+            else showToast('Garde au moins un compte panel, ou vide les champs.', 'warning');
+        });
+        return wrap;
+    }
+
+    function collectIptvPanelAccounts() {
+        return Array.from(document.querySelectorAll('.iptv-panel-account-row')).map((row) => ({
+            name: row.querySelector('.iptv-panel-acc-name')?.value.trim() || '',
+            username: row.querySelector('.iptv-panel-acc-user')?.value.trim() || '',
+            password: row.querySelector('.iptv-panel-acc-pass')?.value.trim() || '',
+            active: !!row.querySelector('.iptv-panel-acc-active')?.checked
+        }));
+    }
+
+    const btnAddIptvPanelAccount = document.getElementById('btn-add-iptv-panel-account');
+    if (btnAddIptvPanelAccount) {
+        btnAddIptvPanelAccount.addEventListener('click', () => {
+            const list = document.getElementById('iptv-panel-accounts-list');
+            if (list) list.appendChild(createIptvPanelAccountRow({ name: '', username: '', password: '' }));
+        });
+    }
+
+    const btnTestIptvPanel = document.getElementById('btn-test-iptv-panel');
+    if (btnTestIptvPanel) {
+        btnTestIptvPanel.addEventListener('click', async () => {
+            const resultEl = document.getElementById('iptv-panel-test-result');
+            if (resultEl) resultEl.textContent = 'Connexion en cours…';
+            const res = await apiRequest('/iptv/panel-test', 'POST', {});
+            if (res && res.success) {
+                const credits = res.stats?.credits ?? '?';
+                const demos = res.stats?.remaining_demos ?? '?';
+                if (resultEl) resultEl.textContent = `Connecté. Crédits : ${credits} — Démos restantes : ${demos}`;
+                showToast('Connexion panel OK', 'success');
+            } else if (resultEl) {
+                resultEl.textContent = res?.message || 'Échec de la connexion panel';
+            }
+        });
+    }
+
+    document.getElementById('settings-iptv-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const host = document.getElementById('setting-iptv-host') ? document.getElementById('setting-iptv-host').value.trim() : '';
+        const type = document.getElementById('setting-iptv-type') ? document.getElementById('setting-iptv-type').value.trim() : '';
+        const footer = document.getElementById('setting-iptv-footer') ? document.getElementById('setting-iptv-footer').value : '';
+        const p1 = document.getElementById('setting-iptv-1m').value.trim();
+        const p3 = document.getElementById('setting-iptv-3m').value.trim();
+        const p6 = document.getElementById('setting-iptv-6m').value.trim();
+        const p12 = document.getElementById('setting-iptv-12m').value.trim();
+        const accounts = collectIptvAccounts();
+        const panel_accounts = collectIptvPanelAccounts();
+
+        const res = await apiRequest('/settings/iptv', 'POST', {
+            host,
+            type,
+            message_footer: footer,
+            price_1m: p1,
+            price_3m: p3,
+            price_6m: p6,
+            price_12m: p12,
+            accounts,
+            panel_accounts
+        });
+        if (res && res.success) {
+            showToast('Configuration et tarifs IPTV enregistrés !', 'success');
+        }
+    });
+
+    const pwdForm = document.getElementById('settings-password-form');
+    if (pwdForm) {
+        pwdForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pass = document.getElementById('setting-admin-password').value;
+            const confirmPass = document.getElementById('setting-admin-password-confirm').value;
+
+            if (pass !== confirmPass) {
+                showToast('Les mots de passe ne correspondent pas', 'danger');
+                return;
+            }
+
+            const res = await apiRequest('/settings/password', 'POST', { password: pass });
+            if (res && res.success) {
+                if (res.token) {
+                    authToken = res.token;
+                    localStorage.setItem('admin_auth_token', res.token);
+                    localStorage.setItem('admin_auth_token_time', Date.now().toString());
+                }
+                showToast('Mot de passe administrateur mis à jour avec succès !', 'success');
+                document.getElementById('setting-admin-password').value = '';
+                document.getElementById('setting-admin-password-confirm').value = '';
+            } else {
+                showToast(res ? res.message : 'Erreur lors du changement de mot de passe', 'danger');
+            }
+        });
+    }
+
+    if (authToken) {
+        initApp();
+    }
+});

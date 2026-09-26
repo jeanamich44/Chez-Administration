@@ -80,7 +80,8 @@ interface IptvPanelAccount {
   active: boolean;
 }
 
-interface SumUpBank {
+interface SumUpBankItem {
+  id: string;
   name: string;
   pay_to_email: string;
   api_key: string;
@@ -142,17 +143,48 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
   const [iptvPrice6m, setIptvPrice6m] = useState<string>("");
   const [iptvPrice12m, setIptvPrice12m] = useState<string>("");
   const [iptvFooter, setIptvFooter] = useState<string>("");
-  const [iptvAccounts, setIptvAccounts] = useState<IptvAccount[]>([]);
-  const [iptvPanelAccounts, setIptvPanelAccounts] = useState<IptvPanelAccount[]>([]);
+  const [iptvAccounts, setIptvAccounts] = useState<IptvAccount[]>([
+    {
+      name: "ChezRheyy",
+      pack: "47013",
+      api_key: "c747279bd5a2284570cd5e888ef182f6",
+      api_url: "https://4k.cms-only.ru/api/api.php",
+      active: true
+    }
+  ]);
+  const [iptvPanelAccounts, setIptvPanelAccounts] = useState<IptvPanelAccount[]>([
+    {
+      name: "ChezRheyy",
+      username: "LABANK",
+      password: "LECOFFREFORTT",
+      active: true
+    }
+  ]);
   const [iptvApiTestResult, setIptvApiTestResult] = useState<string>("");
   const [iptvPanelTestResult, setIptvPanelTestResult] = useState<string>("");
   const [isTestingIptvApi, setIsTestingIptvApi] = useState<boolean>(false);
   const [isTestingIptvPanel, setIsTestingIptvPanel] = useState<boolean>(false);
 
-  const [sumupActive, setSumupActive] = useState<"sumup" | "sumup_bank2">("sumup");
-  const [sumupExpiration, setSumupExpiration] = useState<string>("");
-  const [sumup1, setSumup1] = useState<SumUpBank>({ name: "", pay_to_email: "", api_key: "", client_id: "", client_secret: "" });
-  const [sumup2, setSumup2] = useState<SumUpBank>({ name: "", pay_to_email: "", api_key: "", client_id: "", client_secret: "" });
+  const [sumupActive, setSumupActive] = useState<string>("bank1");
+  const [sumupExpiration, setSumupExpiration] = useState<string>("15");
+  const [sumupBanks, setSumupBanks] = useState<SumUpBankItem[]>([
+    {
+      id: "bank1",
+      name: "Banque 1",
+      pay_to_email: "gustave.pro@outlook.fr",
+      api_key: "",
+      client_id: "",
+      client_secret: ""
+    },
+    {
+      id: "bank2",
+      name: "Banque 2",
+      pay_to_email: "kevin.ebpro@outlook.fr",
+      api_key: "",
+      client_id: "",
+      client_secret: ""
+    }
+  ]);
 
   const [adminPassword, setAdminPassword] = useState<string>("");
   const [adminPasswordConfirm, setAdminPasswordConfirm] = useState<string>("");
@@ -210,48 +242,70 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
           setIptvPrice12m(String(data.iptv.price_12m ?? ""));
           
           if (Array.isArray(data.iptv.accounts) && data.iptv.accounts.length > 0) {
-            setIptvAccounts(data.iptv.accounts.map((a: any) => ({
+            const accs = data.iptv.accounts.map((a: any) => ({
               name: a.name || a.Name || "",
               pack: a.pack || a.Pack || "",
               api_key: a.api_key || a.ApiKey || "",
               api_url: a.api_url || a.ApiUrl || "",
               active: !!(a.active ?? a.Active)
-            })));
-          } else {
-            setIptvAccounts([{ name: "", pack: "", api_key: "", api_url: "", active: true }]);
+            }));
+            if (!accs.some((a: any) => a.active)) {
+              accs[0].active = true;
+            }
+            setIptvAccounts(accs);
           }
 
           if (Array.isArray(data.iptv.panel_accounts) && data.iptv.panel_accounts.length > 0) {
-            setIptvPanelAccounts(data.iptv.panel_accounts.map((p: any) => ({
+            const paccs = data.iptv.panel_accounts.map((p: any) => ({
               name: p.name || p.Name || "",
               username: p.username || p.Username || "",
               password: p.password || p.Password || "",
               active: !!(p.active ?? p.Active)
-            })));
-          } else {
-            setIptvPanelAccounts([{ name: "", username: "", password: "", active: true }]);
+            }));
+            if (!paccs.some((p: any) => p.active)) {
+              paccs[0].active = true;
+            }
+            setIptvPanelAccounts(paccs);
           }
         }
 
         if (data.sumup) {
-          setSumupActive(data.sumup.active === "sumup_bank2" ? "sumup_bank2" : "sumup");
-          setSumupExpiration(String(data.sumup.expiration_minutes ?? ""));
-          const b1 = data.sumup.banks?.sumup || {};
-          const b2 = data.sumup.banks?.sumup_bank2 || {};
-          setSumup1({
-            name: b1.name || "",
-            pay_to_email: b1.pay_to_email || "",
-            api_key: b1.api_key || "",
-            client_id: b1.client_id || "",
-            client_secret: b1.client_secret || ""
-          });
-          setSumup2({
-            name: b2.name || "",
-            pay_to_email: b2.pay_to_email || "",
-            api_key: b2.api_key || "",
-            client_id: b2.client_id || "",
-            client_secret: b2.client_secret || ""
-          });
+          const act = data.sumup.active || "bank1";
+          const normAct = act === "sumup" ? "bank1" : (act === "sumup_bank2" ? "bank2" : act);
+          setSumupActive(normAct);
+          setSumupExpiration(String(data.sumup.expiration_minutes ?? "15"));
+          
+          if (Array.isArray(data.sumup.banks_list) && data.sumup.banks_list.length > 0) {
+            setSumupBanks(data.sumup.banks_list.map((b: any, idx: number) => ({
+              id: b.id || `bank${idx + 1}`,
+              name: b.name || `Banque ${idx + 1}`,
+              pay_to_email: b.pay_to_email || b.payToEmail || "",
+              api_key: b.api_key || b.apiKey || "",
+              client_id: b.client_id || b.clientId || "",
+              client_secret: b.client_secret || b.clientSecret || ""
+            })));
+          } else {
+            const b1 = data.sumup.banks?.sumup || {};
+            const b2 = data.sumup.banks?.sumup_bank2 || {};
+            setSumupBanks([
+              {
+                id: "bank1",
+                name: b1.name || "Banque 1",
+                pay_to_email: b1.pay_to_email || "",
+                api_key: b1.api_key || "",
+                client_id: b1.client_id || "",
+                client_secret: b1.client_secret || ""
+              },
+              {
+                id: "bank2",
+                name: b2.name || "Banque 2",
+                pay_to_email: b2.pay_to_email || "",
+                api_key: b2.api_key || "",
+                client_id: b2.client_id || "",
+                client_secret: b2.client_secret || ""
+              }
+            ]);
+          }
         }
       }
     } catch {}
@@ -869,24 +923,33 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
   const handleSaveSumup = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem("admin_auth_token") || "";
+    const active = sumupActive || (sumupBanks[0]?.id || "bank1");
     const payload = {
-      active: sumupActive,
-      expiration_minutes: sumupExpiration.trim(),
+      active,
+      expiration_minutes: sumupExpiration.trim() || "15",
+      banks_list: sumupBanks.map((b, idx) => ({
+        id: b.id || `bank${idx + 1}`,
+        name: b.name.trim() || `Banque ${idx + 1}`,
+        pay_to_email: b.pay_to_email.trim(),
+        api_key: b.api_key.trim(),
+        client_id: b.client_id.trim(),
+        client_secret: b.client_secret.trim()
+      })),
       banks: {
-        sumup: {
-          name: sumup1.name.trim(),
-          pay_to_email: sumup1.pay_to_email.trim(),
-          api_key: sumup1.api_key.trim(),
-          client_id: sumup1.client_id.trim(),
-          client_secret: sumup1.client_secret.trim()
-        },
-        sumup_bank2: {
-          name: sumup2.name.trim(),
-          pay_to_email: sumup2.pay_to_email.trim(),
-          api_key: sumup2.api_key.trim(),
-          client_id: sumup2.client_id.trim(),
-          client_secret: sumup2.client_secret.trim()
-        }
+        sumup: sumupBanks[0] ? {
+          name: sumupBanks[0].name.trim(),
+          pay_to_email: sumupBanks[0].pay_to_email.trim(),
+          api_key: sumupBanks[0].api_key.trim(),
+          client_id: sumupBanks[0].client_id.trim(),
+          client_secret: sumupBanks[0].client_secret.trim()
+        } : {},
+        sumup_bank2: sumupBanks[1] ? {
+          name: sumupBanks[1].name.trim(),
+          pay_to_email: sumupBanks[1].pay_to_email.trim(),
+          api_key: sumupBanks[1].api_key.trim(),
+          client_id: sumupBanks[1].client_id.trim(),
+          client_secret: sumupBanks[1].client_secret.trim()
+        } : {}
       }
     };
     try {
@@ -1821,25 +1884,33 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                               {p.method}
                             </span>
                           </td>
-                          <td className={`font-bold ${
-                            (p.status || "").toUpperCase() === "PAID" || (p.status || "").toUpperCase() === "SUCCESS" || (p.status || "").toUpperCase() === "COMPLETED"
-                              ? "text-emerald-400"
-                              : (p.status || "").toUpperCase() === "PENDING" || (p.status || "").toUpperCase() === "WAITING"
-                              ? "text-amber-400"
-                              : "text-white/40"
-                          }`}>
+                          <td className="font-bold text-white">
                             {p.amount.toFixed(2)} €
                           </td>
                           <td>
-                            <span className={`admin-badge ${
-                              (p.status || "").toUpperCase() === "PAID" || (p.status || "").toUpperCase() === "SUCCESS" || (p.status || "").toUpperCase() === "COMPLETED"
-                                ? "admin-badge-success"
-                                : (p.status || "").toUpperCase() === "PENDING" || (p.status || "").toUpperCase() === "WAITING"
-                                ? "admin-badge-warning"
-                                : "admin-badge-danger"
-                            }`}>
-                              {p.status}
-                            </span>
+                            {(() => {
+                              const s = (p.status || "").toUpperCase();
+                              let cls = "admin-badge-warning";
+                              let label = p.status || "INCONNU";
+                              if (s === "PAID" || s === "SUCCESS" || s === "COMPLETED") {
+                                cls = "admin-badge-success";
+                                label = "PAYÉ";
+                              } else if (s === "EXPIRED") {
+                                cls = "admin-badge-muted";
+                                label = "EXPIRÉ";
+                              } else if (s === "CANCELLED" || s === "CANCELED" || s === "FAILED") {
+                                cls = "admin-badge-danger";
+                                label = "ÉCHOUÉ";
+                              } else if (s === "PENDING" || s === "WAITING") {
+                                cls = "admin-badge-warning";
+                                label = "EN ATTENTE";
+                              }
+                              return (
+                                <span className={`admin-badge ${cls}`}>
+                                  {label}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td className="font-mono text-xs text-white/60">{p.trackId}</td>
                           <td className="text-white/50">{p.createdAt}</td>
@@ -2161,155 +2232,134 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                   </span>
                 </div>
 
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-3">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
-                    <input
-                      type="radio"
-                      name="sumup-active"
-                      value="sumup"
-                      checked={sumupActive === "sumup"}
-                      onChange={() => setSumupActive("sumup")}
-                      className="accent-[#6366f1]"
-                    />
-                    <span>Banque 1 active</span>
-                  </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Nom</label>
-                      <input
-                        type="text"
-                        value={sumup1.name}
-                        onChange={(e) => setSumup1({ ...sumup1, name: e.target.value })}
-                        placeholder="Nom d'affichage"
-                        className="admin-form-input text-xs"
-                        required
-                      />
+                <div className="space-y-4">
+                  {sumupBanks.map((bank, index) => (
+                    <div key={bank.id || index} className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
+                          <input
+                            type="radio"
+                            name="sumup-active-bank"
+                            value={bank.id}
+                            checked={sumupActive === bank.id}
+                            onChange={() => setSumupActive(bank.id)}
+                            className="accent-[#6366f1]"
+                          />
+                          <span>{bank.name || `Banque ${index + 1}`} (Active pour les encaissements CB)</span>
+                        </label>
+                        {sumupBanks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextBanks = sumupBanks.filter((_, i) => i !== index);
+                              setSumupBanks(nextBanks);
+                              if (sumupActive === bank.id && nextBanks.length > 0) {
+                                setSumupActive(nextBanks[0].id);
+                              }
+                            }}
+                            className="text-xs text-rose-400 hover:text-rose-300 border border-rose-500/30 rounded px-2.5 py-1"
+                          >
+                            Supprimer
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] text-white/50 mb-1">Nom d'affichage</label>
+                          <input
+                            type="text"
+                            value={bank.name}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setSumupBanks(prev => prev.map((b, i) => i === index ? { ...b, name: val } : b));
+                            }}
+                            placeholder={`Banque ${index + 1}`}
+                            className="admin-form-input text-xs"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] text-white/50 mb-1">Email marchand (pay_to_email)</label>
+                          <input
+                            type="text"
+                            value={bank.pay_to_email}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setSumupBanks(prev => prev.map((b, i) => i === index ? { ...b, pay_to_email: val } : b));
+                            }}
+                            placeholder="marchand@example.com"
+                            className="admin-form-input text-xs"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-white/50 mb-1">API Key</label>
+                        <input
+                          type="text"
+                          value={bank.api_key}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSumupBanks(prev => prev.map((b, i) => i === index ? { ...b, api_key: val } : b));
+                          }}
+                          placeholder="sup_sk_..."
+                          className="admin-form-input text-xs font-mono"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] text-white/50 mb-1">Client ID</label>
+                          <input
+                            type="text"
+                            value={bank.client_id}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setSumupBanks(prev => prev.map((b, i) => i === index ? { ...b, client_id: val } : b));
+                            }}
+                            placeholder="cc_classic_..."
+                            className="admin-form-input text-xs font-mono"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] text-white/50 mb-1">Client Secret</label>
+                          <input
+                            type="text"
+                            value={bank.client_secret}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setSumupBanks(prev => prev.map((b, i) => i === index ? { ...b, client_secret: val } : b));
+                            }}
+                            placeholder="cc_sk_classic_..."
+                            className="admin-form-input text-xs font-mono"
+                            required
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Email marchand</label>
-                      <input
-                        type="text"
-                        value={sumup1.pay_to_email}
-                        onChange={(e) => setSumup1({ ...sumup1, pay_to_email: e.target.value })}
-                        placeholder="pay_to_email"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-white/50 mb-1">API Key</label>
-                    <input
-                      type="text"
-                      value={sumup1.api_key}
-                      onChange={(e) => setSumup1({ ...sumup1, api_key: e.target.value })}
-                      placeholder="api_key"
-                      className="admin-form-input text-xs"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Client ID</label>
-                      <input
-                        type="text"
-                        value={sumup1.client_id}
-                        onChange={(e) => setSumup1({ ...sumup1, client_id: e.target.value })}
-                        placeholder="client_id"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Client Secret</label>
-                      <input
-                        type="text"
-                        value={sumup1.client_secret}
-                        onChange={(e) => setSumup1({ ...sumup1, client_secret: e.target.value })}
-                        placeholder="client_secret"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-3">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
-                    <input
-                      type="radio"
-                      name="sumup-active"
-                      value="sumup_bank2"
-                      checked={sumupActive === "sumup_bank2"}
-                      onChange={() => setSumupActive("sumup_bank2")}
-                      className="accent-[#6366f1]"
-                    />
-                    <span>Banque 2 active</span>
-                  </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Nom</label>
-                      <input
-                        type="text"
-                        value={sumup2.name}
-                        onChange={(e) => setSumup2({ ...sumup2, name: e.target.value })}
-                        placeholder="Nom d'affichage"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Email marchand</label>
-                      <input
-                        type="text"
-                        value={sumup2.pay_to_email}
-                        onChange={(e) => setSumup2({ ...sumup2, pay_to_email: e.target.value })}
-                        placeholder="pay_to_email"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-white/50 mb-1">API Key</label>
-                    <input
-                      type="text"
-                      value={sumup2.api_key}
-                      onChange={(e) => setSumup2({ ...sumup2, api_key: e.target.value })}
-                      placeholder="api_key"
-                      className="admin-form-input text-xs"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Client ID</label>
-                      <input
-                        type="text"
-                        value={sumup2.client_id}
-                        onChange={(e) => setSumup2({ ...sumup2, client_id: e.target.value })}
-                        placeholder="client_id"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-white/50 mb-1">Client Secret</label>
-                      <input
-                        type="text"
-                        value={sumup2.client_secret}
-                        onChange={(e) => setSumup2({ ...sumup2, client_secret: e.target.value })}
-                        placeholder="client_secret"
-                        className="admin-form-input text-xs"
-                        required
-                      />
-                    </div>
-                  </div>
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextIdx = sumupBanks.length + 1;
+                      const newId = `bank${nextIdx}`;
+                      setSumupBanks(prev => [
+                        ...prev,
+                        { id: newId, name: `Banque ${nextIdx}`, pay_to_email: "", api_key: "", client_id: "", client_secret: "" }
+                      ]);
+                    }}
+                    className="admin-btn-primary"
+                  >
+                    Ajouter une banque
+                  </button>
+                  <button type="submit" className="admin-btn-primary">
+                    Enregistrer SumUp
+                  </button>
                 </div>
-
-                <button type="submit" className="admin-btn-primary">
-                  Enregistrer SumUp
-                </button>
               </form>
             </div>
 

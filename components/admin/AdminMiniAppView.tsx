@@ -16,7 +16,9 @@ import {
   Search,
   CheckCircle2,
   Sliders,
-  AlertCircle
+  AlertCircle,
+  ExternalLink,
+  Globe
 } from "lucide-react";
 import { useTelegram } from "@/components/TelegramContext";
 import { useToast } from "@/components/NotificationToast";
@@ -74,6 +76,20 @@ export default function AdminMiniAppView({ onBack }: AdminMiniAppViewProps) {
     setActiveTab(tab);
   };
 
+  const handleOpenWebPanel = () => {
+    haptic("impact");
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const targetUrl = `${origin}/espace-sec-x9k2m7`;
+    const tg = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null;
+
+    toast.success("Redirection vers le panel web...");
+    if (tg?.openLink) {
+      tg.openLink(targetUrl);
+    } else if (typeof window !== "undefined") {
+      window.open(targetUrl, "_blank");
+    }
+  };
+
   /* ===================================================================== */
 
   return (
@@ -97,10 +113,14 @@ export default function AdminMiniAppView({ onBack }: AdminMiniAppViewProps) {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          EN DIRECT
-        </div>
+        <button
+          type="button"
+          onClick={handleOpenWebPanel}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-slate-950 font-black text-[11px] uppercase tracking-wider hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 shrink-0"
+        >
+          <ExternalLink size={13} />
+          <span>Panel Web</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-5 gap-1.5 bg-[#0a0d16]/80 p-1.5 rounded-2xl border border-white/[0.06]">
@@ -215,6 +235,26 @@ export default function AdminMiniAppView({ onBack }: AdminMiniAppViewProps) {
             </div>
           </div>
 
+          <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-2xl p-4 border border-primary/20 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary shrink-0">
+                <Globe size={18} />
+              </div>
+              <div>
+                <p className="text-xs font-black text-white uppercase tracking-wider">Panel Web Complet</p>
+                <p className="text-[10px] text-white/50">Interface de gestion complète sur navigateur</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenWebPanel}
+              className="px-3.5 py-2 rounded-xl bg-primary text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 shrink-0"
+            >
+              <span>Accéder</span>
+              <ExternalLink size={13} />
+            </button>
+          </div>
+
           <div className="bg-[#0f121d]/80 rounded-2xl p-4 border border-white/[0.08] flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Activity size={18} className="text-primary" />
@@ -241,36 +281,66 @@ export default function AdminMiniAppView({ onBack }: AdminMiniAppViewProps) {
               className="w-full bg-[#0f121d]/90 border border-white/[0.08] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50"
             />
           </div>
-          <div className="bg-[#0f121d]/80 rounded-2xl p-6 border border-white/[0.08] text-center space-y-2">
+          <div className="bg-[#0f121d]/80 rounded-2xl p-6 border border-white/[0.08] text-center space-y-3">
             <Users size={32} className="mx-auto text-primary/40" />
             <p className="text-xs font-bold text-white">Gestion des Utilisateurs</p>
             <p className="text-[10px] text-white/40 max-w-xs mx-auto">
               Modification de solde en direct, application de sanctions et consultation des logs d'achat.
             </p>
+            <div>
+              <button
+                type="button"
+                onClick={handleOpenWebPanel}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-slate-950 font-black text-xs uppercase tracking-wider hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+              >
+                <span>Gérer sur le Panel Web</span>
+                <ExternalLink size={13} />
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {activeTab === "stock" && (
         <div className="space-y-3 fade-in">
-          <div className="bg-[#0f121d]/80 rounded-2xl p-6 border border-white/[0.08] text-center space-y-2">
+          <div className="bg-[#0f121d]/80 rounded-2xl p-6 border border-white/[0.08] text-center space-y-3">
             <Package size={32} className="mx-auto text-primary/40" />
             <p className="text-xs font-bold text-white">Boutique & Inventaire Stock</p>
             <p className="text-[10px] text-white/40 max-w-xs mx-auto">
               Importation massive de cartes Carrefour au format CODE|PIN|PRIX et gestion des comptes IPTV.
             </p>
+            <div>
+              <button
+                type="button"
+                onClick={handleOpenWebPanel}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-slate-950 font-black text-xs uppercase tracking-wider hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+              >
+                <span>Gérer sur le Panel Web</span>
+                <ExternalLink size={13} />
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {activeTab === "docs" && (
         <div className="space-y-3 fade-in">
-          <div className="bg-[#0f121d]/80 rounded-2xl p-6 border border-white/[0.08] text-center space-y-2">
+          <div className="bg-[#0f121d]/80 rounded-2xl p-6 border border-white/[0.08] text-center space-y-3">
             <FileText size={32} className="mx-auto text-primary/40" />
             <p className="text-xs font-bold text-white">Générateurs de Documents</p>
             <p className="text-[10px] text-white/40 max-w-xs mx-auto">
               Activation et coupure instantanée des formulaires RIB, Fiches de paie, Relevés, Factures et Assurances.
             </p>
+            <div>
+              <button
+                type="button"
+                onClick={handleOpenWebPanel}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-slate-950 font-black text-xs uppercase tracking-wider hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+              >
+                <span>Gérer sur le Panel Web</span>
+                <ExternalLink size={13} />
+              </button>
+            </div>
           </div>
         </div>
       )}

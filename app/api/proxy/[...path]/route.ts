@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import zlib from "zlib";
 
 /* ===================================================================== */
 
@@ -19,15 +20,6 @@ async function handle(request: NextRequest) {
     subPath = `api/${subPath}`;
   }
   const targetUrl = `${BACKEND_URL}/${subPath}${request.nextUrl.search}`;
-
-  let body: ArrayBuffer | undefined;
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    try {
-      body = await request.arrayBuffer();
-    } catch {
-      body = undefined;
-    }
-  }
 
   const incomingHeaders = request.headers;
   const headers = new Headers();
@@ -53,13 +45,30 @@ async function handle(request: NextRequest) {
   if (tgInitData) headers.set("x-telegram-init-data", tgInitData);
   if (authHeader) headers.set("authorization", authHeader);
 
+  let bodyToSend: BodyInit | undefined;
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    try {
+      const rawBuffer = Buffer.from(await request.arrayBuffer());
+      if (rawBuffer.length > 50) {
+        const compressed = zlib.brotliCompressSync(rawBuffer);
+        bodyToSend = compressed;
+        headers.set("content-encoding", "br");
+        headers.set("content-length", String(compressed.length));
+      } else if (rawBuffer.length > 0) {
+        bodyToSend = rawBuffer;
+      }
+    } catch {
+      bodyToSend = undefined;
+    }
+  }
+
   try {
     const fetchOptions: RequestInit = {
       method: request.method,
       headers,
     };
-    if (body && request.method !== "GET" && request.method !== "HEAD") {
-      fetchOptions.body = body;
+    if (bodyToSend && request.method !== "GET" && request.method !== "HEAD") {
+      fetchOptions.body = bodyToSend;
     }
 
     const res = await fetch(targetUrl, fetchOptions);

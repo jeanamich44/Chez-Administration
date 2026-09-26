@@ -2277,17 +2277,18 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                 <h2 className="admin-card-panel-title">Tarifs IPTV & Configuration API</h2>
               </div>
               <form onSubmit={handleSaveIptv} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-white/60 mb-1.5">Host affiché au client</label>
-                    <input
-                      type="text"
-                      value={iptvHost}
-                      onChange={(e) => setIptvHost(e.target.value)}
-                      className="admin-form-input"
-                      placeholder="http://cf.business-cloud-neo.com"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Host affiché au client</label>
+                  <input
+                    type="text"
+                    value={iptvHost}
+                    onChange={(e) => setIptvHost(e.target.value)}
+                    className="admin-form-input"
+                    placeholder="http://cf.business-cloud-neo.com"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-white/60 mb-1.5">Type Flux</label>
                     <input
@@ -2298,9 +2299,6 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                       placeholder="m3u"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-white/60 mb-1.5">Prix 1 Mois (€)</label>
                     <input
@@ -2373,17 +2371,8 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                               }}
                               className="accent-[#6366f1]"
                             />
-                            <span>Compte actif</span>
+                            <span>Compte actif (utilisé pour les achats)</span>
                           </label>
-                          {iptvAccounts.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => setIptvAccounts(prev => prev.filter((_, i) => i !== index))}
-                              className="text-xs text-rose-400 hover:text-rose-300"
-                            >
-                              Supprimer
-                            </button>
-                          )}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
@@ -2395,7 +2384,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                                 const val = e.target.value;
                                 setIptvAccounts(prev => prev.map((a, i) => i === index ? { ...a, name: val } : a));
                               }}
-                              placeholder="Compte 1"
+                              placeholder="ChezRheyy"
                               className="admin-form-input text-xs"
                             />
                           </div>
@@ -2413,34 +2402,43 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[11px] text-white/50 mb-1">Clé API</label>
-                            <input
-                              type="text"
-                              value={acc.api_key}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setIptvAccounts(prev => prev.map((a, i) => i === index ? { ...a, api_key: val } : a));
-                              }}
-                              placeholder="api_key"
-                              className="admin-form-input text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[11px] text-white/50 mb-1">URL API</label>
-                            <input
-                              type="text"
-                              value={acc.api_url}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setIptvAccounts(prev => prev.map((a, i) => i === index ? { ...a, api_url: val } : a));
-                              }}
-                              placeholder="https://4k.cms-only.ru/api..."
-                              className="admin-form-input text-xs"
-                            />
-                          </div>
+                        <div>
+                          <label className="block text-[11px] text-white/50 mb-1">API Key</label>
+                          <input
+                            type="text"
+                            value={acc.api_key}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setIptvAccounts(prev => prev.map((a, i) => i === index ? { ...a, api_key: val } : a));
+                            }}
+                            placeholder="api_key"
+                            className="admin-form-input text-xs"
+                          />
                         </div>
+                        <div>
+                          <label className="block text-[11px] text-white/50 mb-1">API URL</label>
+                          <input
+                            type="text"
+                            value={acc.api_url}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setIptvAccounts(prev => prev.map((a, i) => i === index ? { ...a, api_url: val } : a));
+                            }}
+                            placeholder="https://4k.cms-only.ru/api/api.php"
+                            className="admin-form-input text-xs"
+                          />
+                        </div>
+                        {iptvAccounts.length > 1 && (
+                          <div className="flex justify-end pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setIptvAccounts(prev => prev.filter((_, i) => i !== index))}
+                              className="text-xs text-rose-400 hover:text-rose-300 border border-rose-500/30 rounded px-2.5 py-1"
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2449,17 +2447,17 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                     <button
                       type="button"
                       onClick={() => setIptvAccounts(prev => [...prev, { name: "", pack: "", api_key: "", api_url: "", active: false }])}
-                      className="admin-action-btn"
+                      className="admin-btn-primary"
                     >
-                      ➕ Ajouter un compte
+                      Ajouter un compte
                     </button>
                     <button
                       type="button"
                       onClick={handleTestIptvApi}
                       disabled={isTestingIptvApi}
-                      className="admin-action-btn"
+                      className="admin-btn-primary"
                     >
-                      {isTestingIptvApi ? "Test en cours..." : "Tester la connexion API"}
+                      {isTestingIptvApi ? "Connexion en cours…" : "Tester la connexion API"}
                     </button>
                   </div>
                   {iptvApiTestResult && (
@@ -2490,17 +2488,8 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                             />
                             <span>Compte actif (connexion panel)</span>
                           </label>
-                          {iptvPanelAccounts.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => setIptvPanelAccounts(prev => prev.filter((_, i) => i !== index))}
-                              className="text-xs text-rose-400 hover:text-rose-300"
-                            >
-                              Supprimer
-                            </button>
-                          )}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
                             <label className="block text-[11px] text-white/50 mb-1">Nom</label>
                             <input
@@ -2523,24 +2512,35 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                                 const val = e.target.value;
                                 setIptvPanelAccounts(prev => prev.map((a, i) => i === index ? { ...a, username: val } : a));
                               }}
-                              placeholder="username"
-                              className="admin-form-input text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[11px] text-white/50 mb-1">Mot de passe</label>
-                            <input
-                              type="password"
-                              value={acc.password}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setIptvPanelAccounts(prev => prev.map((a, i) => i === index ? { ...a, password: val } : a));
-                              }}
-                              placeholder="mot de passe"
+                              placeholder="ChezRheyy"
                               className="admin-form-input text-xs"
                             />
                           </div>
                         </div>
+                        <div>
+                          <label className="block text-[11px] text-white/50 mb-1">Mot de passe</label>
+                          <input
+                            type="text"
+                            value={acc.password}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setIptvPanelAccounts(prev => prev.map((a, i) => i === index ? { ...a, password: val } : a));
+                            }}
+                            placeholder="mot de passe"
+                            className="admin-form-input text-xs"
+                          />
+                        </div>
+                        {iptvPanelAccounts.length > 1 && (
+                          <div className="flex justify-end pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setIptvPanelAccounts(prev => prev.filter((_, i) => i !== index))}
+                              className="text-xs text-rose-400 hover:text-rose-300 border border-rose-500/30 rounded px-2.5 py-1"
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2549,17 +2549,17 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                     <button
                       type="button"
                       onClick={() => setIptvPanelAccounts(prev => [...prev, { name: "", username: "", password: "", active: false }])}
-                      className="admin-action-btn"
+                      className="admin-btn-primary"
                     >
-                      ➕ Ajouter un compte panel
+                      Ajouter un compte panel
                     </button>
                     <button
                       type="button"
                       onClick={handleTestIptvPanel}
                       disabled={isTestingIptvPanel}
-                      className="admin-action-btn"
+                      className="admin-btn-primary"
                     >
-                      {isTestingIptvPanel ? "Test en cours..." : "Tester la connexion panel"}
+                      {isTestingIptvPanel ? "Connexion en cours…" : "Tester la connexion panel"}
                     </button>
                   </div>
                   {iptvPanelTestResult && (
@@ -2572,9 +2572,11 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                   </span>
                 </div>
 
-                <button type="submit" className="admin-btn-primary">
-                  Enregistrer la Configuration IPTV
-                </button>
+                <div>
+                  <button type="submit" className="admin-btn-primary" style={{ width: "auto", padding: "12px 28px" }}>
+                    Enregistrer la Configuration IPTV
+                  </button>
+                </div>
               </form>
             </div>
 
@@ -2583,11 +2585,11 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                 <h2 className="admin-card-panel-title">Mot de Passe Admin Panel</h2>
               </div>
               <form onSubmit={handleSavePassword} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg">
+                <div className="space-y-4 max-w-md">
                   <div>
                     <label className="block text-xs font-semibold text-white/60 mb-1.5">Nouveau Mot de Passe</label>
                     <input
-                      type="password"
+                      type="text"
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
                       className="admin-form-input"
@@ -2599,7 +2601,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                   <div>
                     <label className="block text-xs font-semibold text-white/60 mb-1.5">Confirmer le Mot de Passe</label>
                     <input
-                      type="password"
+                      type="text"
                       value={adminPasswordConfirm}
                       onChange={(e) => setAdminPasswordConfirm(e.target.value)}
                       className="admin-form-input"
@@ -2609,7 +2611,7 @@ export default function AdminWebView({ onLogout }: AdminWebViewProps) {
                     />
                   </div>
                 </div>
-                <button type="submit" className="admin-btn-primary">
+                <button type="submit" className="admin-btn-primary" style={{ maxWidth: 250 }}>
                   Modifier le Mot de Passe
                 </button>
               </form>

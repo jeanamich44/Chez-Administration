@@ -1773,6 +1773,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('setting-iptv-3m').value = iptv.price_3m || '';
         document.getElementById('setting-iptv-6m').value = iptv.price_6m || '';
         document.getElementById('setting-iptv-12m').value = iptv.price_12m || '';
+        if (document.getElementById('setting-iptv-demo')) document.getElementById('setting-iptv-demo').value = iptv.price_demo || '1';
+        if (document.getElementById('setting-iptv-demo-enabled')) document.getElementById('setting-iptv-demo-enabled').value = iptv.demo_enabled !== false ? 'true' : 'false';
         renderIptvAccounts(iptv.accounts || []);
         renderIptvPanelAccounts(iptv.panel_accounts || []);
 
@@ -2266,6 +2268,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const p3 = document.getElementById('setting-iptv-3m').value.trim();
         const p6 = document.getElementById('setting-iptv-6m').value.trim();
         const p12 = document.getElementById('setting-iptv-12m').value.trim();
+        const pDemo = document.getElementById('setting-iptv-demo') ? document.getElementById('setting-iptv-demo').value.trim() : '1';
+        const isDemoEnabled = document.getElementById('setting-iptv-demo-enabled') ? (document.getElementById('setting-iptv-demo-enabled').value === 'true') : true;
         const accounts = collectIptvAccounts();
         const panel_accounts = collectIptvPanelAccounts();
 
@@ -2277,6 +2281,8 @@ document.addEventListener('DOMContentLoaded', () => {
             price_3m: p3,
             price_6m: p6,
             price_12m: p12,
+            price_demo: pDemo,
+            demo_enabled: isDemoEnabled,
             accounts,
             panel_accounts
         });

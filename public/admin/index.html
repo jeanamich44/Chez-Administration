@@ -850,6 +850,17 @@
                             <label class="form-label">Prix 12 Mois (€)</label>
                             <input type="number" id="setting-iptv-12m" class="form-input" required>
                         </div>
+                        <div class="form-group">
+                            <label class="form-label">Prix Démo 24h (€)</label>
+                            <input type="number" step="0.1" id="setting-iptv-demo" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Offre Démo 24h</label>
+                            <select id="setting-iptv-demo-enabled" class="form-input">
+                                <option value="true">Activée</option>
+                                <option value="false">Désactivée</option>
+                            </select>
+                        </div>
                         <div class="form-group" style="grid-column: 1 / -1;">
                             <label class="form-label">Bas du message client (texte + lien)</label>
                             <textarea id="setting-iptv-footer" class="form-input" rows="4" style="min-height: 110px; resize: vertical;"></textarea>

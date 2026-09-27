@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const hash = (window.location.hash || '').replace('#', '').trim();
         const savedTab = localStorage.getItem('admin_active_tab') || 'dashboard';
-        const validTabs = ['dashboard', 'metrics', 'users', 'stock', 'payments', 'transactions', 'settings'];
+        const validTabs = ['dashboard', 'metrics', 'users', 'stock', 'payments', 'transactions', 'settings', 'database'];
         const activeTab = validTabs.includes(hash) ? hash : (validTabs.includes(savedTab) ? savedTab : 'dashboard');
 
         window.switchTab(activeTab);
@@ -193,7 +193,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 'stock': 'Gestion du Stock Carrefour',
                 'payments': 'Rechargements (CB & Crypto)',
                 'transactions': 'Historique des Achats',
-                'settings': 'Configuration du Bot'
+                'settings': 'Configuration du Bot',
+                'database': '🗄️ Studio Base de Données Aiven'
             };
             pageTitleHeading.innerText = titleMap[tab] || 'Administration';
 
@@ -204,6 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (tab === 'payments') loadPaymentsData();
             else if (tab === 'transactions') loadTransactionsData();
             else if (tab === 'settings') loadSettingsData();
+            else if (tab === 'database') loadDatabaseStudio();
         });
     });
 
@@ -2338,6 +2340,358 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    /* ===================================================================== */
+
+    let dbTablesList = [];
+    let currentDbTable = '';
+    let currentDbPage = 1;
+    let currentDbLimit = 25;
+    let currentDbSearch = '';
+    let currentDbSortCol = null;
+    let currentDbSortDir = 'asc';
+    let currentDbRows = [];
+    let currentDbColumns = [];
+    let dbSearchTimeout = null;
+    let dbStudioInitialized = false;
+
+    function getDbTypeClass(typeStr) {
+        if (!typeStr) return 'db-type-text';
+        const t = String(typeStr).toLowerCase();
+        if (t.includes('int') || t.includes('serial') || t.includes('numeric') || t.includes('double') || t.includes('real')) return 'db-type-int';
+        if (t.includes('uuid')) return 'db-type-uuid';
+        if (t.includes('json')) return 'db-type-json';
+        if (t.includes('bool')) return 'db-type-bool';
+        if (t.includes('time') || t.includes('date')) return 'db-type-time';
+        return 'db-type-text';
+    }
+
+    async function loadDatabaseStudio() {
+        initDbStudioListeners();
+        const res = await apiRequest('/database/tables', 'GET');
+        if (!res || !res.tables || !Array.isArray(res.tables)) {
+            showToast('Impossible de charger les tables de la base de données', 'danger');
+            return;
+        }
+
+        dbTablesList = res.tables;
+        if (dbTablesList.length === 0) {
+            document.getElementById('db-tables-pills').innerHTML = '<span style="color: var(--text-muted); font-size: 13px;">Aucune table trouvée</span>';
+            return;
+        }
+
+        if (!currentDbTable || !dbTablesList.find(t => t.name === currentDbTable)) {
+            const defaultTable = dbTablesList.find(t => t.name === 'tma_users') || dbTablesList[0];
+            currentDbTable = defaultTable.name;
+        }
+
+        renderDbTablesPills();
+        fetchDbTableData();
+    }
+
+    function renderDbTablesPills() {
+        const container = document.getElementById('db-tables-pills');
+        if (!container) return;
+
+        container.innerHTML = dbTablesList.map(t => {
+            const isActive = t.name === currentDbTable;
+            return `
+                <button type="button" class="db-pill ${isActive ? 'active' : ''}" data-table="${escapeHtml(t.name)}">
+                    <span>${escapeHtml(t.name)}</span>
+                    <span class="db-pill-count">${t.count || 0}</span>
+                </button>
+            `;
+        }).join('');
+
+        container.querySelectorAll('.db-pill').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tbl = btn.getAttribute('data-table');
+                if (tbl === currentDbTable) return;
+                currentDbTable = tbl;
+                currentDbPage = 1;
+                currentDbSearch = '';
+                currentDbSortCol = null;
+                currentDbSortDir = 'asc';
+                const searchInp = document.getElementById('db-search-input');
+                if (searchInp) searchInp.value = '';
+                renderDbTablesPills();
+                fetchDbTableData();
+            });
+        });
+    }
+
+    function initDbStudioListeners() {
+        if (dbStudioInitialized) return;
+        dbStudioInitialized = true;
+
+        const refreshBtn = document.getElementById('db-refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                showToast('Actualisation de la table...', 'info');
+                loadDatabaseStudio();
+            });
+        }
+
+        const limitSelect = document.getElementById('db-limit-select');
+        if (limitSelect) {
+            limitSelect.addEventListener('change', (e) => {
+                currentDbLimit = parseInt(e.target.value, 10) || 25;
+                currentDbPage = 1;
+                fetchDbTableData();
+            });
+        }
+
+        const prevBtn = document.getElementById('db-prev-page-btn');
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                if (currentDbPage > 1) {
+                    currentDbPage--;
+                    fetchDbTableData();
+                }
+            });
+        }
+
+        const nextBtn = document.getElementById('db-next-page-btn');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                currentDbPage++;
+                fetchDbTableData();
+            });
+        }
+
+        const searchInput = document.getElementById('db-search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(dbSearchTimeout);
+                dbSearchTimeout = setTimeout(() => {
+                    currentDbSearch = e.target.value.trim();
+                    currentDbPage = 1;
+                    fetchDbTableData();
+                }, 300);
+            });
+        }
+    }
+
+    async function fetchDbTableData() {
+        if (!currentDbTable) return;
+
+        const thead = document.getElementById('db-table-head');
+        const tbody = document.getElementById('db-table-body');
+        if (!thead || !tbody) return;
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="100" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    <div style="font-size: 24px; margin-bottom: 8px;">🔄</div>
+                    Chargement des enregistrements...
+                </td>
+            </tr>
+        `;
+
+        let url = `/database/query?table=${encodeURIComponent(currentDbTable)}&page=${currentDbPage}&limit=${currentDbLimit}`;
+        if (currentDbSearch) {
+            url += `&search=${encodeURIComponent(currentDbSearch)}`;
+        }
+        if (currentDbSortCol) {
+            url += `&sort_col=${encodeURIComponent(currentDbSortCol)}&sort_dir=${currentDbSortDir}`;
+        }
+
+        const data = await apiRequest(url, 'GET');
+        if (!data || !data.columns) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="100" style="text-align: center; padding: 40px; color: var(--danger);">
+                        Erreur lors du chargement des données de la table
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        currentDbColumns = data.columns || [];
+        currentDbRows = data.rows || [];
+        const total = data.total || 0;
+        const totalPages = Math.max(1, Math.ceil(total / currentDbLimit));
+
+        const totalBadge = document.getElementById('db-total-records-badge');
+        if (totalBadge) {
+            totalBadge.innerText = `${total} enregistrement${total > 1 ? 's' : ''}`;
+        }
+
+        const pageIndicator = document.getElementById('db-page-indicator');
+        if (pageIndicator) {
+            pageIndicator.innerText = `Page ${currentDbPage} / ${totalPages}`;
+        }
+
+        const prevBtn = document.getElementById('db-prev-page-btn');
+        const nextBtn = document.getElementById('db-next-page-btn');
+        if (prevBtn) prevBtn.disabled = currentDbPage <= 1;
+        if (nextBtn) nextBtn.disabled = currentDbPage >= totalPages;
+
+        thead.innerHTML = `
+            <tr>
+                ${currentDbColumns.map(col => {
+                    const typeClass = getDbTypeClass(col.type);
+                    const isSorted = currentDbSortCol === col.name;
+                    const arrow = isSorted ? (currentDbSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+                    return `
+                        <th class="db-th" data-col="${escapeHtml(col.name)}" style="cursor: pointer; user-select: none; padding: 12px 14px; text-align: left; white-space: nowrap;">
+                            <span style="font-weight: 600; color: ${isSorted ? '#fff' : 'inherit'};">${escapeHtml(col.name)}</span>
+                            <span class="db-col-type ${typeClass}">${escapeHtml(col.type)}</span>
+                            <span style="color: var(--accent-primary); font-size: 11px;">${arrow}</span>
+                        </th>
+                    `;
+                }).join('')}
+                <th style="padding: 12px 14px; text-align: right; width: 90px; white-space: nowrap;">Actions</th>
+            </tr>
+        `;
+
+        thead.querySelectorAll('.db-th').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.getAttribute('data-col');
+                if (currentDbSortCol === col) {
+                    currentDbSortDir = currentDbSortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentDbSortCol = col;
+                    currentDbSortDir = 'asc';
+                }
+                fetchDbTableData();
+            });
+        });
+
+        if (currentDbRows.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="${currentDbColumns.length + 1}" style="text-align: center; padding: 50px; color: var(--text-muted);">
+                        <div style="font-size: 28px; margin-bottom: 8px;">📭</div>
+                        Aucun enregistrement trouvé dans cette table
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = currentDbRows.map((row, rIdx) => {
+            return `
+                <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                    ${currentDbColumns.map(col => {
+                        const val = row[col.name];
+                        return `<td style="padding: 10px 14px; font-size: 12px; vertical-align: middle; white-space: nowrap; max-width: 280px; overflow: hidden; text-overflow: ellipsis;">
+                            ${renderDbCellValue(val, col, rIdx)}
+                        </td>`;
+                    }).join('')}
+                    <td style="padding: 10px 14px; text-align: right; white-space: nowrap; vertical-align: middle;">
+                        <button type="button" class="db-inspect-btn" onclick="openDbRowDetailModal(${rIdx})">
+                            🔍 Détails
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function renderDbCellValue(val, col, rIdx) {
+        if (val === null || val === undefined) {
+            return '<span class="db-cell-null">null</span>';
+        }
+        if (typeof val === 'boolean') {
+            return `<span class="${val ? 'db-cell-bool-true' : 'db-cell-bool-false'}">${val ? 'true' : 'false'}</span>`;
+        }
+        if (typeof val === 'object') {
+            return `<button type="button" class="db-json-btn" onclick="openDbJsonModal(${rIdx}, '${escapeHtml(col.name)}')">{ } JSON</button>`;
+        }
+        const strVal = String(val);
+        const colType = (col.type || '').toLowerCase();
+        if (colType.includes('time') || colType.includes('date')) {
+            return `<span style="font-family: monospace; font-size: 11px; color: #a5b4fc;">${formatDate(strVal)}</span>`;
+        }
+        if (colType.includes('uuid')) {
+            return `<span style="font-family: monospace; font-size: 11px; color: #c084fc;">${escapeHtml(strVal)}</span>`;
+        }
+        if (strVal.length > 45) {
+            return `<span title="${escapeHtml(strVal)}">${escapeHtml(strVal.substring(0, 42))}...</span>`;
+        }
+        return escapeHtml(strVal);
+    }
+
+    window.openDbJsonModal = (rowIndex, colName) => {
+        const row = currentDbRows[rowIndex];
+        if (!row) return;
+        const val = row[colName];
+        let jsonStr = '';
+        try {
+            jsonStr = typeof val === 'string' ? JSON.stringify(JSON.parse(val), null, 2) : JSON.stringify(val, null, 2);
+        } catch {
+            jsonStr = String(val);
+        }
+
+        const html = `
+            <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; color: var(--text-muted); font-family: monospace;">Colonne : <strong>${escapeHtml(colName)}</strong></span>
+                <button type="button" class="action-btn" id="db-copy-json-btn" style="padding: 4px 10px; font-size: 11px;">📋 Copier</button>
+            </div>
+            <pre class="db-json-pre" id="db-json-content">${escapeHtml(jsonStr)}</pre>
+        `;
+
+        openModal(`Inspecteur JSON — ${escapeHtml(colName)}`, html, null);
+
+        setTimeout(() => {
+            const copyBtn = document.getElementById('db-copy-json-btn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(jsonStr);
+                    showToast('JSON copié dans le presse-papier !', 'success');
+                });
+            }
+        }, 50);
+    };
+
+    window.openDbRowDetailModal = (rowIndex) => {
+        const row = currentDbRows[rowIndex];
+        if (!row) return;
+
+        const rowsHtml = currentDbColumns.map(col => {
+            const val = row[col.name];
+            let displayVal = '';
+            if (val === null || val === undefined) {
+                displayVal = '<span class="db-cell-null">null</span>';
+            } else if (typeof val === 'boolean') {
+                displayVal = `<span class="${val ? 'db-cell-bool-true' : 'db-cell-bool-false'}">${val ? 'true' : 'false'}</span>`;
+            } else if (typeof val === 'object') {
+                const pretty = JSON.stringify(val, null, 2);
+                displayVal = `<pre class="db-json-pre" style="max-height: 180px; margin: 4px 0 0 0; padding: 8px;">${escapeHtml(pretty)}</pre>`;
+            } else {
+                displayVal = `<span style="font-family: monospace;">${escapeHtml(String(val))}</span>`;
+            }
+
+            const typeClass = getDbTypeClass(col.type);
+            return `
+                <tr>
+                    <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color); text-align: left; vertical-align: top; width: 35%;">
+                        <div style="font-weight: 600; color: #fff;">${escapeHtml(col.name)}</div>
+                        <span class="db-col-type ${typeClass}">${escapeHtml(col.type)}</span>
+                    </th>
+                    <td style="padding: 8px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle;">
+                        ${displayVal}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        const html = `
+            <div style="max-height: 60vh; overflow-y: auto; padding-right: 4px;">
+                <table class="db-detail-table" style="width: 100%; border-collapse: collapse;">
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        openModal(`Détails Enregistrement #${rowIndex + 1} (${escapeHtml(currentDbTable)})`, html, null);
+    };
+
+    /* ===================================================================== */
 
     if (authToken) {
         initApp();

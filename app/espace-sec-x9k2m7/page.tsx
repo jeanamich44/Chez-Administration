@@ -1,10 +1,174 @@
-export default function EspaceSecPage() {
+"use client";
+
+import { useState, useEffect, FormEvent } from "react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
+import { ToastProvider } from "@/components/NotificationToast";
+
+/* ===================================================================== */
+
+function SecretAdminContent() {
+  const [token, setToken] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [checking, setChecking] = useState<boolean>(true);
+  const [errorShake, setErrorShake] = useState<boolean>(false);
+
+  /* ===================================================================== */
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const current = localStorage.getItem("admin_auth_token");
+      if (!current) {
+        setToken("");
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  /* ===================================================================== */
+
+  useEffect(() => {
+    const savedToken = localStorage.getItem("admin_auth_token") || "";
+    const savedTime = parseInt(localStorage.getItem("admin_auth_token_time") || "0", 10);
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+    if (!savedToken || !savedTime || Date.now() - savedTime >= TWENTY_FOUR_HOURS) {
+      localStorage.removeItem("admin_auth_token");
+      localStorage.removeItem("admin_auth_token_time");
+      setToken("");
+      setChecking(false);
+      return;
+    }
+
+    fetch("/api/admin/check", {
+      headers: { "Authorization": `Bearer ${savedToken}` }
+    })
+      .then((res) => {
+        if (res.ok) {
+          setToken(savedToken);
+        } else {
+          localStorage.removeItem("admin_auth_token");
+          localStorage.removeItem("admin_auth_token_time");
+          setToken("");
+        }
+      })
+      .catch(() => {
+        setToken(savedToken);
+      })
+      .finally(() => {
+        setChecking(false);
+      });
+  }, []);
+
+  /* ===================================================================== */
+
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!password.trim() || loading) return;
+
+    setLoading(true);
+    setErrorShake(false);
+
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: password.trim() })
+      });
+
+      if (!res.ok) {
+        setPassword("");
+        setErrorShake(true);
+        setTimeout(() => setErrorShake(false), 500);
+        return;
+      }
+
+      const data = await res.json();
+      if (data && data.success && data.token) {
+        localStorage.setItem("admin_auth_token", data.token);
+        localStorage.setItem("admin_auth_token_time", Date.now().toString());
+        setToken(data.token);
+      } else {
+        setPassword("");
+        setErrorShake(true);
+        setTimeout(() => setErrorShake(false), 500);
+      }
+    } catch {
+      setPassword("");
+      setErrorShake(true);
+      setTimeout(() => setErrorShake(false), 500);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ===================================================================== */
+
+  if (checking) {
+    return <div className="min-h-screen bg-black" />;
+  }
+
+  if (token) {
+    return (
+      <iframe
+        src="/admin/index.html"
+        title="ChezRheyy Admin"
+        className="fixed inset-0 w-screen h-screen border-none m-0 p-0 overflow-hidden"
+        style={{ border: "none", width: "100vw", height: "100vh" }}
+      />
+    );
+  }
+
   return (
-    <iframe
-      src="/admin/index.html"
-      title="ChezRheyy Admin"
-      className="fixed inset-0 w-screen h-screen border-none m-0 p-0 overflow-hidden"
-      style={{ border: "none", width: "100vw", height: "100vh" }}
-    />
+    <div className="min-h-screen bg-black flex items-center justify-center p-4 select-none">
+      <form onSubmit={handleLogin} className="w-full max-w-xs">
+        <div
+          className={`relative flex items-center transition-transform ${
+            errorShake ? "translate-x-1 duration-75" : ""
+          }`}
+        >
+          <input
+            type={showPassword ? "text" : "password"}
+            autoFocus
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+            className="w-full bg-[#0a0c12] border border-white/[0.08] focus:border-white/20 rounded-xl pl-4 pr-16 py-3 text-xs text-white placeholder-transparent focus:outline-none transition-colors"
+          />
+          <div className="absolute right-2 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="p-1 rounded-lg text-white/30 hover:text-white transition-colors"
+            >
+              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !password.trim()}
+              className="p-1 rounded-lg text-white/30 hover:text-white disabled:opacity-0 transition-all"
+            >
+              {loading ? (
+                <div className="w-3.5 h-3.5 border border-white/20 border-t-white rounded-full animate-spin" />
+              ) : (
+                <ArrowRight size={14} />
+              )}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/* ===================================================================== */
+
+export default function SecretAdminPage() {
+  return (
+    <ToastProvider>
+      <SecretAdminContent />
+    </ToastProvider>
   );
 }

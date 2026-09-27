@@ -20,8 +20,7 @@ import {
   Tv,
   ShoppingCart,
   Zap,
-  Tag,
-  Layers
+  Tag
 } from "lucide-react";
 
 /* ===================================================================== */
@@ -269,25 +268,7 @@ function AppRouter() {
             {activeTab === "services" && (
               <>
                 {serviceRoot === "menu" && (
-                  <div className="space-y-4 pb-20 fade-in">
-                    <div className="p-4 rounded-2xl bg-gradient-to-r from-primary/15 via-primary/5 to-transparent border border-primary/20 flex items-center justify-between shadow-lg">
-                      <div>
-                        <span className="text-[9px] font-black uppercase tracking-wider text-primary flex items-center gap-1">
-                          <Sparkles size={11} /> Boutique & Services
-                        </span>
-                        <h2 className="text-sm font-black italic text-white mt-0.5">
-                          Catalogue des Prestations
-                        </h2>
-                        <p className="text-[10px] text-white/50 font-medium">
-                          Sélectionnez une catégorie de service pour débuter
-                        </p>
-                      </div>
-                      <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-inner">
-                        <Layers size={20} />
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
+                  <div className="space-y-3 pb-20 fade-in">
                       {ROOT_SERVICES.map((srv) => {
                         const Icon = srv.icon;
                         return (
@@ -328,7 +309,6 @@ function AppRouter() {
                         );
                       })}
                     </div>
-                  </div>
                 )}
 
                 {serviceRoot === "iptv" && (

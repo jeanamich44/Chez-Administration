@@ -603,14 +603,14 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
                 <div className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-0.5">
                   Host / Serveur
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold text-white truncate max-w-[200px]">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs font-bold text-white break-all select-all leading-normal">
                     {generatedAccount.host || config.host}
                   </span>
                   <button
                     type="button"
                     onClick={() => handleCopy(generatedAccount.host || config.host, "res_host")}
-                    className="text-white/40 hover:text-white"
+                    className="text-white/40 hover:text-white shrink-0 p-1"
                   >
                     {copiedField === "res_host" ? (
                       <Check size={12} className="text-emerald-400" />
@@ -626,14 +626,14 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
                   <div className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-0.5">
                     Identifiant (Username)
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-black text-white">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-black text-white break-all select-all leading-normal">
                       {generatedAccount.username}
                     </span>
                     <button
                       type="button"
                       onClick={() => handleCopy(generatedAccount.username, "res_user")}
-                      className="text-white/40 hover:text-white"
+                      className="text-white/40 hover:text-white shrink-0 p-1"
                     >
                       {copiedField === "res_user" ? (
                         <Check size={12} className="text-emerald-400" />
@@ -650,40 +650,16 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
                   <div className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-0.5">
                     Mot de passe (Password)
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-black text-primary">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-black text-primary break-all select-all leading-normal">
                       {generatedAccount.password}
                     </span>
                     <button
                       type="button"
                       onClick={() => handleCopy(generatedAccount.password, "res_pass")}
-                      className="text-white/40 hover:text-white"
+                      className="text-white/40 hover:text-white shrink-0 p-1"
                     >
                       {copiedField === "res_pass" ? (
-                        <Check size={12} className="text-emerald-400" />
-                      ) : (
-                        <Copy size={12} />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {generatedAccount.url && (
-                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-                  <div className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-0.5">
-                    Lien Playlist M3U
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] text-white/80 truncate max-w-[200px]">
-                      {generatedAccount.url}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(generatedAccount.url, "res_url")}
-                      className="text-white/40 hover:text-white"
-                    >
-                      {copiedField === "res_url" ? (
                         <Check size={12} className="text-emerald-400" />
                       ) : (
                         <Copy size={12} />

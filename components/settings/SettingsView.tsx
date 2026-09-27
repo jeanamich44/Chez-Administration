@@ -1,6 +1,6 @@
 "use client";
 
-import { User, MessageSquare, Bell, Copy, Shield } from "lucide-react";
+import { User, MessageSquare, Bell, Copy, Shield, ExternalLink } from "lucide-react";
 import { useTelegram } from "@/components/TelegramContext";
 import { useToast } from "@/components/NotificationToast";
 
@@ -33,6 +33,20 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
     toast.success("ID Telegram copié !");
   };
 
+  const handleOpenWebPanel = () => {
+    haptic("impact");
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const targetUrl = `${origin}/espace-sec-x9k2m7`;
+    const tg = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null;
+
+    toast.success("Ouverture du panel web...");
+    if (tg?.openLink) {
+      tg.openLink(targetUrl);
+    } else if (typeof window !== "undefined") {
+      window.open(targetUrl, "_blank");
+    }
+  };
+
   return (
     <div className="space-y-4 pb-24 fade-in">
       <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-3xl p-5 border border-white/[0.08] flex items-center gap-4">
@@ -62,10 +76,7 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
           </h3>
           <button
             type="button"
-            onClick={() => {
-              haptic("impact");
-              onOpenAdmin?.();
-            }}
+            onClick={handleOpenWebPanel}
             className="w-full flex items-center justify-between p-3.5 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all text-left"
           >
             <div className="flex items-center gap-3">
@@ -73,12 +84,13 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
                 <Shield size={16} />
               </div>
               <div>
-                <p className="text-xs font-black text-white">Panel d'Administration</p>
-                <p className="text-[10px] text-white/50">Gestion TMA & Services</p>
+                <p className="text-xs font-black text-white">Panel d'Administration Web</p>
+                <p className="text-[10px] text-white/50">Ouvrir dans le navigateur externe</p>
               </div>
             </div>
-            <span className="text-[10px] bg-primary text-slate-950 font-black px-2.5 py-1 rounded-full">
-              OUVRIR
+            <span className="text-[10px] bg-primary text-slate-950 font-black px-2.5 py-1 rounded-full flex items-center gap-1">
+              <span>NAVIGATEUR</span>
+              <ExternalLink size={10} />
             </span>
           </button>
         </div>

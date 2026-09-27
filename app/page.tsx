@@ -21,8 +21,7 @@ import {
   ShoppingCart,
   Zap,
   Tag,
-  Layers,
-  X
+  Layers
 } from "lucide-react";
 
 /* ===================================================================== */
@@ -164,7 +163,6 @@ function AppRouter() {
   const { user, navigation, navigateTo, goBack, haptic, balance, ready, isTelegram } = useTelegram();
   const [activeTab, setActiveTab] = useState<MainTab>("services");
   const [serviceRoot, setServiceRoot] = useState<ServiceRootType>("menu");
-  const [showAdmin, setShowAdmin] = useState<boolean>(false);
 
   const handleRootServiceSelect = useCallback(
     (serviceId: ServiceRootType) => {
@@ -211,7 +209,6 @@ function AppRouter() {
 
   const handleTabChange = useCallback(
     (tab: MainTab) => {
-      setShowAdmin(false);
       setActiveTab(tab);
       if (tab === "services" && navigation.view === "form") {
         goBack();
@@ -221,11 +218,10 @@ function AppRouter() {
   );
 
   const isInDetailedView =
-    showAdmin ||
-    (activeTab === "services" &&
-      (serviceRoot === "iptv" ||
-        serviceRoot === "carrefour" ||
-        (serviceRoot === "generate-docs" && navigation.view === "form")));
+    activeTab === "services" &&
+    (serviceRoot === "iptv" ||
+      serviceRoot === "carrefour" ||
+      (serviceRoot === "generate-docs" && navigation.view === "form"));
 
   /* ===================================================================== */
 
@@ -262,34 +258,13 @@ function AppRouter() {
           </button>
         </header>
 
-        {showAdmin ? (
-          <div className="fixed inset-0 z-50 bg-[#060810] flex flex-col">
-            <div className="flex items-center justify-between px-4 py-2.5 bg-[#0f121d] border-b border-white/10 shrink-0">
-              <span className="text-xs font-black italic text-primary">Administration Bot Panel</span>
-              <button
-                type="button"
-                onClick={() => setShowAdmin(false)}
-                className="flex items-center gap-1 text-xs text-white/60 hover:text-white px-2.5 py-1 rounded-lg bg-white/[0.05]"
-              >
-                <X size={13} />
-                <span>Fermer</span>
-              </button>
-            </div>
-            <iframe
-              src="/admin/index.html"
-              title="ChezRheyy Admin"
-              className="w-full flex-1 border-none"
-            />
-          </div>
-        ) : (
-          <>
-            {activeTab === "recharge" && (
-              <RechargeView onBackToServices={() => handleTabChange("services")} />
-            )}
+        {activeTab === "recharge" && (
+          <RechargeView onBackToServices={() => handleTabChange("services")} />
+        )}
 
-            {activeTab === "settings" && (
-              <SettingsView onOpenAdmin={() => setShowAdmin(true)} />
-            )}
+        {activeTab === "settings" && (
+          <SettingsView />
+        )}
 
             {activeTab === "services" && (
               <>
@@ -519,8 +494,6 @@ function AppRouter() {
                 )}
               </>
             )}
-          </>
-        )}
       </div>
 
       {!isInDetailedView && (

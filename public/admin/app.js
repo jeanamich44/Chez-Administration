@@ -999,6 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.addEventListener('contextmenu', (e) => {
                 showDynamicContextMenu(e, [
                     { label: '💳 Modifier le Solde', action: () => btnEditSolde(user.id, user.solde) },
+                    { label: user.isAdmin ? '👑 Retirer Admin' : '👑 Nommer Admin', action: () => btnToggleAdmin(user.id, !user.isAdmin) },
                     { label: user.isBanned ? '🔓 Débannir l\'Utilisateur' : '🚫 Bannir l\'Utilisateur', action: () => user.isBanned ? btnDebanUser(user.id) : btnBanUser(user.id) },
                     { divider: true },
                     { label: '📋 Copier l\'ID Telegram', action: () => { navigator.clipboard.writeText(String(user.id)); showToast(`ID ${user.id} copié !`, 'info'); } },
@@ -1281,6 +1282,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (res && res.success) {
                 showToast('Utilisateur débanni', 'success');
                 loadUsersData();
+            }
+        });
+    };
+
+    window.btnToggleAdmin = (userId, newStatus) => {
+        const actionLabel = newStatus ? 'Nommer Administrateur' : 'Retirer les droits Administrateur';
+        openModal(`${actionLabel} (${userId})`, `<p style="margin-bottom: 12px; color: var(--text-secondary);">Êtes-vous sûr de vouloir ${newStatus ? 'nommer administrateur' : 'retirer les droits admin de'} l'utilisateur <code>${userId}</code> ?</p>`, async () => {
+            const res = await apiRequest('/users/admin', 'POST', { userId, admin: newStatus });
+            if (res && res.success) {
+                showToast(`Droits admin ${newStatus ? 'accordés' : 'retirés'} avec succès`, 'success');
+                loadUsersData();
+            } else {
+                showToast('Erreur lors de la modification des droits', 'danger');
             }
         });
     };

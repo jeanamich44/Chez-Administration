@@ -233,12 +233,7 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
       setPendingCheckout(newCheckout);
       setShowPaymentModal(true);
 
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg?.openLink) {
-        tg.openLink(data.payment_url);
-      } else {
-        window.open(data.payment_url, "_blank");
-      }
+      window.location.href = data.payment_url;
     } catch (err: any) {
       console.error("[VERCEL RECHARGE ERREUR] Connexion impossible:", err?.message);
       toast.error("Connexion au serveur de paiement impossible");
@@ -314,12 +309,7 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
             <button
               type="button"
               onClick={() => {
-                const tg = (window as any).Telegram?.WebApp;
-                if (tg?.openLink) {
-                  tg.openLink(pendingCheckout.payment_url);
-                } else {
-                  window.open(pendingCheckout.payment_url, "_blank");
-                }
+                window.location.href = pendingCheckout.payment_url;
               }}
               className="flex-1 h-9 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
             >
@@ -501,11 +491,8 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
                     type="button"
                     onClick={() => {
                       const url = activeCheckout?.payment_url || pendingCheckout?.payment_url || "";
-                      const tg = (window as any).Telegram?.WebApp;
-                      if (tg?.openLink) {
-                        tg.openLink(url);
-                      } else {
-                        window.open(url, "_blank");
+                      if (url) {
+                        window.location.href = url;
                       }
                     }}
                     className="w-full h-11 rounded-xl bg-white text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-white/90 transition-colors"

@@ -17,7 +17,6 @@ import {
   AlertCircle,
   HelpCircle,
   Sparkles,
-  Wallet,
   PlayCircle
 } from "lucide-react";
 
@@ -204,7 +203,7 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
 
   return (
     <div className="space-y-4 pb-24 fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center">
         <button
           type="button"
           onClick={() => {
@@ -216,13 +215,6 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
           <ArrowLeft size={13} />
           <span>Services</span>
         </button>
-
-        <div className="flex items-center gap-1.5 bg-[#0f121d] border border-white/10 px-3 py-1.5 rounded-xl">
-          <Wallet size={13} className="text-primary" />
-          <span className="text-xs font-black italic text-white">
-            {balance.toFixed(2).replace(".", ",")} €
-          </span>
-        </div>
       </div>
 
       <div className="p-4 rounded-2xl bg-gradient-to-r from-red-600/20 via-rose-600/10 to-transparent border border-rose-500/30 flex items-center justify-between shadow-lg">

@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
   Wallet,
-  ShieldCheck,
   Zap,
   ArrowRight,
   CheckCircle2,
@@ -275,16 +274,11 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
               </h2>
             </div>
           </div>
-          <div className="flex flex-col items-end">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-[9px] font-black tracking-wider uppercase">
-              <ShieldCheck size={10} /> Compte Actif
+          {user?.id && (
+            <span className="text-[9px] text-white/40 font-medium">
+              ID: {user.id}
             </span>
-            {user?.id && (
-              <span className="text-[9px] text-white/40 mt-1 font-medium">
-                ID: {user.id}
-              </span>
-            )}
-          </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between pt-3 border-t border-white/5 text-[11px] text-white/60">

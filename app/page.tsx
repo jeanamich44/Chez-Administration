@@ -247,9 +247,6 @@ function AppRouter() {
               <h1 className="text-sm font-black italic tracking-tight text-white flex items-center gap-1.5">
                 CHEZ <span className="text-primary">ADMINISTRATION</span>
               </h1>
-              <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest">
-                Telegram Mini App
-              </p>
             </div>
           </div>
 

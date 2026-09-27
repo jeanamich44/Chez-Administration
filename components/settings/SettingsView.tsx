@@ -77,20 +77,20 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
           <button
             type="button"
             onClick={handleOpenWebPanel}
-            className="w-full flex items-center justify-between p-3.5 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all text-left"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all text-left gap-2.5"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 text-primary flex items-center justify-center">
-                <Shield size={16} />
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 text-primary flex items-center justify-center shrink-0">
+                <Shield size={15} />
               </div>
-              <div>
-                <p className="text-xs font-black text-white">Panel d'Administration Web</p>
-                <p className="text-[10px] text-white/50">Ouvrir dans le navigateur externe</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-black text-white truncate">Panel d'Administration Web</p>
+                <p className="text-[10px] text-white/50 truncate">Ouvrir dans le navigateur externe</p>
               </div>
             </div>
-            <span className="text-[10px] bg-primary text-slate-950 font-black px-2.5 py-1 rounded-full flex items-center gap-1">
+            <span className="text-[9px] bg-primary text-slate-950 font-black px-2 py-1 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
               <span>NAVIGATEUR</span>
-              <ExternalLink size={10} />
+              <ExternalLink size={9} />
             </span>
           </button>
         </div>

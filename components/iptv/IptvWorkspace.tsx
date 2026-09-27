@@ -52,9 +52,7 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
   const toast = useToast();
 
   const [activeTab, setActiveTab] = useState<"buy" | "demo" | "my-subs">("buy");
-  const [subType, setSubType] = useState<"m3u" | "mag">("m3u");
   const [selectedDuration, setSelectedDuration] = useState<1 | 3 | 6 | 12>(1);
-  const [macAddress, setMacAddress] = useState<string>("");
 
   const [config, setConfig] = useState<IptvPrices>({
     prices: { "1": 5, "3": 10, "6": 20, "12": 35, "demo": 0 },
@@ -126,13 +124,6 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
 
   const handleConfirmOrder = () => {
     haptic("impact");
-    if (subType === "mag") {
-      const cleanMac = macAddress.replace(/[^a-fA-F0-9]/g, "");
-      if (cleanMac.length !== 12) {
-        toast.error("Veuillez saisir une adresse MAC valide (12 caractères hexadécimaux)");
-        return;
-      }
-    }
     if (!canAfford) {
       toast.error(`Solde insuffisant (${balance.toFixed(2)} € / ${currentPrice.toFixed(2)} €)`);
       return;
@@ -151,9 +142,8 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
           "X-Telegram-Init-Data": initData,
         },
         body: JSON.stringify({
-          subscription_type: subType,
+          subscription_type: "m3u",
           sub: selectedDuration,
-          mac: subType === "mag" ? macAddress : undefined,
         }),
       });
 
@@ -238,7 +228,7 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
       <div className="p-4 rounded-2xl bg-gradient-to-r from-red-600/20 via-rose-600/10 to-transparent border border-rose-500/30 flex items-center justify-between shadow-lg">
         <div>
           <span className="text-[9px] font-black uppercase tracking-wider text-rose-400 flex items-center gap-1">
-            <Sparkles size={11} /> 4K • FHD • Stalker
+            <Sparkles size={11} /> 4K • Full HD • M3U
           </span>
           <h2 className="text-base font-black italic text-white mt-0.5">
             IPTV
@@ -307,71 +297,7 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
         <div className="space-y-4">
           <div className="rounded-2xl bg-[#0f121d] border border-white/[0.08] p-4 space-y-3">
             <span className="text-[10px] font-black uppercase tracking-wider text-white/50">
-              1. Type de support
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  haptic("selection");
-                  setSubType("m3u");
-                }}
-                className={`p-3 rounded-xl border text-left transition-all ${
-                  subType === "m3u"
-                    ? "bg-primary/10 border-primary text-white"
-                    : "bg-white/[0.02] border-white/10 text-white/60 hover:border-white/20"
-                }`}
-              >
-                <div className="text-xs font-black italic text-white flex items-center justify-between">
-                  <span>M3U / Smarters</span>
-                  {subType === "m3u" && <Check size={14} className="text-primary" />}
-                </div>
-                <div className="text-[9px] text-white/40 mt-1">
-                  Pour applications TV, Smartphones, PC & boîtiers Android
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  haptic("selection");
-                  setSubType("mag");
-                }}
-                className={`p-3 rounded-xl border text-left transition-all ${
-                  subType === "mag"
-                    ? "bg-primary/10 border-primary text-white"
-                    : "bg-white/[0.02] border-white/10 text-white/60 hover:border-white/20"
-                }`}
-              >
-                <div className="text-xs font-black italic text-white flex items-center justify-between">
-                  <span>MAG / Stalker</span>
-                  {subType === "mag" && <Check size={14} className="text-primary" />}
-                </div>
-                <div className="text-[9px] text-white/40 mt-1">
-                  Pour boîtiers MAG ou portails via adresse MAC
-                </div>
-              </button>
-            </div>
-
-            {subType === "mag" && (
-              <div className="pt-2 fade-in">
-                <label className="text-[10px] uppercase font-bold tracking-wider text-white/50 block mb-1">
-                  Adresse MAC de votre appareil
-                </label>
-                <input
-                  type="text"
-                  placeholder="00:1A:79:XX:XX:XX"
-                  value={macAddress}
-                  onChange={(e) => setMacAddress(e.target.value.toUpperCase())}
-                  className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-primary uppercase"
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-2xl bg-[#0f121d] border border-white/[0.08] p-4 space-y-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-white/50">
-              2. Durée de l&apos;abonnement
+              Durée de l&apos;abonnement
             </span>
 
             <div className="grid grid-cols-2 gap-2.5">
@@ -623,7 +549,7 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
             <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-white/60">Formule :</span>
-                <span className="font-black text-white">{selectedDuration} Mois ({subType.toUpperCase()})</span>
+                <span className="font-black text-white">{selectedDuration} Mois (M3U)</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-white/60">Montant débité :</span>

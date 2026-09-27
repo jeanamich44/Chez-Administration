@@ -1776,14 +1776,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderIptvAccounts(iptv.accounts || []);
         renderIptvPanelAccounts(iptv.panel_accounts || []);
 
-        if (data.telegramMode) {
-            const tgSelect = document.getElementById('setting-telegram-mode');
-            if (tgSelect) tgSelect.value = data.telegramMode;
-        }
-        if (data.sumupMode) {
-            const suSelect = document.getElementById('setting-sumup-mode');
-            if (suSelect) suSelect.value = data.sumupMode;
-        }
         const sumup = data.sumup || {};
         const banks = sumup.banks || {};
         const b1 = banks.sumup || {};
@@ -2018,30 +2010,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btnPmNext.addEventListener('click', () => {
             paymentsCurrentPage++;
             applyPaymentsPagination();
-        });
-    }
-
-    const tgModeForm = document.getElementById('settings-telegram-mode-form');
-    if (tgModeForm) {
-        tgModeForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const mode = document.getElementById('setting-telegram-mode').value;
-            const res = await apiRequest('/settings/telegram', 'POST', { mode });
-            if (res && res.success) {
-                showToast(`Mode Telegram basculé sur ${res.mode === 'webhook' ? 'Webhook ⚡' : 'Long Polling 🔄'} avec succès !`, 'success');
-            }
-        });
-    }
-
-    const sumupModeForm = document.getElementById('settings-sumup-mode-form');
-    if (sumupModeForm) {
-        sumupModeForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const mode = document.getElementById('setting-sumup-mode').value;
-            const res = await apiRequest('/settings/sumup/mode', 'POST', { mode });
-            if (res && res.success) {
-                showToast(`Mode SumUp basculé sur ${res.mode === 'webhook' ? 'Webhook ⚡' : 'Long Polling 🔄'} avec succès !`, 'success');
-            }
         });
     }
 

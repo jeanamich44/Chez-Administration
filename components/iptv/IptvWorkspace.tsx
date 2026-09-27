@@ -55,9 +55,9 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
   const [selectedDuration, setSelectedDuration] = useState<1 | 3 | 6 | 12>(1);
 
   const [config, setConfig] = useState<IptvPrices>({
-    prices: { "1": 5, "3": 10, "6": 20, "12": 35, "demo": 1 },
-    demo_enabled: true,
-    host: "http://cf.business-cloud-neo.com",
+    prices: {},
+    demo_enabled: false,
+    host: "",
     message_footer: "",
   });
 

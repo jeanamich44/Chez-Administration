@@ -381,21 +381,18 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
             </div>
 
             <div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-primary">
-                Essai Sans Engagement
-              </span>
-              <h3 className="text-lg font-black italic text-white mt-1">
+              <h3 className="text-lg font-black italic text-white">
                 Test Démo 24 Heures
               </h3>
-              <p className="text-xs text-white/50 max-w-xs mx-auto mt-1">
-                Profitez d&apos;un accès complet à l&apos;ensemble du catalogue chaînes et VOD pendant 24h.
+              <p className="text-xs text-white/50 max-w-xs mx-auto mt-1.5">
+                Profitez d&apos;un accès complet aux films, séries et chaînes du monde entier pendant 24h.
               </p>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] text-xs flex justify-between items-center">
-              <span className="text-white/60 font-medium">Tarif du test :</span>
+              <span className="text-white/60 font-medium">Prix :</span>
               <span className="font-black text-white text-sm">
-                {demoPrice > 0 ? `${demoPrice.toFixed(2)} €` : "GRATUIT (0,00 €)"}
+                {demoPrice > 0 ? `${demoPrice.toFixed(2).replace(".", ",")} €` : "0,00 €"}
               </span>
             </div>
 

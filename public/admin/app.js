@@ -1710,11 +1710,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.style.cursor = 'context-menu';
             const isIptv = (tx.brand || '').toLowerCase() === 'iptv';
-            const valueFormatted = (!isIptv && tx.value != null && tx.value > 0) ? `${tx.value} €` : '-';
+            let valueFormatted = '-';
+            if (isIptv) {
+                valueFormatted = (tx.value != null && tx.value > 0) ? `${tx.value} Mois` : '24h Démo';
+            } else if (tx.value != null && tx.value > 0) {
+                valueFormatted = `${tx.value} €`;
+            }
+            const brandFormatted = isIptv ? 'IPTV' : (tx.brand === 'carr' ? 'Carrefour' : (tx.brand || '-'));
             tr.innerHTML = `
                 <td>#${tx.id}</td>
                 <td style="cursor: pointer; color: var(--accent-primary);" onclick="window.redirectToUser('${tx.userId}')"><code>${tx.userId}</code></td>
-                <td>${escapeHtml(tx.brand)}</td>
+                <td><span class="badge ${isIptv ? 'badge-info' : 'badge-warning'}" style="text-transform: uppercase;">${escapeHtml(brandFormatted)}</span></td>
                 <td><code>${escapeHtml(tx.code)}</code></td>
                 <td>${valueFormatted}</td>
                 <td><strong>${tx.price} €</strong></td>

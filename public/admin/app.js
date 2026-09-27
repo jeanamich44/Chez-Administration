@@ -2528,21 +2528,38 @@ document.addEventListener('DOMContentLoaded', () => {
         if (prevBtn) prevBtn.disabled = currentDbPage <= 1;
         if (nextBtn) nextBtn.disabled = currentDbPage >= totalPages;
 
+        function formatDbTypeLabel(typeStr) {
+            if (!typeStr) return 'text';
+            const t = String(typeStr).toLowerCase();
+            if (t.includes('timestamp') || t.includes('date')) return 'timestamp';
+            if (t.includes('character varying') || t.includes('varchar')) return 'varchar';
+            if (t === 'text') return 'text';
+            if (t === 'bigint') return 'bigint';
+            if (t.includes('int') || t.includes('serial')) return 'int';
+            if (t.includes('numeric') || t.includes('decimal')) return 'numeric';
+            if (t.includes('bool')) return 'bool';
+            if (t.includes('json')) return 'json';
+            if (t.includes('uuid')) return 'uuid';
+            return t.length > 12 ? t.substring(0, 10) + '..' : t;
+        }
+
         thead.innerHTML = `
             <tr>
                 ${currentDbColumns.map(col => {
+                    const cleanType = formatDbTypeLabel(col.type);
                     const typeClass = getDbTypeClass(col.type);
                     const isSorted = currentDbSortCol === col.name;
-                    const arrow = isSorted ? (currentDbSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+                    const arrow = isSorted ? (currentDbSortDir === 'asc' ? ' ↑' : ' ↓') : '';
+                    const isKey = col.name === 'id';
                     return `
-                        <th class="db-th" data-col="${escapeHtml(col.name)}" style="cursor: pointer; user-select: none; padding: 12px 14px; text-align: left; white-space: nowrap;">
-                            <span style="font-weight: 600; color: ${isSorted ? '#fff' : 'inherit'};">${escapeHtml(col.name)}</span>
-                            <span class="db-col-type ${typeClass}">${escapeHtml(col.type)}</span>
-                            <span style="color: var(--accent-primary); font-size: 11px;">${arrow}</span>
+                        <th class="db-th" data-col="${escapeHtml(col.name)}" style="cursor: pointer; user-select: none; padding: 10px 14px; text-align: left; white-space: nowrap; background: #0c0f16; border-bottom: 1px solid var(--border-color);">
+                            <span style="font-weight: 600; color: ${isSorted ? '#fff' : 'var(--text-primary)'}; font-size: 12px;">${isKey ? '🔑 ' : ''}${escapeHtml(col.name)}</span>
+                            <span class="db-col-type ${typeClass}">${cleanType}</span>
+                            <span style="color: var(--accent-primary); font-size: 11px; font-weight: bold;">${arrow}</span>
                         </th>
                     `;
                 }).join('')}
-                <th style="padding: 12px 14px; text-align: right; width: 90px; white-space: nowrap;">Actions</th>
+                <th style="padding: 10px 14px; text-align: right; width: 90px; white-space: nowrap; background: #0c0f16; border-bottom: 1px solid var(--border-color); font-size: 12px; color: var(--text-muted);">Actions</th>
             </tr>
         `;
 
@@ -2559,59 +2576,74 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        if (currentDbRows.length === 0) {
+        try {
+            if (currentDbRows.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="${currentDbColumns.length + 1}" style="text-align: center; padding: 50px; color: var(--text-muted);">
+                            <div style="font-size: 28px; margin-bottom: 8px;">📭</div>
+                            Aucun enregistrement trouvé dans cette table
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = currentDbRows.map((row, rIdx) => {
+                return `
+                    <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                        ${currentDbColumns.map(col => {
+                            const val = row[col.name];
+                            return `<td style="padding: 10px 14px; font-size: 12px; vertical-align: middle; white-space: nowrap; max-width: 280px; overflow: hidden; text-overflow: ellipsis;">
+                                ${renderDbCellValue(val, col, rIdx)}
+                            </td>`;
+                        }).join('')}
+                        <td style="padding: 10px 14px; text-align: right; white-space: nowrap; vertical-align: middle;">
+                            <button type="button" class="db-inspect-btn" onclick="openDbRowDetailModal(${rIdx})">
+                                🔍 Détails
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (renderErr) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="${currentDbColumns.length + 1}" style="text-align: center; padding: 50px; color: var(--text-muted);">
-                        <div style="font-size: 28px; margin-bottom: 8px;">📭</div>
-                        Aucun enregistrement trouvé dans cette table
+                    <td colspan="100" style="text-align: center; padding: 40px; color: var(--danger);">
+                        Erreur de rendu : ${escapeHtml(renderErr.message)}
                     </td>
                 </tr>
             `;
-            return;
         }
-
-        tbody.innerHTML = currentDbRows.map((row, rIdx) => {
-            return `
-                <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-                    ${currentDbColumns.map(col => {
-                        const val = row[col.name];
-                        return `<td style="padding: 10px 14px; font-size: 12px; vertical-align: middle; white-space: nowrap; max-width: 280px; overflow: hidden; text-overflow: ellipsis;">
-                            ${renderDbCellValue(val, col, rIdx)}
-                        </td>`;
-                    }).join('')}
-                    <td style="padding: 10px 14px; text-align: right; white-space: nowrap; vertical-align: middle;">
-                        <button type="button" class="db-inspect-btn" onclick="openDbRowDetailModal(${rIdx})">
-                            🔍 Détails
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
     }
 
     function renderDbCellValue(val, col, rIdx) {
-        if (val === null || val === undefined) {
-            return '<span class="db-cell-null">null</span>';
+        try {
+            if (val === null || val === undefined) {
+                return '<span class="db-cell-null">null</span>';
+            }
+            if (typeof val === 'boolean') {
+                return `<span class="${val ? 'db-cell-bool-true' : 'db-cell-bool-false'}">${val ? 'true' : 'false'}</span>`;
+            }
+            if (typeof val === 'object') {
+                return `<button type="button" class="db-json-btn" onclick="openDbJsonModal(${rIdx}, '${escapeHtml(col.name)}')">{ } JSON</button>`;
+            }
+            const strVal = String(val);
+            const colType = (col.type || '').toLowerCase();
+            if (colType.includes('time') || colType.includes('date')) {
+                const formatted = typeof formatParisDate === 'function' ? formatParisDate(strVal) : strVal;
+                return `<span style="font-family: monospace; font-size: 11px; color: #a5b4fc;">${escapeHtml(formatted)}</span>`;
+            }
+            if (colType.includes('uuid')) {
+                return `<span style="font-family: monospace; font-size: 11px; color: #c084fc;">${escapeHtml(strVal)}</span>`;
+            }
+            if (strVal.length > 50) {
+                return `<span title="${escapeHtml(strVal)}">${escapeHtml(strVal.substring(0, 48))}...</span>`;
+            }
+            return escapeHtml(strVal);
+        } catch {
+            return escapeHtml(String(val));
         }
-        if (typeof val === 'boolean') {
-            return `<span class="${val ? 'db-cell-bool-true' : 'db-cell-bool-false'}">${val ? 'true' : 'false'}</span>`;
-        }
-        if (typeof val === 'object') {
-            return `<button type="button" class="db-json-btn" onclick="openDbJsonModal(${rIdx}, '${escapeHtml(col.name)}')">{ } JSON</button>`;
-        }
-        const strVal = String(val);
-        const colType = (col.type || '').toLowerCase();
-        if (colType.includes('time') || colType.includes('date')) {
-            return `<span style="font-family: monospace; font-size: 11px; color: #a5b4fc;">${formatDate(strVal)}</span>`;
-        }
-        if (colType.includes('uuid')) {
-            return `<span style="font-family: monospace; font-size: 11px; color: #c084fc;">${escapeHtml(strVal)}</span>`;
-        }
-        if (strVal.length > 45) {
-            return `<span title="${escapeHtml(strVal)}">${escapeHtml(strVal.substring(0, 42))}...</span>`;
-        }
-        return escapeHtml(strVal);
     }
 
     window.openDbJsonModal = (rowIndex, colName) => {

@@ -81,20 +81,22 @@
 
             <div id="tab-dashboard" class="tab-content">
                 <div class="system-status-pills">
-                    <div class="status-pill" id="status-pill-render">
+                    <div class="status-pill" id="status-pill-render" title="Backend Render">
                         <span class="status-dot"></span>
                         <span>Render :</span>
                         <strong id="status-val-render" style="color: var(--text-primary);">Vérification...</strong>
+                        <span id="status-meta-render" class="status-meta-tag" style="display: none;"></span>
                     </div>
-                    <div class="status-pill" id="status-pill-db">
+                    <div class="status-pill" id="status-pill-db" title="Base de données PostgreSQL Aiven">
                         <span class="status-dot"></span>
                         <span>Aiven BDD :</span>
                         <strong id="status-val-db" style="color: var(--text-primary);">Vérification...</strong>
                     </div>
-                    <div class="status-pill" id="status-pill-vercel">
+                    <div class="status-pill" id="status-pill-vercel" title="Relais Edge Vercel">
                         <span class="status-dot"></span>
                         <span>Vercel Edge :</span>
                         <strong id="status-val-vercel" style="color: var(--text-primary);">Opérationnel</strong>
+                        <span id="status-meta-vercel" class="status-meta-tag" style="display: none;"></span>
                     </div>
                 </div>
 

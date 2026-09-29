@@ -442,6 +442,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function formatRelativeTime(isoString) {
+        if (!isoString) return '';
+        try {
+            const date = new Date(isoString);
+            if (isNaN(date.getTime())) return '';
+            const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
+            if (diffSec < 60) return "à l'instant";
+            const diffMin = Math.floor(diffSec / 60);
+            if (diffMin < 60) return `il y a ${diffMin}m`;
+            const diffHours = Math.floor(diffMin / 60);
+            if (diffHours < 24) return `il y a ${diffHours}h`;
+            const diffDays = Math.floor(diffHours / 24);
+            return `il y a ${diffDays}j`;
+        } catch {
+            return '';
+        }
+    }
+
+    function formatExactDate(isoString) {
+        if (!isoString) return '';
+        try {
+            const date = new Date(isoString);
+            if (isNaN(date.getTime())) return '';
+            return date.toLocaleString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        } catch {
+            return '';
+        }
+    }
+
+    function isRecentTimestamp(isoString) {
+        if (!isoString) return false;
+        try {
+            const date = new Date(isoString);
+            if (isNaN(date.getTime())) return false;
+            return (Date.now() - date.getTime()) < 3600000;
+        } catch {
+            return false;
+        }
+    }
+
+    // =====================================================================
+
     async function loadDashboardData() {
         const renderPill = document.getElementById('status-pill-render');
         const dbPill = document.getElementById('status-pill-db');
@@ -472,6 +521,44 @@ document.addEventListener('DOMContentLoaded', () => {
             rawRecentSales = stats.recentSales || [];
             initRecentSalesListeners();
             renderRecentSalesTable();
+
+            try {
+                const versionData = await apiRequest('/version');
+                if (versionData) {
+                    const rMeta = document.getElementById('status-meta-render');
+                    const vMeta = document.getElementById('status-meta-vercel');
+
+                    if (rMeta && versionData.render && versionData.render.commit && versionData.render.commit !== 'unknown') {
+                        const rCommit = versionData.render.commit;
+                        const rDate = versionData.render.commit_date || versionData.render.commitDate || versionData.render.boot_time || versionData.render.bootTime;
+                        const rRel = formatRelativeTime(rDate);
+                        const rExact = formatExactDate(rDate);
+                        rMeta.style.display = 'inline-flex';
+                        rMeta.innerText = rRel ? `${rCommit} (${rRel})` : rCommit;
+                        rMeta.title = `Commit : ${rCommit}\nDate : ${rExact || 'Inconnue'}`;
+                        if (isRecentTimestamp(rDate)) {
+                            rMeta.classList.add('is-fresh');
+                        } else {
+                            rMeta.classList.remove('is-fresh');
+                        }
+                    }
+
+                    if (vMeta && versionData.vercel && versionData.vercel.commit && versionData.vercel.commit !== 'unknown') {
+                        const vCommit = versionData.vercel.commit;
+                        const vDate = versionData.vercel.commitDate || versionData.vercel.buildTime;
+                        const vRel = formatRelativeTime(vDate);
+                        const vExact = formatExactDate(vDate);
+                        vMeta.style.display = 'inline-flex';
+                        vMeta.innerText = vRel ? `${vCommit} (${vRel})` : vCommit;
+                        vMeta.title = `Commit : ${vCommit}\nDate : ${vExact || 'Inconnue'}`;
+                        if (isRecentTimestamp(vDate)) {
+                            vMeta.classList.add('is-fresh');
+                        } else {
+                            vMeta.classList.remove('is-fresh');
+                        }
+                    }
+                }
+            } catch (_) {}
         } else {
             if (renderPill) renderPill.className = 'status-pill error';
             if (renderVal) renderVal.innerText = 'Inaccessible';

@@ -443,19 +443,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadDashboardData() {
+        const renderPill = document.getElementById('status-pill-render');
+        const dbPill = document.getElementById('status-pill-db');
+        const vercelPill = document.getElementById('status-pill-vercel');
+        const renderVal = document.getElementById('status-val-render');
+        const dbVal = document.getElementById('status-val-db');
+        const vercelVal = document.getElementById('status-val-vercel');
+
+        const startTime = performance.now();
         const stats = await apiRequest('/stats');
-        if (!stats) return;
+        const latency = Math.round(performance.now() - startTime);
 
-        updateMaintenanceUI(stats.maintenance);
+        if (stats) {
+            if (renderPill) renderPill.className = 'status-pill';
+            if (renderVal) renderVal.innerText = `En ligne (${latency}ms)`;
+            if (dbPill) dbPill.className = 'status-pill';
+            if (dbVal) dbVal.innerText = 'Connectée';
+            if (vercelPill) vercelPill.className = 'status-pill';
+            if (vercelVal) vercelVal.innerText = 'Opérationnel';
 
-        document.getElementById('stat-total-ca').innerText = `${stats.totalCa.toFixed(2)} €`;
-        document.getElementById('stat-total-sales').innerText = stats.totalSales;
-        document.getElementById('stat-total-users').innerText = stats.totalUsers;
-        document.getElementById('stat-total-stock').innerText = stats.totalStock;
+            updateMaintenanceUI(stats.maintenance);
 
-        rawRecentSales = stats.recentSales || [];
-        initRecentSalesListeners();
-        renderRecentSalesTable();
+            document.getElementById('stat-total-ca').innerText = `${stats.totalCa.toFixed(2)} €`;
+            document.getElementById('stat-total-sales').innerText = stats.totalSales;
+            document.getElementById('stat-total-users').innerText = stats.totalUsers;
+            document.getElementById('stat-total-stock').innerText = stats.totalStock;
+
+            rawRecentSales = stats.recentSales || [];
+            initRecentSalesListeners();
+            renderRecentSalesTable();
+        } else {
+            if (renderPill) renderPill.className = 'status-pill error';
+            if (renderVal) renderVal.innerText = 'Inaccessible';
+            if (dbPill) dbPill.className = 'status-pill error';
+            if (dbVal) dbVal.innerText = 'Erreur';
+            if (vercelPill) vercelPill.className = 'status-pill error';
+            if (vercelVal) vercelVal.innerText = 'Erreur';
+        }
     }
 
     let metricsLiveInterval = null;

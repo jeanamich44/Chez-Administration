@@ -80,6 +80,24 @@
             </header>
 
             <div id="tab-dashboard" class="tab-content">
+                <div class="system-status-pills">
+                    <div class="status-pill" id="status-pill-render">
+                        <span class="status-dot"></span>
+                        <span>Render :</span>
+                        <strong id="status-val-render" style="color: var(--text-primary);">Vérification...</strong>
+                    </div>
+                    <div class="status-pill" id="status-pill-db">
+                        <span class="status-dot"></span>
+                        <span>Aiven BDD :</span>
+                        <strong id="status-val-db" style="color: var(--text-primary);">Vérification...</strong>
+                    </div>
+                    <div class="status-pill" id="status-pill-vercel">
+                        <span class="status-dot"></span>
+                        <span>Vercel Edge :</span>
+                        <strong id="status-val-vercel" style="color: var(--text-primary);">Opérationnel</strong>
+                    </div>
+                </div>
+
                 <div class="stats-grid">
                     <div class="stat-card stat-card-interactive" onclick="switchTab('payments')">
                         <div class="stat-icon" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">💶</div>

@@ -2381,7 +2381,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!currentDbTable || !dbTablesList.find(t => t.name === currentDbTable)) {
-            const defaultTable = dbTablesList.find(t => t.name === 'tma_users') || dbTablesList[0];
+            const defaultTable = dbTablesList.find(t => t.name === 'users') || dbTablesList[0];
             currentDbTable = defaultTable.name;
         }
 

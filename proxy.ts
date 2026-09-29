@@ -7,16 +7,27 @@ export function proxy(request: NextRequest) {
 
   /* ===================================================================== */
 
-  if (pathname.startsWith("/api/proxy")) {
-    if (pathname === "/api/proxy/admin/login") {
+  if (pathname.startsWith("/api/admin") || pathname.startsWith("/api/proxy/admin")) {
+    if (pathname === "/api/admin/login" || pathname === "/api/proxy/admin/login") {
       return NextResponse.next();
     }
 
     const authHeader = request.headers.get("authorization");
-    if (pathname.startsWith("/api/proxy/admin") && authHeader && authHeader.startsWith("Bearer ")) {
+    if (authHeader && authHeader.startsWith("Bearer ")) {
       return NextResponse.next();
     }
 
+    const tgInitData = request.headers.get("x-telegram-init-data");
+    if (tgInitData && tgInitData.trim()) {
+      return NextResponse.next();
+    }
+
+    return new NextResponse(null, { status: 404 });
+  }
+
+  /* ===================================================================== */
+
+  if (pathname.startsWith("/api/proxy")) {
     const tgInitData = request.headers.get("x-telegram-init-data");
     if (!tgInitData || !tgInitData.trim()) {
       return new NextResponse(null, { status: 404 });
@@ -37,5 +48,6 @@ export const middleware = proxy;
 export const config = {
   matcher: [
     "/api/proxy/:path*",
+    "/api/admin/:path*",
   ],
 };

@@ -49,7 +49,8 @@ async function handle(request: NextRequest) {
   if (request.method !== "GET" && request.method !== "HEAD") {
     try {
       const rawBuffer = Buffer.from(await request.arrayBuffer());
-      if (rawBuffer.length > 50) {
+      const isMultipart = contentType?.toLowerCase().includes("multipart/form-data");
+      if (rawBuffer.length > 50 && !isMultipart) {
         const compressed = zlib.brotliCompressSync(rawBuffer);
         bodyToSend = compressed;
         headers.set("content-encoding", "br");

@@ -20,7 +20,8 @@ import {
   Tv,
   ShoppingCart,
   Zap,
-  Tag
+  Tag,
+  FileCheck
 } from "lucide-react";
 
 /* ===================================================================== */
@@ -37,10 +38,11 @@ const AssuranceHubContent = lazy(() => import("@/components/assurance/AssuranceH
 const JustificatifHubContent = lazy(() => import("@/components/justificatif/JustificatifHubContent"));
 const CarrefourWorkspace = lazy(() => import("@/components/carrefour/CarrefourWorkspace"));
 const IptvWorkspace = lazy(() => import("@/components/iptv/IptvWorkspace"));
+const AmendesWorkspace = lazy(() => import("@/components/amendes/AmendesWorkspace"));
 
 /* ===================================================================== */
 
-type ServiceRootType = "menu" | "generate-docs" | "iptv" | "carrefour";
+type ServiceRootType = "menu" | "generate-docs" | "iptv" | "carrefour" | "amendes";
 
 /* ===================================================================== */
 
@@ -83,6 +85,19 @@ const ROOT_SERVICES = [
     border: "border-emerald-500/20 hover:border-emerald-400/40",
     badge: "EN STOCK",
     badgeColor: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
+  },
+  {
+    id: "amendes" as const,
+    name: "Annulation Amende 24h",
+    shortName: "Amendes",
+    description: "Contestation et annulation d'avis de contravention avec prise en charge rapide sous 24h.",
+    icon: FileCheck,
+    iconColor: "text-amber-400",
+    iconBg: "bg-amber-500/10 border-amber-500/20",
+    gradient: "from-amber-500/10 via-amber-500/5 to-transparent",
+    border: "border-amber-500/20 hover:border-amber-400/40",
+    badge: "24H CHRONO",
+    badgeColor: "bg-amber-500/10 border-amber-500/20 text-amber-400",
   },
 ];
 
@@ -220,6 +235,7 @@ function AppRouter() {
     activeTab === "services" &&
     (serviceRoot === "iptv" ||
       serviceRoot === "carrefour" ||
+      serviceRoot === "amendes" ||
       (serviceRoot === "generate-docs" && navigation.view === "form"));
 
   /* ===================================================================== */
@@ -323,6 +339,15 @@ function AppRouter() {
                 {serviceRoot === "carrefour" && (
                   <Suspense fallback={<LoadingSpinner />}>
                     <CarrefourWorkspace
+                      onBack={handleBackToServicesMenu}
+                      onGoRecharge={() => handleTabChange("recharge")}
+                    />
+                  </Suspense>
+                )}
+
+                {serviceRoot === "amendes" && (
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AmendesWorkspace
                       onBack={handleBackToServicesMenu}
                       onGoRecharge={() => handleTabChange("recharge")}
                     />

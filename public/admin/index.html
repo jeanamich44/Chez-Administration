@@ -50,6 +50,9 @@
                 <a class="nav-item" data-tab="transactions">
                     <span>📜</span> Historique Achats
                 </a>
+                <a class="nav-item" data-tab="amendes">
+                    <span>📑</span> Annulation Amendes
+                </a>
                 <a class="nav-item" data-tab="settings">
                     <span>⚙️</span> Configuration
                 </a>
@@ -754,6 +757,82 @@
                                 <button id="btn-transactions-next" class="action-btn" style="padding: 6px 12px;">Suivant ▶</button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-amendes" class="tab-content" style="display: none;">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">📑</div>
+                        <div>
+                            <div class="stat-val" id="amendes-stat-total">0</div>
+                            <div class="stat-lbl">Total Dossiers</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">⏳</div>
+                        <div>
+                            <div class="stat-val" id="amendes-stat-pending">0</div>
+                            <div class="stat-lbl">En Attente de Traitement</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">✅</div>
+                        <div>
+                            <div class="stat-val" id="amendes-stat-accepted">0</div>
+                            <div class="stat-lbl">Acceptés / En Attente Paiement</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">💳</div>
+                        <div>
+                            <div class="stat-val" id="amendes-stat-paid">0</div>
+                            <div class="stat-lbl">Payés / Clôturés</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-panel">
+                    <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <h2 class="card-panel-title" style="margin: 0;">Dossiers d'Annulation d'Amendes</h2>
+                            <button id="btn-refresh-amendes" class="action-btn" style="padding: 6px 12px; font-size: 12px;" title="Rafraîchir">🔄 Actualiser</button>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 4px; background: rgba(255, 255, 255, 0.03); padding: 3px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                <button class="action-btn amende-filter-btn active" data-filter="ALL" style="padding: 5px 10px; font-size: 11px;">Tous</button>
+                                <button class="action-btn amende-filter-btn" data-filter="PENDING" style="padding: 5px 10px; font-size: 11px;">En attente</button>
+                                <button class="action-btn amende-filter-btn" data-filter="ACCEPTED" style="padding: 5px 10px; font-size: 11px;">Acceptés</button>
+                                <button class="action-btn amende-filter-btn" data-filter="PAID" style="padding: 5px 10px; font-size: 11px;">Payés</button>
+                                <button class="action-btn amende-filter-btn" data-filter="REJECTED" style="padding: 5px 10px; font-size: 11px;">Refusés</button>
+                                <button class="action-btn amende-filter-btn" data-filter="FINISHED" style="padding: 5px 10px; font-size: 11px;">Clôturés</button>
+                            </div>
+                            <div style="position: relative; width: 220px;">
+                                <input type="text" id="amendes-search-input" class="form-input" placeholder="Rechercher ID, client..." style="width: 100%; height: 34px; font-size: 12px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table style="min-width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th>Dossier / Date</th>
+                                    <th>Client</th>
+                                    <th>Pièces Jointes</th>
+                                    <th>Note Client</th>
+                                    <th>Statut</th>
+                                    <th>Tarif Fixé</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="amendes-table-body">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 30px;">Chargement des dossiers d'amendes...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

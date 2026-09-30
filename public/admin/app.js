@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const hash = (window.location.hash || '').replace('#', '').trim();
         const savedTab = localStorage.getItem('admin_active_tab') || 'dashboard';
-        const validTabs = ['dashboard', 'metrics', 'users', 'stock', 'payments', 'transactions', 'settings', 'database'];
+        const validTabs = ['dashboard', 'metrics', 'users', 'stock', 'payments', 'transactions', 'amendes', 'settings', 'database'];
         const activeTab = validTabs.includes(hash) ? hash : (validTabs.includes(savedTab) ? savedTab : 'dashboard');
 
         window.switchTab(activeTab);
@@ -193,6 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'stock': 'Gestion du Stock Carrefour',
                 'payments': 'Rechargements (CB & Crypto)',
                 'transactions': 'Historique des Achats',
+                'amendes': 'Gestion des Amendes 24h',
                 'settings': 'Configuration du Bot',
                 'database': '🗄️ Studio Base de Données Aiven'
             };
@@ -204,6 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (tab === 'stock') loadStockData();
             else if (tab === 'payments') loadPaymentsData();
             else if (tab === 'transactions') loadTransactionsData();
+            else if (tab === 'amendes') loadAmendesData();
             else if (tab === 'settings') loadSettingsData();
             else if (tab === 'database') loadDatabaseStudio();
         });
@@ -1893,6 +1895,285 @@ document.addEventListener('DOMContentLoaded', () => {
             applyTransactionsPagination();
         });
     }
+
+    // =====================================================================
+
+    let rawAmendesData = [];
+    let currentAmendesFilter = 'ALL';
+    let amendesListenersInitialized = false;
+
+    function initAmendesListeners() {
+        if (amendesListenersInitialized) return;
+        amendesListenersInitialized = true;
+
+        const refreshBtn = document.getElementById('btn-refresh-amendes');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                loadAmendesData();
+            });
+        }
+
+        const filterBtns = document.querySelectorAll('.amende-filter-btn');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentAmendesFilter = btn.getAttribute('data-filter') || 'ALL';
+                renderAmendesTable();
+            });
+        });
+
+        const searchInput = document.getElementById('amendes-search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                renderAmendesTable();
+            });
+        }
+    }
+
+    async function loadAmendesData() {
+        initAmendesListeners();
+        const tbody = document.getElementById('amendes-table-body');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 30px;">Chargement des dossiers d\'amendes...</td></tr>';
+        }
+
+        const data = await apiRequest('/amendes');
+        if (!data || !Array.isArray(data.amendes)) {
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger); padding: 30px;">Erreur de chargement des dossiers d\'amendes.</td></tr>';
+            }
+            return;
+        }
+
+        rawAmendesData = data.amendes;
+
+        const totalEl = document.getElementById('amendes-stat-total');
+        const pendingEl = document.getElementById('amendes-stat-pending');
+        const acceptedEl = document.getElementById('amendes-stat-accepted');
+        const paidEl = document.getElementById('amendes-stat-paid');
+
+        if (totalEl) totalEl.innerText = rawAmendesData.length;
+        if (pendingEl) pendingEl.innerText = rawAmendesData.filter(a => a.status === 'PENDING').length;
+        if (acceptedEl) acceptedEl.innerText = rawAmendesData.filter(a => a.status === 'ACCEPTED').length;
+        if (paidEl) paidEl.innerText = rawAmendesData.filter(a => a.status === 'PAID' || a.status === 'FINISHED').length;
+
+        renderAmendesTable();
+    }
+
+    function renderAmendesTable() {
+        const tbody = document.getElementById('amendes-table-body');
+        if (!tbody) return;
+
+        const searchInput = document.getElementById('amendes-search-input');
+        const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+        let filtered = rawAmendesData;
+        if (currentAmendesFilter !== 'ALL') {
+            filtered = filtered.filter(a => a.status === currentAmendesFilter);
+        }
+
+        if (query) {
+            filtered = filtered.filter(a => {
+                const idMatch = a.id && a.id.toLowerCase().includes(query);
+                const userMatch = (a.username && a.username.toLowerCase().includes(query)) || String(a.user_id).includes(query);
+                const noteMatch = a.note && a.note.toLowerCase().includes(query);
+                return idMatch || userMatch || noteMatch;
+            });
+        }
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 30px;">Aucun dossier d\'amende correspondant aux critères.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = filtered.map(a => {
+            const shortId = a.id ? a.id.substring(0, 8) : 'N/A';
+            const dateStr = formatParisDate(a.created_at);
+
+            let clientLabel = '';
+            if (a.username) {
+                clientLabel = `<a href="javascript:void(0)" onclick="window.redirectToUser('${a.user_id}')" style="color: var(--accent-primary); font-weight: 600; text-decoration: none;">@${escapeHtml(a.username)}</a>`;
+            } else {
+                clientLabel = `<a href="javascript:void(0)" onclick="window.redirectToUser('${a.user_id}')" style="color: var(--accent-primary); font-weight: 600; text-decoration: none;">User #${a.user_id}</a>`;
+            }
+            clientLabel += `<div style="font-size: 11px; color: var(--text-secondary);">Solde: ${Number(a.user_balance || 0).toFixed(2)} €</div>`;
+
+            let filesHtml = '';
+            if (Array.isArray(a.file_urls) && a.file_urls.length > 0) {
+                filesHtml = a.file_urls.map((url, idx) => {
+                    return `<a href="${url}" target="_blank" rel="noreferrer" class="action-btn" style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; font-size: 11px; margin-bottom: 4px; text-decoration: none;">📎 Pièce ${idx + 1} ↗</a>`;
+                }).join(' ');
+            } else {
+                filesHtml = '<span style="color: var(--text-secondary); font-size: 11px;">Aucun fichier</span>';
+            }
+
+            let badgeHtml = '';
+            switch (a.status) {
+                case 'PENDING':
+                    badgeHtml = '<span class="badge badge-warning">⏳ En attente</span>';
+                    break;
+                case 'ACCEPTED':
+                    badgeHtml = '<span class="badge badge-success">✅ Accepté</span>';
+                    break;
+                case 'PAID':
+                    badgeHtml = '<span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">💳 Réglé</span>';
+                    break;
+                case 'REJECTED':
+                    badgeHtml = '<span class="badge badge-danger">❌ Refusé</span>';
+                    break;
+                case 'FINISHED':
+                    badgeHtml = '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">🏁 Clôturé</span>';
+                    break;
+                default:
+                    badgeHtml = `<span class="badge">${escapeHtml(a.status)}</span>`;
+            }
+
+            const priceHtml = a.price !== null && a.price !== undefined
+                ? `<strong style="color: var(--accent-primary);">${Number(a.price).toFixed(2)} €</strong>`
+                : '<span style="color: var(--text-secondary);">-</span>';
+
+            const noteHtml = a.note
+                ? `<div style="max-width: 200px; font-size: 12px; color: var(--text-secondary); word-break: break-word; font-style: italic;">"${escapeHtml(a.note)}"</div>`
+                : '<span style="color: var(--text-secondary); font-size: 11px;">-</span>';
+
+            let actionsHtml = '';
+            if (a.status === 'PENDING') {
+                actionsHtml = `
+                    <button class="action-btn" onclick="window.adminAcceptAmende('${a.id}')" style="background: var(--success-bg); color: var(--success); border-color: var(--success);">Accepter</button>
+                    <button class="action-btn action-btn-danger" onclick="window.adminRejectAmende('${a.id}')" style="background: var(--danger-bg); color: var(--danger); border-color: var(--danger);">Refuser</button>
+                `;
+            } else if (a.status === 'ACCEPTED') {
+                actionsHtml = `
+                    <button class="action-btn" onclick="window.adminAcceptAmende('${a.id}', ${a.price || 0})" style="font-size: 11px;">Modifier Prix</button>
+                    <button class="action-btn action-btn-danger" onclick="window.adminRejectAmende('${a.id}')" style="font-size: 11px;">Refuser</button>
+                `;
+            } else if (a.status === 'PAID') {
+                actionsHtml = `
+                    <button class="action-btn" onclick="window.adminFinishAmende('${a.id}')" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: #10b981;">Clôturer Dossier</button>
+                `;
+            } else {
+                actionsHtml = '<span style="color: var(--text-secondary); font-size: 11px;">Aucune action</span>';
+            }
+
+            return `
+                <tr>
+                    <td>
+                        <div style="font-weight: 700; color: var(--text-primary); font-family: monospace;">#${shortId}</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">${dateStr}</div>
+                    </td>
+                    <td>${clientLabel}</td>
+                    <td>${filesHtml}</td>
+                    <td>${noteHtml}</td>
+                    <td>${badgeHtml}</td>
+                    <td>${priceHtml}</td>
+                    <td style="text-align: right; white-space: nowrap;">${actionsHtml}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    window.adminAcceptAmende = function(amendeId, currentPrice = '') {
+        const modalHtml = `
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
+                    Fixez le tarif en euros pour ce dossier. Une fois validé, le client recevra une notification et pourra régler le montant depuis son solde.
+                </p>
+                <div>
+                    <label class="form-label">Tarif (€) :</label>
+                    <input type="number" step="0.5" min="1" id="amende-modal-price" class="form-input" placeholder="Ex: 40" value="${currentPrice || ''}" style="width: 100%; height: 40px; font-size: 15px; font-weight: 700;">
+                </div>
+                <div>
+                    <label class="form-label">Note admin interne (optionnel) :</label>
+                    <input type="text" id="amende-modal-notes" class="form-input" placeholder="Notes de gestion..." style="width: 100%;">
+                </div>
+            </div>
+        `;
+
+        openModal('✅ Accepter le Dossier d\'Amende', modalHtml, async () => {
+            const priceInput = document.getElementById('amende-modal-price');
+            const notesInput = document.getElementById('amende-modal-notes');
+            const priceVal = parseFloat(priceInput ? priceInput.value : '0');
+
+            if (isNaN(priceVal) || priceVal <= 0) {
+                showToast('Veuillez saisir un tarif valide supérieur à 0 €.', 'danger');
+                return;
+            }
+
+            const res = await apiRequest(`/amendes/${amendeId}/decision`, 'POST', {
+                action: 'accept',
+                price: priceVal,
+                adminNotes: notesInput ? notesInput.value.trim() : ''
+            });
+
+            if (res && res.success) {
+                showToast(`Dossier accepté avec un tarif de ${priceVal.toFixed(2)} € !`, 'success');
+                loadAmendesData();
+            } else {
+                showToast(res && res.detail ? res.detail : 'Échec de la validation.', 'danger');
+            }
+        });
+    };
+
+    window.adminRejectAmende = function(amendeId) {
+        const modalHtml = `
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
+                    Êtes-vous certain de vouloir refuser la prise en charge de ce dossier ? Le client sera notifié.
+                </p>
+                <div>
+                    <label class="form-label">Motif du refus (optionnel) :</label>
+                    <input type="text" id="amende-reject-notes" class="form-input" placeholder="Ex: Pièce illisible, délai de contestation dépassé..." style="width: 100%;">
+                </div>
+            </div>
+        `;
+
+        openModal('❌ Refuser le Dossier d\'Amende', modalHtml, async () => {
+            const notesInput = document.getElementById('amende-reject-notes');
+            const res = await apiRequest(`/amendes/${amendeId}/decision`, 'POST', {
+                action: 'reject',
+                adminNotes: notesInput ? notesInput.value.trim() : ''
+            });
+
+            if (res && res.success) {
+                showToast('Dossier refusé.', 'warning');
+                loadAmendesData();
+            } else {
+                showToast(res && res.detail ? res.detail : 'Échec du refus.', 'danger');
+            }
+        });
+    };
+
+    window.adminFinishAmende = function(amendeId) {
+        const modalHtml = `
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
+                    Confirmez-vous que la démarche d'annulation a été menée à terme et que ce dossier peut être clôturé ?
+                </p>
+                <div>
+                    <label class="form-label">Note finale (optionnel) :</label>
+                    <input type="text" id="amende-finish-notes" class="form-input" placeholder="Ex: Avis d'annulation reçu du tribunal..." style="width: 100%;">
+                </div>
+            </div>
+        `;
+
+        openModal('🏁 Clôturer le Dossier d\'Amende', modalHtml, async () => {
+            const notesInput = document.getElementById('amende-finish-notes');
+            const res = await apiRequest(`/amendes/${amendeId}/decision`, 'POST', {
+                action: 'finish',
+                adminNotes: notesInput ? notesInput.value.trim() : ''
+            });
+
+            if (res && res.success) {
+                showToast('Dossier clôturé avec succès.', 'success');
+                loadAmendesData();
+            } else {
+                showToast(res && res.detail ? res.detail : 'Échec de la clôture.', 'danger');
+            }
+        });
+    };
+
+    // =====================================================================
 
     async function loadSettingsData() {
         const data = await apiRequest('/settings');

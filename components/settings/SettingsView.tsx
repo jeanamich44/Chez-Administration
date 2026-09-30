@@ -1,12 +1,8 @@
 "use client";
 
-import { User, MessageSquare, Bell, Copy, Shield, ExternalLink } from "lucide-react";
+import { MessageSquare, Bell, Copy, Shield, ExternalLink } from "lucide-react";
 import { useTelegram } from "@/components/TelegramContext";
 import { useToast } from "@/components/NotificationToast";
-
-/* ===================================================================== */
-
-const ADMIN_IDS = [8740419947, 6298536933, 8676919760, 5883885733, 1461973886];
 
 /* ===================================================================== */
 
@@ -15,7 +11,7 @@ interface SettingsViewProps {
 }
 
 export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
-  const { user, haptic } = useTelegram();
+  const { user, haptic, isAdmin, adminSlug, supportTelegram, channelTelegram } = useTelegram();
   const toast = useToast();
 
   const fullName = user
@@ -24,7 +20,6 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
   const username = user?.username ? `@${user.username}` : "";
   const userId = user?.id ? String(user.id) : "";
   const initials = (user?.first_name?.[0] || user?.username?.[0] || "").toUpperCase();
-  const isAdmin = user?.id && ADMIN_IDS.includes(Number(user.id));
 
   const handleCopyId = () => {
     if (!userId) return;
@@ -35,8 +30,13 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
 
   const handleOpenWebPanel = () => {
     haptic("impact");
+    if (!adminSlug) {
+      toast.error("Panel administrateur non configuré");
+      return;
+    }
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const targetUrl = `${origin}/espace-sec-x9k2m7`;
+    const cleanSlug = adminSlug.replace(/^\/+/, "");
+    const targetUrl = `${origin}/${cleanSlug}`;
     const tg = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null;
 
     toast.success("Ouverture du panel web...");
@@ -46,6 +46,20 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
       window.open(targetUrl, "_blank");
     }
   };
+
+  const supportHandle = supportTelegram
+    ? supportTelegram.startsWith("@") ? supportTelegram : `@${supportTelegram}`
+    : null;
+  const supportUrl = supportTelegram
+    ? `https://t.me/${supportTelegram.replace("@", "")}`
+    : null;
+
+  const channelHandle = channelTelegram
+    ? channelTelegram.startsWith("@") ? channelTelegram : `@${channelTelegram}`
+    : null;
+  const channelUrl = channelTelegram
+    ? `https://t.me/${channelTelegram.replace("@", "")}`
+    : null;
 
   return (
     <div className="space-y-4 pb-24 fade-in">
@@ -96,49 +110,55 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
         </div>
       )}
 
-      <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-4 border border-white/[0.06] space-y-2">
-        <h3 className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-2">
-          Assistance & Communauté
-        </h3>
+      {(supportUrl || channelUrl) && (
+        <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-4 border border-white/[0.06] space-y-2">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-2">
+            Assistance & Communauté
+          </h3>
 
-        <a
-          href="https://t.me/RheyySupport"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => haptic("selection")}
-          className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
-              <MessageSquare size={16} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-white">Support Technique</p>
-              <p className="text-[10px] text-white/40">Équipe d'astreinte 7j/7</p>
-            </div>
-          </div>
-          <span className="text-[10px] text-primary font-bold">@RheyySupport</span>
-        </a>
+          {supportUrl && (
+            <a
+              href={supportUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => haptic("selection")}
+              className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
+                  <MessageSquare size={16} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white">Support Technique</p>
+                  <p className="text-[10px] text-white/40">Équipe d'astreinte 7j/7</p>
+                </div>
+              </div>
+              <span className="text-[10px] text-primary font-bold">{supportHandle}</span>
+            </a>
+          )}
 
-        <a
-          href="https://t.me/ChezRheyyNews"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => haptic("selection")}
-          className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
-              <Bell size={16} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-white">Canal d'annonces</p>
-              <p className="text-[10px] text-white/40">Mises à jour et nouveautés</p>
-            </div>
-          </div>
-          <span className="text-[10px] text-amber-400 font-bold">Rejoindre</span>
-        </a>
-      </div>
+          {channelUrl && (
+            <a
+              href={channelUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => haptic("selection")}
+              className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <Bell size={16} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white">Canal d'annonces</p>
+                  <p className="text-[10px] text-white/40">Mises à jour et nouveautés</p>
+                </div>
+              </div>
+              <span className="text-[10px] text-amber-400 font-bold">Rejoindre</span>
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 }

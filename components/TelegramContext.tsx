@@ -10,6 +10,7 @@ interface TelegramUser {
   last_name?: string;
   username?: string;
   language_code?: string;
+  admin?: boolean;
 }
 
 interface NavigationState {
@@ -26,6 +27,10 @@ interface TelegramContextType {
   isLoadingBalance: boolean;
   ready: boolean;
   isTelegram: boolean;
+  isAdmin: boolean;
+  adminSlug: string | null;
+  supportTelegram: string | null;
+  channelTelegram: string | null;
   navigation: NavigationState;
   navigateTo: (view: NavigationState["view"], category?: string, slug?: string) => void;
   goBack: () => void;
@@ -43,6 +48,10 @@ const TelegramContext = createContext<TelegramContextType>({
   isLoadingBalance: false,
   ready: false,
   isTelegram: false,
+  isAdmin: false,
+  adminSlug: null,
+  supportTelegram: null,
+  channelTelegram: null,
   navigation: { view: "hub" },
   navigateTo: () => {},
   goBack: () => {},
@@ -63,6 +72,10 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const [balance, setBalance] = useState<number>(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState<boolean>(false);
   const [ready, setReady] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [adminSlug, setAdminSlug] = useState<string | null>(null);
+  const [supportTelegram, setSupportTelegram] = useState<string | null>(null);
+  const [channelTelegram, setChannelTelegram] = useState<string | null>(null);
   const [navigation, setNavigation] = useState<NavigationState>({ view: "hub" });
   const historyRef = useRef<NavigationState[]>([{ view: "hub" }]);
 
@@ -81,11 +94,16 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         if (typeof data.balance === "number") {
           setBalance(data.balance);
         }
+        setIsAdmin(Boolean(data.admin));
+        setAdminSlug(data.admin_slug || null);
+        setSupportTelegram(data.support_telegram || null);
+        setChannelTelegram(data.channel_telegram || null);
         if (data.username || data.first_name) {
           setUser((prev) => ({
             id: data.id || prev?.id || 0,
             first_name: data.first_name || prev?.first_name || "",
             username: data.username || prev?.username,
+            admin: Boolean(data.admin),
           }));
         }
       }
@@ -118,41 +136,44 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     }
   }, [initData, refreshBalance]);
 
-  const updateBackButton = useCallback((nav: NavigationState) => {
-    const tg = (window as any).Telegram?.WebApp;
-    if (!tg?.BackButton) return;
-    if (nav.view === "hub") {
-      tg.BackButton.hide();
-    } else {
-      tg.BackButton.show();
-    }
-  }, []);
-
-  const navigateTo = useCallback((view: NavigationState["view"], category?: string, slug?: string) => {
-    const newState: NavigationState = { view, category, slug };
-    historyRef.current.push(newState);
-    setNavigation(newState);
-    updateBackButton(newState);
-    window.scrollTo(0, 0);
-  }, [updateBackButton]);
+  const navigateTo = useCallback(
+    (view: NavigationState["view"], category?: string, slug?: string) => {
+      const nextState: NavigationState = { view, category, slug };
+      historyRef.current.push(nextState);
+      setNavigation(nextState);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    []
+  );
 
   const goBack = useCallback(() => {
     if (historyRef.current.length > 1) {
       historyRef.current.pop();
       const prev = historyRef.current[historyRef.current.length - 1];
       setNavigation(prev);
-      updateBackButton(prev);
-      window.scrollTo(0, 0);
+    } else {
+      const hubState: NavigationState = { view: "hub" };
+      historyRef.current = [hubState];
+      setNavigation(hubState);
     }
-  }, [updateBackButton]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   useEffect(() => {
-    const tg = (window as any).Telegram?.WebApp;
+    const tg = webApp || (window as any).Telegram?.WebApp;
     if (!tg?.BackButton) return;
-    const handler = () => goBack();
-    tg.BackButton.onClick(handler);
-    return () => tg.BackButton.offClick(handler);
-  }, [goBack]);
+
+    if (navigation.view !== "hub") {
+      tg.BackButton.show();
+      const handleBackClick = () => goBack();
+      tg.BackButton.onClick(handleBackClick);
+      return () => {
+        tg.BackButton.offClick(handleBackClick);
+      };
+    } else {
+      tg.BackButton.hide();
+    }
+  }, [navigation, webApp, goBack]);
 
   const haptic = useCallback((type: "impact" | "notification" | "selection" = "impact") => {
     const tg = (window as any).Telegram?.WebApp?.HapticFeedback;
@@ -174,6 +195,10 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         isLoadingBalance,
         ready,
         isTelegram,
+        isAdmin,
+        adminSlug,
+        supportTelegram,
+        channelTelegram,
         navigation,
         navigateTo,
         goBack,

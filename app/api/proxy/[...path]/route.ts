@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import zlib from "zlib";
+import { promisify } from "util";
+
+/* ===================================================================== */
+
+const brotliCompressAsync = promisify(zlib.brotliCompress);
 
 /* ===================================================================== */
 
@@ -54,7 +59,7 @@ async function handle(request: NextRequest) {
       const rawBuffer = Buffer.from(await request.arrayBuffer());
       const isMultipart = contentType?.toLowerCase().includes("multipart/form-data");
       if (rawBuffer.length > 50 && !isMultipart) {
-        const compressed = zlib.brotliCompressSync(rawBuffer);
+        const compressed = await brotliCompressAsync(rawBuffer);
         bodyToSend = compressed;
         headers.set("content-encoding", "br");
         headers.set("content-length", String(compressed.length));

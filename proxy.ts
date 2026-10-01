@@ -28,8 +28,17 @@ export function proxy(request: NextRequest) {
   /* ===================================================================== */
 
   if (pathname.startsWith("/api/proxy")) {
+    const qInitData = request.nextUrl.searchParams.get("initData") || request.nextUrl.searchParams.get("init_data");
+    const qAuth = request.nextUrl.searchParams.get("auth") || request.nextUrl.searchParams.get("token");
+    const authHeader = request.headers.get("authorization");
     const tgInitData = request.headers.get("x-telegram-init-data");
-    if (!tgInitData || !tgInitData.trim()) {
+
+    if (
+      (!tgInitData || !tgInitData.trim()) &&
+      (!qInitData || !qInitData.trim()) &&
+      (!authHeader || !authHeader.trim()) &&
+      (!qAuth || !qAuth.trim())
+    ) {
       return new NextResponse(null, { status: 404 });
     }
 

@@ -2002,7 +2002,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let filesHtml = '';
             if (Array.isArray(a.file_urls) && a.file_urls.length > 0) {
                 filesHtml = a.file_urls.map((url, idx) => {
-                    return `<a href="${url}" target="_blank" rel="noreferrer" class="action-btn" style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; font-size: 11px; margin-bottom: 4px; text-decoration: none;">📎 Pièce ${idx + 1} ↗</a>`;
+                    const normUrl = url.startsWith('/api/amendes/') ? url.replace('/api/amendes/', '/api/proxy/amendes/') : url;
+                    const fullHref = `${normUrl}?auth=${encodeURIComponent(authToken)}`;
+                    return `<a href="${fullHref}" target="_blank" rel="noreferrer" class="action-btn" style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; font-size: 11px; margin-bottom: 4px; text-decoration: none;">📎 Pièce ${idx + 1} ↗</a>`;
                 }).join(' ');
             } else {
                 filesHtml = '<span style="color: var(--text-secondary); font-size: 11px;">Aucun fichier</span>';

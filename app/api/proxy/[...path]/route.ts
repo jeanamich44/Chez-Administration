@@ -34,8 +34,11 @@ async function handle(request: NextRequest) {
     headers.set("X-Internal-Secret", INTERNAL_SECRET);
   }
 
-  const tgInitData = incomingHeaders.get("x-telegram-init-data");
-  const authHeader = incomingHeaders.get("authorization");
+  const qInitData = request.nextUrl.searchParams.get("initData") || request.nextUrl.searchParams.get("init_data");
+  const qAuth = request.nextUrl.searchParams.get("auth") || request.nextUrl.searchParams.get("token");
+
+  const tgInitData = incomingHeaders.get("x-telegram-init-data") || qInitData;
+  const authHeader = incomingHeaders.get("authorization") || (qAuth ? `Bearer ${qAuth}` : null);
   const isLoginRoute = subPath === "api/admin/login";
 
   if (!isLoginRoute && !tgInitData && !authHeader) {

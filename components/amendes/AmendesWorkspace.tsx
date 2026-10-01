@@ -535,19 +535,22 @@ export default function AmendesWorkspace({ onBack, onGoRecharge }: AmendesWorksp
                       Documents ({item.file_urls.length})
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      {item.file_urls.map((url, fIdx) => (
-                        <a
-                          key={fIdx}
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/10 hover:border-amber-400/40 text-[10px] font-bold text-white/80 transition-colors"
-                        >
-                          <Eye size={10} className="text-amber-400" />
-                          <span>Pièce {fIdx + 1}</span>
-                          <ExternalLink size={9} className="opacity-40" />
-                        </a>
-                      ))}
+                      {item.file_urls.map((url, fIdx) => {
+                        const linkHref = `${url}?initData=${encodeURIComponent(initData)}`;
+                        return (
+                          <a
+                            key={fIdx}
+                            href={linkHref}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/10 hover:border-amber-400/40 text-[10px] font-bold text-white/80 transition-colors"
+                          >
+                            <Eye size={10} className="text-amber-400" />
+                            <span>Pièce {fIdx + 1}</span>
+                            <ExternalLink size={9} className="opacity-40" />
+                          </a>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

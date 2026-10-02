@@ -31,6 +31,11 @@ interface TelegramContextType {
   adminSlug: string | null;
   supportTelegram: string | null;
   channelTelegram: string | null;
+  services: Record<string, boolean>;
+  generateDocsConfig: any;
+  isServiceActive: (slug: string) => boolean;
+  isCategoryActive: (catSlug: string) => boolean;
+  isDocumentActive: (catSlug: string, docSlug: string) => boolean;
   navigation: NavigationState;
   navigateTo: (view: NavigationState["view"], category?: string, slug?: string) => void;
   goBack: () => void;
@@ -52,6 +57,11 @@ const TelegramContext = createContext<TelegramContextType>({
   adminSlug: null,
   supportTelegram: null,
   channelTelegram: null,
+  services: {},
+  generateDocsConfig: null,
+  isServiceActive: () => true,
+  isCategoryActive: () => true,
+  isDocumentActive: () => true,
   navigation: { view: "hub" },
   navigateTo: () => {},
   goBack: () => {},
@@ -76,6 +86,8 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const [adminSlug, setAdminSlug] = useState<string | null>(null);
   const [supportTelegram, setSupportTelegram] = useState<string | null>(null);
   const [channelTelegram, setChannelTelegram] = useState<string | null>(null);
+  const [services, setServices] = useState<Record<string, boolean>>({});
+  const [generateDocsConfig, setGenerateDocsConfig] = useState<any>(null);
   const [navigation, setNavigation] = useState<NavigationState>({ view: "hub" });
   const historyRef = useRef<NavigationState[]>([{ view: "hub" }]);
 
@@ -98,6 +110,12 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         setAdminSlug(data.admin_slug || null);
         setSupportTelegram(data.support_telegram || null);
         setChannelTelegram(data.channel_telegram || null);
+        if (data.services && typeof data.services === "object") {
+          setServices(data.services);
+        }
+        if (data.generateDocs && typeof data.generateDocs === "object") {
+          setGenerateDocsConfig(data.generateDocs);
+        }
         if (data.username || data.first_name) {
           setUser((prev) => ({
             id: data.id || prev?.id || 0,
@@ -183,6 +201,39 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     else tg.selectionChanged();
   }, []);
 
+  const isServiceActive = useCallback(
+    (slug: string): boolean => {
+      if (services[slug] === false) return false;
+      if (slug === "generate-docs" && generateDocsConfig?.isActive === false) return false;
+      return true;
+    },
+    [services, generateDocsConfig]
+  );
+
+  const isCategoryActive = useCallback(
+    (catSlug: string): boolean => {
+      if (!isServiceActive("generate-docs")) return false;
+      if (!generateDocsConfig?.subcategories) return true;
+      const cat = generateDocsConfig.subcategories[catSlug];
+      if (!cat) return true;
+      if (cat.active === false || cat.enabled === false) return false;
+      return true;
+    },
+    [isServiceActive, generateDocsConfig]
+  );
+
+  const isDocumentActive = useCallback(
+    (catSlug: string, docSlug: string): boolean => {
+      if (!isCategoryActive(catSlug)) return false;
+      if (!generateDocsConfig?.subcategories) return true;
+      const cat = generateDocsConfig.subcategories[catSlug];
+      if (!cat || !cat.documents) return true;
+      if (cat.documents[docSlug] === false) return false;
+      return true;
+    },
+    [isCategoryActive, generateDocsConfig]
+  );
+
   const isTelegram = Boolean(initData && initData.length > 0);
 
   return (
@@ -199,6 +250,11 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         adminSlug,
         supportTelegram,
         channelTelegram,
+        services,
+        generateDocsConfig,
+        isServiceActive,
+        isCategoryActive,
+        isDocumentActive,
         navigation,
         navigateTo,
         goBack,

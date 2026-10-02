@@ -3,6 +3,7 @@
 import React from 'react';
 import { ArrowLeft, ArrowRight, Lock } from 'lucide-react';
 import { BRAND_CATALOG } from '@/data/brands';
+import { useTelegram } from '@/components/TelegramContext';
 
 interface EmploiHubContentProps {
   onNavigate: (slug: string) => void;
@@ -16,6 +17,9 @@ const EMPLOI_DOCS = [
 ];
 
 export default function EmploiHubContent({ onNavigate, onBack }: EmploiHubContentProps) {
+  const { isDocumentActive } = useTelegram();
+  const visibleDocs = EMPLOI_DOCS.filter((doc) => doc.isAvailable && isDocumentActive("emploi", doc.slug));
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex items-center justify-between">
@@ -38,7 +42,7 @@ export default function EmploiHubContent({ onNavigate, onBack }: EmploiHubConten
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-        {EMPLOI_DOCS.map((doc) => (
+        {visibleDocs.map((doc) => (
           <div
             key={doc.slug}
             onClick={() => doc.isAvailable && onNavigate(doc.slug)}

@@ -3,6 +3,7 @@
 import React from 'react';
 import { ArrowLeft, ArrowRight, Shield } from 'lucide-react';
 import { BRAND_CATALOG } from '@/data/brands';
+import { useTelegram } from '@/components/TelegramContext';
 
 interface AssuranceHubContentProps {
   onNavigate: (slug: string) => void;
@@ -15,6 +16,9 @@ const INSURANCES = [
 ];
 
 export default function AssuranceHubContent({ onNavigate, onBack }: AssuranceHubContentProps) {
+  const { isDocumentActive } = useTelegram();
+  const activeInsurances = INSURANCES.filter((item) => item && isDocumentActive("assurance", item.slug));
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex items-center justify-between">
@@ -45,7 +49,7 @@ export default function AssuranceHubContent({ onNavigate, onBack }: AssuranceHub
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          {INSURANCES.map((item) => (
+          {activeInsurances.map((item) => (
             <div
               key={item.slug}
               onClick={() => onNavigate(item.slug)}

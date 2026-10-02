@@ -3,6 +3,7 @@
 import React from 'react';
 import { Landmark, Zap, ArrowRight, ArrowLeft } from 'lucide-react';
 import { BANKS, BankInfo } from '@/data/rib-banks';
+import { useTelegram } from '@/components/TelegramContext';
 
 interface RibHubContentProps {
   onNavigate: (slug: string) => void;
@@ -10,8 +11,9 @@ interface RibHubContentProps {
 }
 
 export default function RibHubContent({ onNavigate, onBack }: RibHubContentProps) {
-  const physiques = BANKS.filter((b) => b.category === 'physique');
-  const neobanques = BANKS.filter((b) => b.category === 'neobanque');
+  const { isDocumentActive } = useTelegram();
+  const physiques = BANKS.filter((b) => b.category === 'physique' && isDocumentActive('rib', b.slug));
+  const neobanques = BANKS.filter((b) => b.category === 'neobanque' && isDocumentActive('rib', b.slug));
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -36,35 +38,39 @@ export default function RibHubContent({ onNavigate, onBack }: RibHubContentProps
         </p>
       </div>
 
-      <section className="glass p-6 md:p-8 space-y-6">
-        <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-          <Landmark className="w-6 h-6 text-primary" />
-          <h2 className="font-black italic uppercase tracking-tight text-white text-xl">
-            BANQUES PHYSIQUES TRADITIONNELLES
-          </h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
-          {physiques.map((bank) => (
-            <BankCard key={bank.slug} bank={bank} onNavigate={onNavigate} />
-          ))}
-        </div>
-      </section>
+      {physiques.length > 0 && (
+        <section className="glass p-6 md:p-8 space-y-6">
+          <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+            <Landmark className="w-6 h-6 text-primary" />
+            <h2 className="font-black italic uppercase tracking-tight text-white text-xl">
+              BANQUES PHYSIQUES TRADITIONNELLES
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+            {physiques.map((bank) => (
+              <BankCard key={bank.slug} bank={bank} onNavigate={onNavigate} />
+            ))}
+          </div>
+        </section>
+      )}
 
-      <section className="glass p-6 md:p-8 space-y-6">
-        <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-          <Zap className="w-6 h-6 text-primary" />
-          <h2 className="font-black italic uppercase tracking-tight text-white text-xl">
-            NÉOBANQUES & BANQUES EN LIGNE
-          </h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
-          {neobanques.map((bank) => (
-            <BankCard key={bank.slug} bank={bank} onNavigate={onNavigate} />
-          ))}
-        </div>
-      </section>
+      {neobanques.length > 0 && (
+        <section className="glass p-6 md:p-8 space-y-6">
+          <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+            <Zap className="w-6 h-6 text-primary" />
+            <h2 className="font-black italic uppercase tracking-tight text-white text-xl">
+              NÉOBANQUES & BANQUES EN LIGNE
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+            {neobanques.map((bank) => (
+              <BankCard key={bank.slug} bank={bank} onNavigate={onNavigate} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

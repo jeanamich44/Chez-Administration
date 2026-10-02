@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Flame, GraduationCap, ArrowRight } from 'lucide-react';
 import { BRAND_CATALOG } from '@/data/brands';
+import { useTelegram } from '@/components/TelegramContext';
 
 interface JustificatifHubContentProps {
   onNavigate: (slug: string) => void;
@@ -35,9 +36,14 @@ const ISSUERS = [
 ];
 
 export default function JustificatifHubContent({ onNavigate, onBack }: JustificatifHubContentProps) {
+  const { isDocumentActive } = useTelegram();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  const displayedCategories = CATEGORIES.filter(cat => selectedCategory === "all" || selectedCategory === cat.id);
+  const activeIssuers = ISSUERS.filter((i) => i && isDocumentActive("justificatif", i.slug));
+  const displayedCategories = CATEGORIES.filter(cat => {
+    const hasItems = activeIssuers.some(i => i.category === cat.id);
+    return hasItems && (selectedCategory === "all" || selectedCategory === cat.id);
+  });
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
@@ -70,10 +76,11 @@ export default function JustificatifHubContent({ onNavigate, onBack }: Justifica
               : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
           }`}
         >
-          Toutes ({ISSUERS.length})
+          Toutes ({activeIssuers.length})
         </button>
         {CATEGORIES.map(cat => {
-          const count = ISSUERS.filter(i => i.category === cat.id).length;
+          const count = activeIssuers.filter(i => i.category === cat.id).length;
+          if (count === 0) return null;
           const Icon = cat.icon;
           return (
             <button
@@ -94,7 +101,7 @@ export default function JustificatifHubContent({ onNavigate, onBack }: Justifica
       </div>
 
       {displayedCategories.map(cat => {
-        const items = ISSUERS.filter(i => i.category === cat.id).sort((a, b) => a.name.localeCompare(b.name, "fr"));
+        const items = activeIssuers.filter(i => i.category === cat.id).sort((a, b) => a.name.localeCompare(b.name, "fr"));
         const Icon = cat.icon;
         return (
           <section key={cat.id} className="glass p-6 md:p-8 rounded-3xl space-y-6">

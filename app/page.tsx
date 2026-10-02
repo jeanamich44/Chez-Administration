@@ -2,7 +2,7 @@
 
 import { useCallback, lazy, Suspense, useState, useEffect } from "react";
 import { TelegramProvider, useTelegram } from "@/components/TelegramContext";
-import { ToastProvider } from "@/components/NotificationToast";
+import { ToastProvider, useToast } from "@/components/NotificationToast";
 import BottomNavBar, { MainTab } from "@/components/navigation/BottomNavBar";
 import RechargeView from "@/components/recharge/RechargeView";
 import SettingsView from "@/components/settings/SettingsView";
@@ -174,19 +174,62 @@ function LoadingSpinner() {
 /* ===================================================================== */
 
 function AppRouter() {
-  const { user, navigation, navigateTo, goBack, haptic, balance, ready, isTelegram } = useTelegram();
+  const {
+    user,
+    navigation,
+    navigateTo,
+    goBack,
+    haptic,
+    balance,
+    ready,
+    isTelegram,
+    isServiceActive,
+    isCategoryActive,
+    isDocumentActive,
+  } = useTelegram();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<MainTab>("services");
   const [serviceRoot, setServiceRoot] = useState<ServiceRootType>("menu");
 
+  const visibleRootServices = ROOT_SERVICES.filter((srv) => isServiceActive(srv.id));
+  const visibleDocCategories = DOC_CATEGORIES.filter((cat) => isCategoryActive(cat.id));
+
+  useEffect(() => {
+    if (serviceRoot !== "menu" && !isServiceActive(serviceRoot)) {
+      setServiceRoot("menu");
+      toast.error("Ce service est temporairement indisponible.");
+    }
+  }, [serviceRoot, isServiceActive, toast]);
+
+  useEffect(() => {
+    if (serviceRoot === "generate-docs") {
+      if (navigation.view === "category" && navigation.category) {
+        if (!isCategoryActive(navigation.category)) {
+          goBack();
+          toast.error("Cette catégorie est temporairement indisponible.");
+        }
+      } else if (navigation.view === "form" && navigation.category && navigation.slug) {
+        if (!isCategoryActive(navigation.category) || !isDocumentActive(navigation.category, navigation.slug)) {
+          goBack();
+          toast.error("Ce document est temporairement indisponible.");
+        }
+      }
+    }
+  }, [serviceRoot, navigation, isCategoryActive, isDocumentActive, goBack, toast]);
+
   const handleRootServiceSelect = useCallback(
     (serviceId: ServiceRootType) => {
+      if (!isServiceActive(serviceId)) {
+        toast.error("Ce service est temporairement indisponible.");
+        return;
+      }
       haptic("impact");
       setServiceRoot(serviceId);
       if (serviceId === "generate-docs") {
         navigateTo("hub");
       }
     },
-    [haptic, navigateTo]
+    [haptic, navigateTo, isServiceActive, toast]
   );
 
   const handleBackToServicesMenu = useCallback(() => {
@@ -196,18 +239,26 @@ function AppRouter() {
 
   const handleCategoryClick = useCallback(
     (categoryId: string) => {
+      if (!isCategoryActive(categoryId)) {
+        toast.error("Cette catégorie est temporairement indisponible.");
+        return;
+      }
       haptic("impact");
       navigateTo("category", categoryId);
     },
-    [navigateTo, haptic]
+    [navigateTo, haptic, isCategoryActive, toast]
   );
 
   const handleFormClick = useCallback(
     (category: string, slug: string) => {
+      if (!isDocumentActive(category, slug)) {
+        toast.error("Ce document est temporairement indisponible.");
+        return;
+      }
       haptic("impact");
       navigateTo("form", category, slug);
     },
-    [navigateTo, haptic]
+    [navigateTo, haptic, isDocumentActive, toast]
   );
 
   const handleBack = useCallback(() => {
@@ -285,7 +336,7 @@ function AppRouter() {
               <>
                 {serviceRoot === "menu" && (
                   <div className="space-y-3 pb-20 fade-in">
-                      {ROOT_SERVICES.map((srv) => {
+                      {visibleRootServices.map((srv) => {
                         const Icon = srv.icon;
                         return (
                           <button
@@ -451,7 +502,7 @@ function AppRouter() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-2.5">
-                          {DOC_CATEGORIES.map((cat) => {
+                          {visibleDocCategories.map((cat) => {
                             const Icon = cat.icon;
                             return (
                               <button

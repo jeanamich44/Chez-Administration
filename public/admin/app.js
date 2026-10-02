@@ -2418,16 +2418,12 @@ document.addEventListener('DOMContentLoaded', () => {
         setVal('setting-general-bot-name', data.botName);
         setVal('setting-general-support-tg', data.supportTelegram);
         setVal('setting-general-channel-tg', data.channelTelegram);
-        setVal('setting-general-site-name', data.siteName);
         setVal('setting-general-marquee-text', data.marqueeText);
         setVal('setting-general-marquee-style', data.marqueeStyle || 'standard');
 
         setVal('setting-security-api-key', data.apiSecretKey);
         setVal('setting-security-admin-slug', data.adminSlug);
         setVal('setting-security-jwt-exp', data.jwtExpirationMinutes || 1440);
-        setVal('setting-security-anti-debug', data.antiDebugMode !== false ? 'true' : 'false');
-        setVal('setting-security-turnstile-site', data.turnstileSiteKey);
-        setVal('setting-security-turnstile-secret', data.turnstileSecretKey);
 
         setVal('setting-limits-enabled', data.paymentEnabled !== false ? 'true' : 'false');
         setVal('setting-limits-min', data.minPaymentAmount != null ? data.minPaymentAmount : '1.0');
@@ -2681,7 +2677,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 botName: val('setting-general-bot-name'),
                 supportTelegram: val('setting-general-support-tg'),
                 channelTelegram: val('setting-general-channel-tg'),
-                siteName: val('setting-general-site-name'),
                 marqueeText: val('setting-general-marquee-text'),
                 marqueeStyle: document.getElementById('setting-general-marquee-style')?.value || 'standard'
             };
@@ -2706,10 +2701,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const payload = {
                 apiSecretKey: val('setting-security-api-key'),
                 adminSlug: val('setting-security-admin-slug'),
-                jwtExpirationMinutes: parseInt(val('setting-security-jwt-exp') || '1440', 10),
-                antiDebugMode: document.getElementById('setting-security-anti-debug')?.value === 'true',
-                turnstileSiteKey: val('setting-security-turnstile-site'),
-                turnstileSecretKey: val('setting-security-turnstile-secret')
+                jwtExpirationMinutes: parseInt(val('setting-security-jwt-exp') || '1440', 10)
             };
             if (!payload.apiSecretKey) {
                 showToast('La clé secrète API ne peut pas être vide.', 'danger');

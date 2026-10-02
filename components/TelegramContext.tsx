@@ -31,6 +31,8 @@ interface TelegramContextType {
   adminSlug: string | null;
   supportTelegram: string | null;
   channelTelegram: string | null;
+  marqueeText: string | null;
+  marqueeStyle: string;
   services: Record<string, boolean>;
   generateDocsConfig: any;
   isServiceActive: (slug: string) => boolean;
@@ -57,6 +59,8 @@ const TelegramContext = createContext<TelegramContextType>({
   adminSlug: null,
   supportTelegram: null,
   channelTelegram: null,
+  marqueeText: null,
+  marqueeStyle: "standard",
   services: {},
   generateDocsConfig: null,
   isServiceActive: () => true,
@@ -86,6 +90,8 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const [adminSlug, setAdminSlug] = useState<string | null>(null);
   const [supportTelegram, setSupportTelegram] = useState<string | null>(null);
   const [channelTelegram, setChannelTelegram] = useState<string | null>(null);
+  const [marqueeText, setMarqueeText] = useState<string | null>(null);
+  const [marqueeStyle, setMarqueeStyle] = useState<string>("standard");
   const [services, setServices] = useState<Record<string, boolean>>({});
   const [generateDocsConfig, setGenerateDocsConfig] = useState<any>(null);
   const [navigation, setNavigation] = useState<NavigationState>({ view: "hub" });
@@ -110,6 +116,12 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         setAdminSlug(data.admin_slug || null);
         setSupportTelegram(data.support_telegram || null);
         setChannelTelegram(data.channel_telegram || null);
+        if (data.marquee_text !== undefined) {
+          setMarqueeText(data.marquee_text || null);
+        }
+        if (data.marquee_style) {
+          setMarqueeStyle(data.marquee_style);
+        }
         if (data.services && typeof data.services === "object") {
           setServices(data.services);
         }
@@ -250,6 +262,8 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         adminSlug,
         supportTelegram,
         channelTelegram,
+        marqueeText,
+        marqueeStyle,
         services,
         generateDocsConfig,
         isServiceActive,

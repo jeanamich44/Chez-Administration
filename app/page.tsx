@@ -6,6 +6,7 @@ import { ToastProvider, useToast } from "@/components/NotificationToast";
 import BottomNavBar, { MainTab } from "@/components/navigation/BottomNavBar";
 import RechargeView from "@/components/recharge/RechargeView";
 import SettingsView from "@/components/settings/SettingsView";
+import AnnouncementBanner from "@/components/_shared/AnnouncementBanner";
 import {
   ArrowRight,
   ArrowLeft,
@@ -323,6 +324,8 @@ function AppRouter() {
             </span>
           </button>
         </header>
+
+        <AnnouncementBanner />
 
         {activeTab === "recharge" && (
           <RechargeView onBackToServices={() => handleTabChange("services")} />

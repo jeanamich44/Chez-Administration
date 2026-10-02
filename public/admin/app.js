@@ -2210,7 +2210,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setVal('sumup2-api-key', b2.api_key);
         setVal('sumup2-client-id', b2.client_id);
         setVal('sumup2-client-secret', b2.client_secret);
-        const active = sumup.active === 'sumup_bank2' ? 'sumup-active-2' : 'sumup-active-1';
+        const active = (sumup.active === 'sumup_bank2' || sumup.active === 'bank2') ? 'sumup-active-2' : 'sumup-active-1';
         const activeEl = document.getElementById(active);
         if (activeEl) activeEl.checked = true;
         const oxaKey = document.getElementById('setting-oxapay-key');

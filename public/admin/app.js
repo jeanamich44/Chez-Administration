@@ -2175,7 +2175,220 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // =====================================================================
+    /* ===================================================================== */
+
+    const GD_META = {
+        subcategories: {
+            rib: { title: "RIB Bancaires", icon: "🏦", defaultRoles: ["user", "admin"] },
+            emploi: { title: "Fiches de Paie / Emploi", icon: "💼", defaultRoles: ["user", "admin"] },
+            releve: { title: "Relevés de Compte", icon: "📊", defaultRoles: ["user", "admin"] },
+            facture: { title: "Factures d'Achat", icon: "🧾", defaultRoles: ["user", "admin"] },
+            assurance: { title: "Assurances", icon: "🛡️", defaultRoles: ["user", "admin"] },
+            justificatif: { title: "Justificatifs & Attestations", icon: "📑", defaultRoles: ["user", "admin"] }
+        },
+        docLabels: {
+            bp: "Banque Populaire",
+            ca: "Crédit Agricole",
+            ce: "Caisse d'Épargne",
+            cm: "Crédit Mutuel",
+            sg: "Société Générale",
+            bfb: "BoursoBank Pro / BFB",
+            bnp: "BNP Paribas",
+            cic: "CIC",
+            lbp: "La Banque Postale",
+            lcl: "LCL",
+            mypos: "myPOS",
+            qonto: "Qonto",
+            sumup: "SumUp",
+            helios: "Helios",
+            noelse: "Noelse",
+            revolut: "Revolut",
+            boursobank: "BoursoBank",
+            fiche_de_paie: "Fiche de Paie",
+            adidas: "Adidas",
+            amazon: "Amazon",
+            ami: "AMI Paris",
+            boulanger: "Boulanger",
+            burberry: "Burberry",
+            cdiscount: "Cdiscount",
+            chanel: "Chanel",
+            dafy: "Dafy Moto",
+            darty: "Darty",
+            dior: "Dior",
+            fnac: "Fnac",
+            fred: "Fred Joaillerie",
+            gaz: "Engie Gaz",
+            jacquemus: "Jacquemus",
+            loro_piana: "Loro Piana",
+            nike: "Nike",
+            nocibe: "Nocibé",
+            pack_moto: "Pack Moto",
+            sfr: "SFR",
+            axa: "Assurance AXA",
+            maxance: "Assurance Maxance",
+            attestation_edf: "Attestation EDF",
+            conduite_heures: "Heures de Conduite",
+            attestation_direct_energie: "Attestation Direct Énergie"
+        }
+    };
+
+    let currentGenerateDocsData = null;
+
+    function renderServicesStatusList(services) {
+        const container = document.getElementById('services-status-list');
+        if (!container) return;
+        container.innerHTML = '';
+        if (!services || typeof services !== 'object' || Object.keys(services).length === 0) {
+            container.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">Aucun service configuré.</div>';
+            return;
+        }
+
+        const icons = {
+            'carrefour': '🛒',
+            'amendes': '📑',
+            'iptv': '📺',
+            'generate-docs': '📄'
+        };
+
+        Object.keys(services).forEach(slug => {
+            const svc = services[slug];
+            const card = document.createElement('div');
+            card.style.cssText = 'background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;';
+
+            const isActive = svc.isActive === true;
+            const icon = icons[slug] || '⚡';
+
+            card.innerHTML = `
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 14px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                            <span>${icon}</span> ${escapeHtml(svc.name || slug)}
+                        </span>
+                        <span class="badge ${isActive ? 'badge-success' : 'badge-danger'}" id="service-badge-${slug}">
+                            ${isActive ? 'Actif' : 'Inactif'}
+                        </span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted); word-break: break-word;">
+                        ${escapeHtml(svc.description || slug)}
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; align-items: center; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 10px;">
+                    <button type="button" class="action-btn" data-service-toggle="${slug}" style="font-size: 12px; padding: 6px 14px;">
+                        ${isActive ? 'Désactiver' : 'Activer'}
+                    </button>
+                </div>
+            `;
+
+            const btn = card.querySelector(`[data-service-toggle="${slug}"]`);
+            if (btn) {
+                btn.addEventListener('click', async () => {
+                    const nextState = !isActive;
+                    btn.disabled = true;
+                    btn.innerText = 'Modification...';
+                    const res = await apiRequest('/settings/services/toggle', 'POST', { slug, isActive: nextState });
+                    if (res && res.success) {
+                        showToast(`Service "${svc.name || slug}" ${nextState ? 'activé' : 'désactivé'}.`, 'success');
+                        svc.isActive = nextState;
+                        renderServicesStatusList(services);
+                    } else {
+                        showToast(res && res.error ? res.error : 'Erreur lors de la modification', 'danger');
+                        btn.disabled = false;
+                        btn.innerText = isActive ? 'Désactiver' : 'Activer';
+                    }
+                });
+            }
+
+            container.appendChild(card);
+        });
+    }
+
+    function renderGenerateDocsSettings(gd) {
+        currentGenerateDocsData = gd || {};
+        const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
+        setVal('setting-gd-is-active', gd.isActive !== false ? 'true' : 'false');
+        setVal('setting-gd-flatten-pdf', gd.flattenPdf !== false ? 'true' : 'false');
+        setVal('setting-gd-preview-off', gd.previewOff === true ? 'true' : 'false');
+        setVal('setting-gd-cooldown-enabled', gd.previewCooldownEnabled !== false ? 'true' : 'false');
+        setVal('setting-gd-cooldown-seconds', gd.previewCooldownSeconds != null ? gd.previewCooldownSeconds : 30);
+
+        const container = document.getElementById('gd-subcategories-container');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const subcats = gd.subcategories || {};
+        const keys = Object.keys(subcats);
+        if (keys.length === 0) {
+            container.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">Aucune sous-catégorie configurée.</div>';
+            return;
+        }
+
+        keys.forEach(catKey => {
+            const catData = subcats[catKey] || {};
+            const meta = GD_META.subcategories[catKey] || { title: catKey.toUpperCase(), icon: '📁' };
+            const catEnabled = catData.enabled !== false;
+
+            const docs = catData.documents || {};
+            const docKeys = Object.keys(docs);
+
+            const card = document.createElement('div');
+            card.style.cssText = 'background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px; display: flex; flex-direction: column; gap: 14px;';
+
+            let docsHtml = '';
+            if (docKeys.length > 0) {
+                docsHtml = `
+                    <div style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 12px; margin-top: 4px;">
+                        <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px;">Modèles de documents individuels :</div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px;">
+                            ${docKeys.map(docKey => {
+                                const docObj = docs[docKey] || {};
+                                const docOn = docObj.enabled !== false;
+                                const label = GD_META.docLabels[docKey] || docKey;
+                                return `
+                                    <label style="display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; cursor: pointer; user-select: none;">
+                                        <span style="font-size: 12px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+                                        <input type="checkbox" class="gd-doc-toggle" data-cat="${escapeHtml(catKey)}" data-doc="${escapeHtml(docKey)}" ${docOn ? 'checked' : ''} style="cursor: pointer; width: 16px; height: 16px;">
+                                    </label>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 20px;">${meta.icon}</span>
+                        <div>
+                            <div style="font-size: 15px; font-weight: 700; color: var(--text-primary);">${escapeHtml(meta.title)} <span style="font-size: 12px; color: var(--text-muted); font-weight: 400;">(${escapeHtml(catKey)})</span></div>
+                            <div style="font-size: 11px; color: var(--text-muted);">${docKeys.length} document(s) configuré(s)</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                            <input type="checkbox" class="gd-cat-enable-toggle" data-cat="${escapeHtml(catKey)}" ${catEnabled ? 'checked' : ''} style="width: 17px; height: 17px; cursor: pointer;">
+                            <span class="gd-cat-status-text" style="color: ${catEnabled ? '#10b981' : '#ef4444'};">${catEnabled ? 'Activée' : 'Désactivée'}</span>
+                        </label>
+                    </div>
+                </div>
+
+                ${docsHtml}
+            `;
+
+            const catToggle = card.querySelector('.gd-cat-enable-toggle');
+            const catStatusText = card.querySelector('.gd-cat-status-text');
+            if (catToggle && catStatusText) {
+                catToggle.addEventListener('change', () => {
+                    catStatusText.innerText = catToggle.checked ? 'Activée' : 'Désactivée';
+                    catStatusText.style.color = catToggle.checked ? '#10b981' : '#ef4444';
+                });
+            }
+
+            container.appendChild(card);
+        });
+    }
+
+    /* ===================================================================== */
 
     async function loadSettingsData() {
         const data = await apiRequest('/settings');
@@ -2206,10 +2419,15 @@ document.addEventListener('DOMContentLoaded', () => {
         setVal('setting-general-support-tg', data.supportTelegram);
         setVal('setting-general-channel-tg', data.channelTelegram);
         setVal('setting-general-site-name', data.siteName);
+        setVal('setting-general-marquee-text', data.marqueeText);
+        setVal('setting-general-marquee-style', data.marqueeStyle || 'standard');
 
         setVal('setting-security-api-key', data.apiSecretKey);
         setVal('setting-security-admin-slug', data.adminSlug);
-        setVal('setting-security-jwt-exp', data.jwtExpirationMinutes || 30);
+        setVal('setting-security-jwt-exp', data.jwtExpirationMinutes || 1440);
+        setVal('setting-security-anti-debug', data.antiDebugMode !== false ? 'true' : 'false');
+        setVal('setting-security-turnstile-site', data.turnstileSiteKey);
+        setVal('setting-security-turnstile-secret', data.turnstileSecretKey);
 
         setVal('setting-limits-enabled', data.paymentEnabled !== false ? 'true' : 'false');
         setVal('setting-limits-min', data.minPaymentAmount != null ? data.minPaymentAmount : '1.0');
@@ -2232,6 +2450,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activeEl) activeEl.checked = true;
         const oxaKey = document.getElementById('setting-oxapay-key');
         if (oxaKey) oxaKey.value = data.oxapayApiKey || '';
+
+        renderServicesStatusList(data.services || {});
+        renderGenerateDocsSettings(data.generateDocs || {});
     }
 
     // [ PAYMENTS PAGINATION LOGIC ] ==========================================
@@ -2460,7 +2681,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 botName: val('setting-general-bot-name'),
                 supportTelegram: val('setting-general-support-tg'),
                 channelTelegram: val('setting-general-channel-tg'),
-                siteName: val('setting-general-site-name')
+                siteName: val('setting-general-site-name'),
+                marqueeText: val('setting-general-marquee-text'),
+                marqueeStyle: document.getElementById('setting-general-marquee-style')?.value || 'standard'
             };
             if (!payload.frontendUrl || !payload.telegramBotToken) {
                 showToast("L'URL Frontend et le Token Telegram sont obligatoires.", 'danger');
@@ -2483,7 +2706,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const payload = {
                 apiSecretKey: val('setting-security-api-key'),
                 adminSlug: val('setting-security-admin-slug'),
-                jwtExpirationMinutes: parseInt(val('setting-security-jwt-exp') || '30', 10)
+                jwtExpirationMinutes: parseInt(val('setting-security-jwt-exp') || '1440', 10),
+                antiDebugMode: document.getElementById('setting-security-anti-debug')?.value === 'true',
+                turnstileSiteKey: val('setting-security-turnstile-site'),
+                turnstileSecretKey: val('setting-security-turnstile-secret')
             };
             if (!payload.apiSecretKey) {
                 showToast('La clé secrète API ne peut pas être vide.', 'danger');
@@ -2494,6 +2720,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast('Sécurité système et clés API mises à jour.', 'success');
             } else {
                 showToast(res && res.detail ? res.detail : 'Erreur lors de la mise à jour de la sécurité', 'danger');
+            }
+        });
+    }
+
+    /* ===================================================================== */
+
+    const gdForm = document.getElementById('settings-generate-docs-form');
+    if (gdForm) {
+        gdForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const isActive = document.getElementById('setting-gd-is-active')?.value === 'true';
+            const flattenPdf = document.getElementById('setting-gd-flatten-pdf')?.value === 'true';
+            const previewOff = document.getElementById('setting-gd-preview-off')?.value === 'true';
+            const previewCooldownEnabled = document.getElementById('setting-gd-cooldown-enabled')?.value === 'true';
+            const previewCooldownSeconds = parseInt(document.getElementById('setting-gd-cooldown-seconds')?.value || '30', 10);
+
+            const nextSubcategories = {};
+            if (currentGenerateDocsData && currentGenerateDocsData.subcategories) {
+                Object.keys(currentGenerateDocsData.subcategories).forEach(catKey => {
+                    const originalCat = currentGenerateDocsData.subcategories[catKey] || {};
+                    const catToggle = document.querySelector(`.gd-cat-enable-toggle[data-cat="${catKey}"]`);
+                    const isEnabled = catToggle ? catToggle.checked : (originalCat.enabled !== false);
+
+                    const nextDocs = {};
+                    if (originalCat.documents) {
+                        Object.keys(originalCat.documents).forEach(docKey => {
+                            const docBox = document.querySelector(`.gd-doc-toggle[data-cat="${catKey}"][data-doc="${docKey}"]`);
+                            const docEnabled = docBox ? docBox.checked : (originalCat.documents[docKey]?.enabled !== false);
+                            nextDocs[docKey] = { enabled: docEnabled };
+                        });
+                    }
+
+                    nextSubcategories[catKey] = {
+                        enabled: isEnabled,
+                        documents: nextDocs
+                    };
+                });
+            }
+
+            const payload = {
+                isActive,
+                flattenPdf,
+                previewOff,
+                previewCooldownEnabled,
+                previewCooldownSeconds,
+                subcategories: nextSubcategories
+            };
+
+            const res = await apiRequest('/settings/generate-docs', 'POST', payload);
+            if (res && res.success) {
+                showToast('Configuration et accès Generate Docs enregistrés.', 'success');
+            } else {
+                showToast(res && res.detail ? res.detail : 'Erreur lors de la sauvegarde Generate Docs', 'danger');
             }
         });
     }

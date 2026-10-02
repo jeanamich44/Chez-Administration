@@ -209,7 +209,6 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
         },
         body: JSON.stringify({
           amount: activeAmount,
-          bank: "bank2",
         }),
       });
 

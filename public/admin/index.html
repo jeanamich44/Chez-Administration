@@ -870,6 +870,20 @@
                                 <label class="form-label">Nom de la Plateforme (Marque)</label>
                                 <input type="text" id="setting-general-site-name" class="form-input" placeholder="CHEZ RHEYY" autocomplete="off">
                             </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label class="form-label">Texte du Bandeau Défilant (Marquee)</label>
+                                <input type="text" id="setting-general-marquee-text" class="form-input" placeholder="Message d'information ou promotionnel défilant sur le site..." autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Style du Bandeau Défilant</label>
+                                <select id="setting-general-marquee-style" class="form-input">
+                                    <option value="standard">Standard</option>
+                                    <option value="info">Information</option>
+                                    <option value="warning">Avertissement</option>
+                                    <option value="danger">Alerte</option>
+                                    <option value="success">Succès / Promo</option>
+                                </select>
+                            </div>
                         </div>
                         <button type="submit" class="btn-primary" style="max-width: 320px;">Enregistrer la Configuration Générale</button>
                     </form>
@@ -892,10 +906,93 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Durée Session JWT (minutes)</label>
-                                <input type="number" id="setting-security-jwt-exp" class="form-input" min="1" step="1" placeholder="30" autocomplete="off">
+                                <input type="number" id="setting-security-jwt-exp" class="form-input" min="1" step="1" placeholder="1440" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Protection Anti-Debug</label>
+                                <select id="setting-security-anti-debug" class="form-input">
+                                    <option value="true">Activée (Protection DevTools)</option>
+                                    <option value="false">Désactivée</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Cloudflare Turnstile Site Key</label>
+                                <input type="text" id="setting-security-turnstile-site" class="form-input" placeholder="0x4AAAAAA..." autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Cloudflare Turnstile Secret Key</label>
+                                <input type="text" id="setting-security-turnstile-secret" class="form-input" placeholder="0x4AAAAAA..." autocomplete="off">
                             </div>
                         </div>
                         <button type="submit" class="btn-primary" style="max-width: 300px;">Enregistrer la Sécurité Système</button>
+                    </form>
+                </div>
+
+                <div class="card-panel">
+                    <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div>
+                            <h2 class="card-panel-title">Disponibilité des Services Plateforme</h2>
+                            <p style="font-size: 12px; color: var(--text-muted); margin: 4px 0 0 0;">Activation ou désactivation globale des services pour les clients (en base de données).</p>
+                        </div>
+                    </div>
+                    <div id="services-status-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 12px;">
+                        <div style="color: var(--text-muted); font-size: 13px;">Chargement des services...</div>
+                    </div>
+                </div>
+
+                <div class="card-panel">
+                    <div class="card-panel-header">
+                        <div>
+                            <h2 class="card-panel-title">Gestion des Documents & Accès (Generate Docs)</h2>
+                            <p style="font-size: 12px; color: var(--text-muted); margin: 4px 0 0 0;">Activation et disponibilité des sous-catégories et des modèles de documents individuels.</p>
+                        </div>
+                    </div>
+                    <form id="settings-generate-docs-form" style="display: flex; flex-direction: column; gap: 20px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">Service Generate Docs</label>
+                                <select id="setting-gd-is-active" class="form-input">
+                                    <option value="true">Actif</option>
+                                    <option value="false">Inactif</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">Aplatir les PDF (Flatten)</label>
+                                <select id="setting-gd-flatten-pdf" class="form-input">
+                                    <option value="true">Activé (Lecture seule)</option>
+                                    <option value="false">Désactivé (Formulaire éditable)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">Prévisualisation PDF</label>
+                                <select id="setting-gd-preview-off" class="form-input">
+                                    <option value="false">Autorisée (Aperçu activé)</option>
+                                    <option value="true">Désactivée</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">Cooldown Prévisualisation</label>
+                                <select id="setting-gd-cooldown-enabled" class="form-input">
+                                    <option value="true">Activé</option>
+                                    <option value="false">Désactivé</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">Délai Cooldown (secondes)</label>
+                                <input type="number" id="setting-gd-cooldown-seconds" class="form-input" min="0" step="5" placeholder="30">
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 4px;">
+                            <h3 style="font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                <span>📁</span> Sous-Catégories & Modèles de Documents
+                            </h3>
+                            <div id="gd-subcategories-container" style="display: flex; flex-direction: column; gap: 16px;">
+                                <div style="color: var(--text-muted); font-size: 13px;">Chargement des catégories et modèles...</div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary" style="max-width: 340px; margin-top: 10px;">Enregistrer les Réglages Generate Docs</button>
                     </form>
                 </div>
 

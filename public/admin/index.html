@@ -838,6 +838,99 @@
             <div id="tab-settings" class="tab-content" style="display: none;">
                 <div class="card-panel">
                     <div class="card-panel-header">
+                        <h2 class="card-panel-title">Configuration Générale & Bot Telegram</h2>
+                    </div>
+                    <form id="settings-general-form" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+                            <div class="form-group">
+                                <label class="form-label">URL Frontend (Client)</label>
+                                <input type="text" id="setting-general-frontend-url" class="form-input" placeholder="https://chezrheyy.xyz" required autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">URL Backend API</label>
+                                <input type="text" id="setting-general-backend-url" class="form-input" placeholder="https://api.chezrheyy.xyz" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Token Bot Telegram</label>
+                                <input type="text" id="setting-general-bot-token" class="form-input" placeholder="123456789:ABCDEF..." required autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nom du Bot Telegram</label>
+                                <input type="text" id="setting-general-bot-name" class="form-input" placeholder="ChezRheyy Bot" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Contact Support Telegram</label>
+                                <input type="text" id="setting-general-support-tg" class="form-input" placeholder="@ChezRheyy" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Canal Telegram Officiel</label>
+                                <input type="text" id="setting-general-channel-tg" class="form-input" placeholder="@ChezRheyyCanal" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nom de la Plateforme (Marque)</label>
+                                <input type="text" id="setting-general-site-name" class="form-input" placeholder="CHEZ RHEYY" autocomplete="off">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary" style="max-width: 320px;">Enregistrer la Configuration Générale</button>
+                    </form>
+                </div>
+
+                <div class="card-panel">
+                    <div class="card-panel-header">
+                        <h2 class="card-panel-title">Sécurité Système & Clés API</h2>
+                    </div>
+                    <form id="settings-security-form" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label class="form-label">Clé Secrète Interne API (X-Internal-Secret)</label>
+                                <input type="text" id="setting-security-api-key" class="form-input" placeholder="Clé secrète partagée..." required autocomplete="off">
+                                <span style="font-size: 12px; color: var(--text-muted); display: block; margin-top: 6px;">Sécurise les requêtes de proxy entre l'application web et le backend FastAPI.</span>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Slug Secret Admin Panel</label>
+                                <input type="text" id="setting-security-admin-slug" class="form-input" placeholder="espace-sec-x9k2m7" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Durée Session JWT (minutes)</label>
+                                <input type="number" id="setting-security-jwt-exp" class="form-input" min="1" step="1" placeholder="30" autocomplete="off">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary" style="max-width: 300px;">Enregistrer la Sécurité Système</button>
+                    </form>
+                </div>
+
+                <div class="card-panel">
+                    <div class="card-panel-header">
+                        <h2 class="card-panel-title">Règles & Limites des Rechargements</h2>
+                    </div>
+                    <form id="settings-limits-form" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+                            <div class="form-group">
+                                <label class="form-label">Passerelle Rechargement</label>
+                                <select id="setting-limits-enabled" class="form-input">
+                                    <option value="true">Activée (Paiements autorisés)</option>
+                                    <option value="false">Désactivée (Paiements suspendus)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Montant Minimum (€)</label>
+                                <input type="number" id="setting-limits-min" class="form-input" step="0.5" min="0.5" placeholder="1.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Montant Maximum (€)</label>
+                                <input type="number" id="setting-limits-max" class="form-input" step="1" min="1" placeholder="500.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Max Factures En Attente / Client</label>
+                                <input type="number" id="setting-limits-max-pending" class="form-input" min="1" step="1" placeholder="2" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary" style="max-width: 300px;">Enregistrer les Règles de Paiement</button>
+                    </form>
+                </div>
+
+                <div class="card-panel">
+                    <div class="card-panel-header">
                         <h2 class="card-panel-title">Comptes SumUp (CB)</h2>
                     </div>
                     <form id="settings-sumup-form" style="display: flex; flex-direction: column; gap: 16px;">

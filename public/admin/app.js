@@ -2198,7 +2198,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const banks = sumup.banks || {};
         const b1 = banks.sumup || {};
         const b2 = banks.sumup_bank2 || {};
-        const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+        const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v !== null && v !== undefined) ? v : ''; };
+        setVal('setting-general-frontend-url', data.frontendUrl);
+        setVal('setting-general-backend-url', data.backendUrl);
+        setVal('setting-general-bot-token', data.telegramBotToken);
+        setVal('setting-general-bot-name', data.botName);
+        setVal('setting-general-support-tg', data.supportTelegram);
+        setVal('setting-general-channel-tg', data.channelTelegram);
+        setVal('setting-general-site-name', data.siteName);
+
+        setVal('setting-security-api-key', data.apiSecretKey);
+        setVal('setting-security-admin-slug', data.adminSlug);
+        setVal('setting-security-jwt-exp', data.jwtExpirationMinutes || 30);
+
+        setVal('setting-limits-enabled', data.paymentEnabled !== false ? 'true' : 'false');
+        setVal('setting-limits-min', data.minPaymentAmount != null ? data.minPaymentAmount : '1.0');
+        setVal('setting-limits-max', data.maxPaymentAmount != null ? data.maxPaymentAmount : '500.0');
+        setVal('setting-limits-max-pending', data.maxPendingPaymentsPerClient != null ? data.maxPendingPaymentsPerClient : '2');
+
         setVal('sumup-expiration', sumup.expiration_minutes);
         setVal('sumup1-name', b1.name);
         setVal('sumup1-email', b1.pay_to_email);
@@ -2428,6 +2445,76 @@ document.addEventListener('DOMContentLoaded', () => {
         btnPmNext.addEventListener('click', () => {
             paymentsCurrentPage++;
             applyPaymentsPagination();
+        });
+    }
+
+    const generalForm = document.getElementById('settings-general-form');
+    if (generalForm) {
+        generalForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const val = (id) => (document.getElementById(id)?.value || '').trim();
+            const payload = {
+                frontendUrl: val('setting-general-frontend-url'),
+                backendUrl: val('setting-general-backend-url'),
+                telegramBotToken: val('setting-general-bot-token'),
+                botName: val('setting-general-bot-name'),
+                supportTelegram: val('setting-general-support-tg'),
+                channelTelegram: val('setting-general-channel-tg'),
+                siteName: val('setting-general-site-name')
+            };
+            if (!payload.frontendUrl || !payload.telegramBotToken) {
+                showToast("L'URL Frontend et le Token Telegram sont obligatoires.", 'danger');
+                return;
+            }
+            const res = await apiRequest('/settings/general', 'POST', payload);
+            if (res && res.success) {
+                showToast('Configuration générale mise à jour avec succès.', 'success');
+            } else {
+                showToast(res && res.detail ? res.detail : 'Erreur lors de la mise à jour générale', 'danger');
+            }
+        });
+    }
+
+    const securityForm = document.getElementById('settings-security-form');
+    if (securityForm) {
+        securityForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const val = (id) => (document.getElementById(id)?.value || '').trim();
+            const payload = {
+                apiSecretKey: val('setting-security-api-key'),
+                adminSlug: val('setting-security-admin-slug'),
+                jwtExpirationMinutes: parseInt(val('setting-security-jwt-exp') || '30', 10)
+            };
+            if (!payload.apiSecretKey) {
+                showToast('La clé secrète API ne peut pas être vide.', 'danger');
+                return;
+            }
+            const res = await apiRequest('/settings/security', 'POST', payload);
+            if (res && res.success) {
+                showToast('Sécurité système et clés API mises à jour.', 'success');
+            } else {
+                showToast(res && res.detail ? res.detail : 'Erreur lors de la mise à jour de la sécurité', 'danger');
+            }
+        });
+    }
+
+    const limitsForm = document.getElementById('settings-limits-form');
+    if (limitsForm) {
+        limitsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const val = (id) => (document.getElementById(id)?.value || '').trim();
+            const payload = {
+                paymentEnabled: document.getElementById('setting-limits-enabled')?.value === 'true',
+                minPaymentAmount: parseFloat(val('setting-limits-min') || '1'),
+                maxPaymentAmount: parseFloat(val('setting-limits-max') || '500'),
+                maxPendingPaymentsPerClient: parseInt(val('setting-limits-max-pending') || '2', 10)
+            };
+            const res = await apiRequest('/settings/payments-limits', 'POST', payload);
+            if (res && res.success) {
+                showToast('Règles et limites de paiement mises à jour.', 'success');
+            } else {
+                showToast(res && res.detail ? res.detail : 'Erreur lors de la mise à jour des limites', 'danger');
+            }
         });
     }
 

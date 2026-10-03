@@ -28,6 +28,7 @@ interface TelegramContextType {
   ready: boolean;
   isTelegram: boolean;
   isAdmin: boolean;
+  isInitialized: boolean;
   adminSlug: string | null;
   supportTelegram: string | null;
   channelTelegram: string | null;
@@ -56,6 +57,7 @@ const TelegramContext = createContext<TelegramContextType>({
   ready: false,
   isTelegram: false,
   isAdmin: false,
+  isInitialized: false,
   adminSlug: null,
   supportTelegram: null,
   channelTelegram: null,
@@ -63,9 +65,9 @@ const TelegramContext = createContext<TelegramContextType>({
   marqueeStyle: "standard",
   services: {},
   generateDocsConfig: null,
-  isServiceActive: () => true,
-  isCategoryActive: () => true,
-  isDocumentActive: () => true,
+  isServiceActive: () => false,
+  isCategoryActive: () => false,
+  isDocumentActive: () => false,
   navigation: { view: "hub" },
   navigateTo: () => {},
   goBack: () => {},
@@ -87,6 +89,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingBalance, setIsLoadingBalance] = useState<boolean>(false);
   const [ready, setReady] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [adminSlug, setAdminSlug] = useState<string | null>(null);
   const [supportTelegram, setSupportTelegram] = useState<string | null>(null);
   const [channelTelegram, setChannelTelegram] = useState<string | null>(null);
@@ -140,6 +143,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     } catch {
     } finally {
       setIsLoadingBalance(false);
+      setIsInitialized(true);
     }
   }, [initData]);
 
@@ -215,8 +219,10 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
 
   const isServiceActive = useCallback(
     (slug: string): boolean => {
+      if (slug === "generate-docs") {
+        return Boolean(services["generate-docs"] && generateDocsConfig?.isActive);
+      }
       if (services[slug] === false) return false;
-      if (slug === "generate-docs" && generateDocsConfig?.isActive === false) return false;
       return true;
     },
     [services, generateDocsConfig]
@@ -259,6 +265,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         ready,
         isTelegram,
         isAdmin,
+        isInitialized,
         adminSlug,
         supportTelegram,
         channelTelegram,

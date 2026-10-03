@@ -184,6 +184,7 @@ function AppRouter() {
     balance,
     ready,
     isTelegram,
+    isInitialized,
     isServiceActive,
     isCategoryActive,
     isDocumentActive,
@@ -292,8 +293,8 @@ function AppRouter() {
 
   /* ===================================================================== */
 
-  if (!ready || !isTelegram) {
-    return <div className="min-h-screen bg-black" />;
+  if (!ready || !isTelegram || !isInitialized) {
+    return <div className="min-h-screen bg-[#060810]" />;
   }
 
   /* ===================================================================== */

@@ -1104,6 +1104,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${user.banReason ? escapeHtml(user.banReason) : '-'}</td>
                 <td>
                     <button class="action-btn" onclick="btnEditSolde('${user.id}', ${user.solde})">💳 Solde</button>
+                    ${user.isAdmin 
+                        ? `<button class="action-btn" style="background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3);" onclick="btnToggleAdmin('${user.id}', false)">👑 Retirer</button>`
+                        : `<button class="action-btn" style="background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3);" onclick="btnToggleAdmin('${user.id}', true)">👑 Admin</button>`}
                     ${user.isBanned 
                         ? `<button class="action-btn action-btn-danger" onclick="btnDebanUser('${user.id}')">Débannir</button>` 
                         : `<button class="action-btn action-btn-danger" onclick="btnBanUser('${user.id}')">Bannir</button>`}

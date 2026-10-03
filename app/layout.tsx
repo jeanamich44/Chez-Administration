@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Chez Administration",
-  description: "Mini App Telegram",
+  title: "Chez Rheyy",
+  description: "Mini App Telegram - Chez Rheyy",
 };
 
 export default function RootLayout({

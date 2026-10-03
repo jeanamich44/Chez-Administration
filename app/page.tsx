@@ -304,11 +304,11 @@ function AppRouter() {
         <header className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.06] gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black text-[11px] shrink-0">
-              CA
+              CR
             </div>
             <div className="min-w-0">
               <h1 className="text-xs sm:text-sm font-black italic tracking-tight text-white flex items-center gap-1.5 truncate">
-                CHEZ <span className="text-primary">ADMINISTRATION</span>
+                CHEZ <span className="text-primary">RHEYY</span>
               </h1>
             </div>
           </div>

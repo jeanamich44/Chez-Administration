@@ -31,6 +31,7 @@ interface TelegramContextType {
   isInitialized: boolean;
   adminSlug: string | null;
   supportTelegram: string | null;
+  supportTelegram2: string | null;
   channelTelegram: string | null;
   marqueeText: string | null;
   marqueeStyle: string;
@@ -60,6 +61,7 @@ const TelegramContext = createContext<TelegramContextType>({
   isInitialized: false,
   adminSlug: null,
   supportTelegram: null,
+  supportTelegram2: null,
   channelTelegram: null,
   marqueeText: null,
   marqueeStyle: "standard",
@@ -92,6 +94,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [adminSlug, setAdminSlug] = useState<string | null>(null);
   const [supportTelegram, setSupportTelegram] = useState<string | null>(null);
+  const [supportTelegram2, setSupportTelegram2] = useState<string | null>("@NtRheyyTech");
   const [channelTelegram, setChannelTelegram] = useState<string | null>(null);
   const [marqueeText, setMarqueeText] = useState<string | null>(null);
   const [marqueeStyle, setMarqueeStyle] = useState<string>("standard");
@@ -118,6 +121,9 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         setIsAdmin(Boolean(data.admin));
         setAdminSlug(data.admin_slug || null);
         setSupportTelegram(data.support_telegram || null);
+        if (data.support_telegram2 !== undefined) {
+          setSupportTelegram2(data.support_telegram2 || null);
+        }
         setChannelTelegram(data.channel_telegram || null);
         if (data.marquee_text !== undefined) {
           setMarqueeText(data.marquee_text || null);
@@ -268,6 +274,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         isInitialized,
         adminSlug,
         supportTelegram,
+        supportTelegram2,
         channelTelegram,
         marqueeText,
         marqueeStyle,

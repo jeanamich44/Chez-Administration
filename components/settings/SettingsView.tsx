@@ -11,7 +11,7 @@ interface SettingsViewProps {
 }
 
 export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
-  const { user, haptic, isAdmin, adminSlug, supportTelegram, channelTelegram } = useTelegram();
+  const { user, haptic, isAdmin, adminSlug, supportTelegram, supportTelegram2, channelTelegram } = useTelegram();
   const toast = useToast();
 
   const fullName = user
@@ -52,6 +52,13 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
     : null;
   const supportUrl = supportTelegram
     ? `https://t.me/${supportTelegram.replace("@", "")}`
+    : null;
+
+  const supportHandle2 = supportTelegram2
+    ? supportTelegram2.startsWith("@") ? supportTelegram2 : `@${supportTelegram2}`
+    : null;
+  const supportUrl2 = supportTelegram2
+    ? `https://t.me/${supportTelegram2.replace("@", "")}`
     : null;
 
   const channelHandle = channelTelegram
@@ -110,7 +117,7 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
         </div>
       )}
 
-      {(supportUrl || channelUrl) && (
+      {(supportUrl || supportUrl2 || channelUrl) && (
         <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-4 border border-white/[0.06] space-y-2">
           <h3 className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-2">
             Assistance & Communauté
@@ -130,10 +137,31 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-white">Support Technique</p>
-                  <p className="text-[10px] text-white/40">Équipe d'astreinte 7j/7</p>
+                  <p className="text-[10px] text-white/40">Équipe admin 7j/7</p>
                 </div>
               </div>
               <span className="text-[10px] text-primary font-bold">{supportHandle}</span>
+            </a>
+          )}
+
+          {supportUrl2 && (
+            <a
+              href={supportUrl2}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => haptic("selection")}
+              className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
+                  <MessageSquare size={16} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white">Support Technique</p>
+                  <p className="text-[10px] text-white/40">Équipe admin 7j/7</p>
+                </div>
+              </div>
+              <span className="text-[10px] text-primary font-bold">{supportHandle2}</span>
             </a>
           )}
 

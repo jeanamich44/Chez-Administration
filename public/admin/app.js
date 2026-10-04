@@ -308,8 +308,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (valA === undefined || valA === null) valA = '';
             if (valB === undefined || valB === null) valB = '';
 
-            if (typeof valA === 'number' && typeof valB === 'number') {
-                return currentRecentSalesSortDir === 'asc' ? valA - valB : valB - valA;
+            const numA = Number(valA);
+            const numB = Number(valB);
+            if (!isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '') {
+                return currentRecentSalesSortDir === 'asc' ? numA - numB : numB - numA;
             }
             const strA = String(valA).toLowerCase();
             const strB = String(valB).toLowerCase();
@@ -1014,11 +1016,19 @@ document.addEventListener('DOMContentLoaded', () => {
             let valA = a[userSortField];
             let valB = b[userSortField];
 
-            if (typeof valA === 'string') valA = valA.toLowerCase();
-            if (typeof valB === 'string') valB = valB.toLowerCase();
+            if (valA === undefined || valA === null) valA = '';
+            if (valB === undefined || valB === null) valB = '';
 
-            if (valA < valB) return userSortDir === 'asc' ? -1 : 1;
-            if (valA > valB) return userSortDir === 'asc' ? 1 : -1;
+            const numA = Number(valA);
+            const numB = Number(valB);
+            if (!isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '') {
+                return userSortDir === 'asc' ? numA - numB : numB - numA;
+            }
+
+            const strA = String(valA).toLowerCase();
+            const strB = String(valB).toLowerCase();
+            if (strA < strB) return userSortDir === 'asc' ? -1 : 1;
+            if (strA > strB) return userSortDir === 'asc' ? 1 : -1;
             return 0;
         });
 
@@ -1104,9 +1114,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${user.banReason ? escapeHtml(user.banReason) : '-'}</td>
                 <td>
                     <button class="action-btn" onclick="btnEditSolde('${user.id}', ${user.solde})">💳 Solde</button>
-                    ${user.isAdmin 
-                        ? `<button class="action-btn" style="background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3);" onclick="btnToggleAdmin('${user.id}', false)">👑 Retirer</button>`
-                        : `<button class="action-btn" style="background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3);" onclick="btnToggleAdmin('${user.id}', true)">👑 Admin</button>`}
                     ${user.isBanned 
                         ? `<button class="action-btn action-btn-danger" onclick="btnDebanUser('${user.id}')">Débannir</button>` 
                         : `<button class="action-btn action-btn-danger" onclick="btnBanUser('${user.id}')">Bannir</button>`}
@@ -1117,7 +1124,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.addEventListener('contextmenu', (e) => {
                 showDynamicContextMenu(e, [
                     { label: '💳 Modifier le Solde', action: () => btnEditSolde(user.id, user.solde) },
-                    { label: user.isAdmin ? '👑 Retirer Admin' : '👑 Nommer Admin', action: () => btnToggleAdmin(user.id, !user.isAdmin) },
                     { label: user.isBanned ? '🔓 Débannir l\'Utilisateur' : '🚫 Bannir l\'Utilisateur', action: () => user.isBanned ? btnDebanUser(user.id) : btnBanUser(user.id) },
                     { divider: true },
                     { label: '📋 Copier l\'ID Telegram', action: () => { navigator.clipboard.writeText(String(user.id)); showToast(`ID ${user.id} copié !`, 'info'); } },
@@ -1404,19 +1410,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    window.btnToggleAdmin = (userId, newStatus) => {
-        const actionLabel = newStatus ? 'Nommer Administrateur' : 'Retirer les droits Administrateur';
-        openModal(`${actionLabel} (${userId})`, `<p style="margin-bottom: 12px; color: var(--text-secondary);">Êtes-vous sûr de vouloir ${newStatus ? 'nommer administrateur' : 'retirer les droits admin de'} l'utilisateur <code>${userId}</code> ?</p>`, async () => {
-            const res = await apiRequest('/users/admin', 'POST', { userId, admin: newStatus });
-            if (res && res.success) {
-                showToast(`Droits admin ${newStatus ? 'accordés' : 'retirés'} avec succès`, 'success');
-                loadUsersData();
-            } else {
-                showToast('Erreur lors de la modification des droits', 'danger');
-            }
-        });
-    };
-
     // [ STOCK PAGINATION LOGIC ] =============================================
     let rawStockData = [];
     let stockCurrentPage = 1;
@@ -1506,8 +1499,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (valA === undefined || valA === null) valA = '';
             if (valB === undefined || valB === null) valB = '';
 
-            if (typeof valA === 'number' && typeof valB === 'number') {
-                return currentStockSortDir === 'asc' ? valA - valB : valB - valA;
+            const numA = Number(valA);
+            const numB = Number(valB);
+            if (!isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '') {
+                return currentStockSortDir === 'asc' ? numA - numB : numB - numA;
             }
             const strA = String(valA).toLowerCase();
             const strB = String(valB).toLowerCase();
@@ -1761,8 +1756,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (valA === undefined || valA === null) valA = '';
             if (valB === undefined || valB === null) valB = '';
 
-            if (typeof valA === 'number' && typeof valB === 'number') {
-                return currentTransactionsSortDir === 'asc' ? valA - valB : valB - valA;
+            const numA = Number(valA);
+            const numB = Number(valB);
+            if (!isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '') {
+                return currentTransactionsSortDir === 'asc' ? numA - numB : numB - numA;
             }
             const strA = String(valA).toLowerCase();
             const strB = String(valB).toLowerCase();
@@ -2420,6 +2417,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setVal('setting-general-bot-token', data.telegramBotToken);
         setVal('setting-general-bot-name', data.botName);
         setVal('setting-general-support-tg', data.supportTelegram);
+        setVal('setting-general-support-tg-2', data.supportTelegram2);
         setVal('setting-general-channel-tg', data.channelTelegram);
         setVal('setting-general-marquee-text', data.marqueeText);
         setVal('setting-general-marquee-style', data.marqueeStyle || 'standard');
@@ -2522,8 +2520,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (valA === undefined || valA === null) valA = '';
             if (valB === undefined || valB === null) valB = '';
 
-            if (typeof valA === 'number' && typeof valB === 'number') {
-                return currentPaymentsSortDir === 'asc' ? valA - valB : valB - valA;
+            const numA = Number(valA);
+            const numB = Number(valB);
+            if (!isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '') {
+                return currentPaymentsSortDir === 'asc' ? numA - numB : numB - numA;
             }
             const strA = String(valA).toLowerCase();
             const strB = String(valB).toLowerCase();
@@ -2679,6 +2679,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 telegramBotToken: val('setting-general-bot-token'),
                 botName: val('setting-general-bot-name'),
                 supportTelegram: val('setting-general-support-tg'),
+                supportTelegram2: val('setting-general-support-tg-2'),
                 channelTelegram: val('setting-general-channel-tg'),
                 marqueeText: val('setting-general-marquee-text'),
                 marqueeStyle: document.getElementById('setting-general-marquee-style')?.value || 'standard'

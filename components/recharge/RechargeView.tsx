@@ -37,30 +37,34 @@ const PAYMENT_METHODS = [
     badge: "INSTANTANÉ • SÉCURISÉ",
     icon: "💳",
     color: "text-violet-400 border-violet-500/20 bg-violet-500/10",
+    available: true,
   },
   {
     id: "crypto_ltc",
     name: "Litecoin (LTC)",
-    badge: "RECOMMANDÉ • FRAIS MINIMES",
+    badge: "INDISPONIBLE POUR LE MOMENT",
     icon: "Ł",
     color: "text-sky-400 border-sky-500/20 bg-sky-500/10",
     address: "ltc1q9x3j7kvw9h6s2a0z5m9d4l8c3x7v6u1p2e3r4",
+    available: false,
   },
   {
     id: "crypto_usdt",
     name: "USDT (TRC-20)",
-    badge: "INSTANTANÉ",
+    badge: "INDISPONIBLE POUR LE MOMENT",
     icon: "₮",
     color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/10",
     address: "TXYZ9876543210AbCdEfGhIjKlMnOpQrSt",
+    available: false,
   },
   {
     id: "crypto_btc",
     name: "Bitcoin (BTC)",
-    badge: "SÉCURISÉ",
+    badge: "INDISPONIBLE POUR LE MOMENT",
     icon: "₿",
     color: "text-amber-400 border-amber-500/20 bg-amber-500/10",
     address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+    available: false,
   },
 ];
 
@@ -191,7 +195,7 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
     haptic("impact");
 
     if (selectedMethod !== "card") {
-      setShowPaymentModal(true);
+      toast.error("Les paiements en cryptomonnaie sont indisponibles pour le moment.");
       return;
     }
 
@@ -363,33 +367,48 @@ export default function RechargeView({ onBackToServices }: RechargeViewProps) {
         <div className="space-y-2">
           {PAYMENT_METHODS.map((method) => {
             const isSelected = selectedMethod === method.id;
+            const isAvailable = method.available !== false;
             return (
               <button
                 key={method.id}
                 type="button"
                 onClick={() => {
+                  if (!isAvailable) {
+                    haptic("notification");
+                    toast.error("Ce mode de paiement est indisponible pour le moment.");
+                    return;
+                  }
                   haptic("selection");
                   setSelectedMethod(method.id);
                 }}
+                disabled={!isAvailable}
                 className={`w-full p-3 rounded-xl border flex items-center justify-between text-left transition-all ${
-                  isSelected
+                  !isAvailable
+                    ? "bg-white/[0.01] border-white/5 opacity-55 cursor-not-allowed"
+                    : isSelected
                     ? "bg-white/[0.07] border-primary/60 shadow-sm"
                     : "bg-white/[0.02] border-white/5 text-white hover:bg-white/[0.04]"
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm border ${method.color}`}>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm border ${method.color} ${!isAvailable ? "grayscale opacity-50" : ""}`}>
                     {method.icon}
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-white">{method.name}</h4>
-                    <span className="text-[9px] font-black tracking-wider uppercase text-white/40">
+                    <h4 className={`text-xs font-bold ${!isAvailable ? "text-white/60" : "text-white"}`}>{method.name}</h4>
+                    <span className={`text-[9px] font-black tracking-wider uppercase ${!isAvailable ? "text-amber-400/80" : "text-white/40"}`}>
                       {method.badge}
                     </span>
                   </div>
                 </div>
-                <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? "border-primary bg-primary" : "border-white/20"}`}>
-                  {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                  !isAvailable
+                    ? "border-white/10 opacity-30"
+                    : isSelected
+                    ? "border-primary bg-primary"
+                    : "border-white/20"
+                }`}>
+                  {isSelected && isAvailable && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
                 </div>
               </button>
             );

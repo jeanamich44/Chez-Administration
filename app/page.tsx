@@ -71,7 +71,7 @@ const ROOT_SERVICES = [
     iconBg: "bg-rose-500/10 border-rose-500/20",
     gradient: "from-rose-500/10 via-rose-500/5 to-transparent",
     border: "border-rose-500/20 hover:border-rose-400/40",
-    badge: "IPTV",
+    badge: "DÉMO 24H DISPO",
     badgeColor: "bg-rose-500/10 border-rose-500/20 text-rose-400",
   },
   {
@@ -84,7 +84,7 @@ const ROOT_SERVICES = [
     iconBg: "bg-emerald-500/10 border-emerald-500/20",
     gradient: "from-emerald-500/10 via-emerald-500/5 to-transparent",
     border: "border-emerald-500/20 hover:border-emerald-400/40",
-    badge: "EN STOCK",
+    badge: "INSTANTANÉ",
     badgeColor: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
   },
   {
@@ -361,11 +361,13 @@ function AppRouter() {
                                   <h3 className="text-xs font-black italic text-white leading-tight">
                                     {srv.name}
                                   </h3>
-                                  <span
-                                    className={`px-1.5 py-0.5 rounded-full border text-[7px] font-black tracking-wider uppercase shrink-0 ${srv.badgeColor}`}
-                                  >
-                                    {srv.badge}
-                                  </span>
+                                  {srv.badge && (
+                                    <span
+                                      className={`px-1.5 py-0.5 rounded-full border text-[7px] font-black tracking-wider uppercase shrink-0 ${srv.badgeColor}`}
+                                    >
+                                      {srv.badge}
+                                    </span>
+                                  )}
                                 </div>
                                 <p className="text-[10px] text-white/40 font-medium leading-relaxed line-clamp-2">
                                   {srv.description}

@@ -1296,8 +1296,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnReset.addEventListener('click', () => {
                 openModal('Réinitialiser l\'audit d\'audience', `
                     <p style="margin-bottom: 12px; color: var(--text-secondary);">
-                        Voulez-vous réinitialiser tous les statuts d'audience en <strong>En attente</strong> ?<br><br>
-                        <span style="color: #10b981;">Note : Les utilisateurs ayant interagi dans les dernières 48h resteront automatiquement validés (Joignables).</span>
+                        Voulez-vous réinitialiser tous les statuts d'audience en <strong>En attente</strong> ?
                     </p>
                 `, async () => {
                     const res = await apiRequest('/audience/reset', 'POST');

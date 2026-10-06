@@ -1173,6 +1173,144 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    let audiencePollTimer = null;
+    let isAudienceScanning = false;
+
+    async function loadAudienceData() {
+        const data = await apiRequest('/audience');
+        if (!data) return;
+
+        const elTotal = document.getElementById('aud-stat-total');
+        const elReachable = document.getElementById('aud-stat-reachable');
+        const elPct = document.getElementById('aud-stat-pct');
+        const elUnreachable = document.getElementById('aud-stat-unreachable');
+        const elPending = document.getElementById('aud-stat-pending');
+        const elStatusText = document.getElementById('aud-scan-status-text');
+        const elProgressText = document.getElementById('aud-scan-progress-text');
+        const elBar = document.getElementById('aud-progress-bar-fill');
+        const elBadge = document.getElementById('audience-bot-badge');
+        const btnBatch = document.getElementById('btn-scan-audience-batch');
+        const btnAll = document.getElementById('btn-scan-audience-all');
+
+        if (elBadge && data.bot_username) {
+            elBadge.innerText = `@${data.bot_username}`;
+        }
+        if (elTotal) elTotal.innerText = String(data.total_users || 0);
+        if (elReachable) elReachable.innerText = String(data.reachable_count || 0);
+        if (elPct) elPct.innerText = `${data.reachable_percent || 0}% de l'audience`;
+        if (elUnreachable) elUnreachable.innerText = String((data.unreachable_count || 0) + (data.blocked_count || 0));
+        if (elPending) elPending.innerText = String(data.pending_count || 0);
+
+        const wasScanning = isAudienceScanning;
+        isAudienceScanning = !!data.is_scanning;
+
+        if (isAudienceScanning) {
+            if (btnBatch) btnBatch.disabled = true;
+            if (btnAll) btnAll.disabled = true;
+
+            const prog = data.scan_progress || {};
+            const scanned = prog.scanned || 0;
+            const total = prog.total || 1;
+            const pct = Math.min(100, Math.round((scanned / total) * 100));
+
+            if (elStatusText) {
+                elStatusText.innerText = `Audit en cours... ${scanned}/${total} audités (${prog.found_reachable || 0} joignables, ${prog.found_unreachable || 0} non migrés)`;
+            }
+            if (elProgressText) elProgressText.innerText = `${pct}%`;
+            if (elBar) elBar.style.width = `${pct}%`;
+
+            clearTimeout(audiencePollTimer);
+            audiencePollTimer = setTimeout(loadAudienceData, 1500);
+        } else {
+            if (btnBatch) btnBatch.disabled = false;
+            if (btnAll) btnAll.disabled = false;
+
+            const total = data.total_users || 1;
+            const pending = data.pending_count || 0;
+            const audited = total - pending;
+            const coveragePct = Math.min(100, Math.round((audited / total) * 100));
+
+            if (elStatusText) {
+                elStatusText.innerText = pending > 0 
+                    ? `Audit partiel : ${audited}/${total} audités (${pending} en attente)` 
+                    : `Audit complet : tous les utilisateurs ont été vérifiés`;
+            }
+            if (elProgressText) elProgressText.innerText = `${coveragePct}%`;
+            if (elBar) elBar.style.width = `${coveragePct}%`;
+
+            if (wasScanning) {
+                showToast('Audit d\'audience terminé avec succès', 'success');
+                const usersData = await apiRequest('/users');
+                if (usersData && usersData.users) {
+                    allUsers = usersData.users;
+                    applyUsersFilterAndSort();
+                }
+            }
+        }
+    }
+
+    async function triggerAudienceScan(batchSize = 50) {
+        if (isAudienceScanning) return;
+        const btnBatch = document.getElementById('btn-scan-audience-batch');
+        const btnAll = document.getElementById('btn-scan-audience-all');
+        if (btnBatch) btnBatch.disabled = true;
+        if (btnAll) btnAll.disabled = true;
+
+        showToast(batchSize === 0 ? 'Démarrage du scan global...' : `Scan silencieux de ${batchSize} utilisateurs lancé...`, 'info');
+        const res = await apiRequest(`/audience/scan?batch_size=${batchSize}`, 'POST');
+        if (res && res.success) {
+            isAudienceScanning = true;
+            loadAudienceData();
+        } else {
+            if (btnBatch) btnBatch.disabled = false;
+            if (btnAll) btnAll.disabled = false;
+            showToast('Impossible de démarrer le scan', 'danger');
+        }
+    }
+
+    function initAudienceControls() {
+        const btnBatch = document.getElementById('btn-scan-audience-batch');
+        if (btnBatch && !btnBatch.dataset.bound) {
+            btnBatch.dataset.bound = 'true';
+            btnBatch.addEventListener('click', () => triggerAudienceScan(50));
+        }
+
+        const btnAll = document.getElementById('btn-scan-audience-all');
+        if (btnAll && !btnAll.dataset.bound) {
+            btnAll.dataset.bound = 'true';
+            btnAll.addEventListener('click', () => {
+                openModal('Confirmer le scan complet', `
+                    <p style="margin-bottom: 12px; color: var(--text-secondary);">
+                        Vous êtes sur le point de scanner l'ensemble des utilisateurs non encore audités.<br><br>
+                        • Totalement silencieux (0 message envoyé).<br>
+                        • Vitesse régulée : 4 requêtes / seconde.<br>
+                        • Le scan continuera en tâche de fond sur le serveur.
+                    </p>
+                `, () => triggerAudienceScan(0));
+            });
+        }
+
+        const btnReset = document.getElementById('btn-reset-audience');
+        if (btnReset && !btnReset.dataset.bound) {
+            btnReset.dataset.bound = 'true';
+            btnReset.addEventListener('click', () => {
+                openModal('Réinitialiser l\'audit d\'audience', `
+                    <p style="margin-bottom: 12px; color: var(--text-secondary);">
+                        Voulez-vous réinitialiser tous les statuts d'audience en <strong>En attente</strong> ?<br><br>
+                        <span style="color: #10b981;">Note : Les utilisateurs ayant interagi dans les dernières 48h resteront automatiquement validés (Joignables).</span>
+                    </p>
+                `, async () => {
+                    const res = await apiRequest('/audience/reset', 'POST');
+                    if (res && res.success) {
+                        showToast('Audit réinitialisé', 'success');
+                        loadAudienceData();
+                        loadUsersData();
+                    }
+                });
+            });
+        }
+    }
+
     let allUsers = [];
     let userSortField = 'userNumber';
     let userSortDir = 'asc';
@@ -1180,6 +1318,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let usersPerPage = 10;
 
     async function loadUsersData() {
+        initAudienceControls();
+        loadAudienceData();
         const data = await apiRequest('/users');
         if (!data) return;
 
@@ -1201,6 +1341,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return String(u.id).includes(q) ||
                    String(u.userNumber).includes(q) ||
                    (u.username && u.username.toLowerCase().includes(q)) ||
+                   (u.reachableStatus && u.reachableStatus.toLowerCase().includes(q)) ||
                    String(u.solde).includes(q) ||
                    (u.banReason && u.banReason.toLowerCase().includes(q));
         });
@@ -1225,7 +1366,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return 0;
         });
 
-        // Update Sort Arrow Indicators
         document.querySelectorAll('.sortable-th').forEach(th => {
             const field = th.getAttribute('data-sort');
             const arrowSpan = th.querySelector('.sort-arrow');
@@ -1240,7 +1380,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Pagination Slice
         const totalItems = filtered.length;
         let perPage = usersPerPage === 'all' ? totalItems : parseInt(usersPerPage) || 10;
         if (perPage <= 0) perPage = 10;
@@ -1253,7 +1392,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const endIdx = usersPerPage === 'all' ? totalItems : Math.min(startIdx + perPage, totalItems);
         const pageItems = filtered.slice(startIdx, endIdx);
 
-        // Update Pagination Info UI
         const infoElem = document.getElementById('users-pagination-info');
         if (infoElem) {
             infoElem.innerText = totalItems > 0 
@@ -1278,7 +1416,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const tbody = document.getElementById('users-table');
         tbody.innerHTML = '';
         if (users.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 24px;">Aucun utilisateur trouvé.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-secondary); padding: 24px;">Aucun utilisateur trouvé.</td></tr>`;
             return;
         }
 
@@ -1293,6 +1431,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? `<span style="color: #6366f1; font-weight: 600;">${escapeHtml(user.username)}</span>` 
                 : `<span style="color: var(--text-secondary); font-style: italic; opacity: 0.6;">-</span>`;
 
+            let audienceBadge = '<span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3);">⏳ En attente</span>';
+            if (user.reachableStatus === 'REACHABLE') {
+                audienceBadge = '<span class="badge badge-success" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">🟢 Joignable</span>';
+            } else if (user.reachableStatus === 'UNREACHABLE') {
+                audienceBadge = '<span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">🔴 Non Migré</span>';
+            } else if (user.reachableStatus === 'BLOCKED') {
+                audienceBadge = '<span class="badge badge-warning" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">🚫 Bloqué</span>';
+            }
+
             const idHtml = user.isAdmin 
                 ? `<code style="color: #ef4444; font-weight: 700; background: rgba(239, 68, 68, 0.18); border: 1px solid rgba(239, 68, 68, 0.4); padding: 2px 8px; border-radius: 4px;">${user.id} 👑 ADMIN</code>` 
                 : `<code>${user.id}</code>`;
@@ -1301,6 +1448,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td><span class="badge badge-info" style="font-weight: 700; background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);">#${user.userNumber || '?'}</span></td>
                 <td>${idHtml}</td>
                 <td>${unameBadge}</td>
+                <td>${audienceBadge}</td>
                 <td><strong>${user.solde.toFixed(2)} €</strong></td>
                 <td>${user.achats}</td>
                 <td>${statusBadge}</td>

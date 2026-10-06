@@ -643,16 +643,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const cpuPct = parseFloat(rCpu.percent || 0);
         setTxt('render-cpu-pct', `${cpuPct.toFixed(1)}%`);
-        setTxt('render-cpu-sub', `${rCpu.cores || 1} vCPU alloué(s)`);
+        setTxt('render-cpu-sub', `${rCpu.cores || 1} vCPU alloué (Conteneur)`);
         setTxt('render-cpu-cores', `${rCpu.cores || 1} vCPU`);
-        setTxt('render-cpu-load', rCpu.load_avg ? rCpu.load_avg.join(', ') : 'N/A (Linux cgroup)');
+        const loadTxt = rCpu.load_avg ? rCpu.load_avg.join(', ') : 'N/A';
+        setTxt('render-cpu-host', `${rCpu.host_cores || 8} vCPU (Load : ${loadTxt})`);
         setProgress('render-cpu-bar', cpuPct);
         const cpuStatusEl = document.getElementById('render-cpu-status');
         if (cpuStatusEl) {
-            if (cpuPct < 60) {
+            if (cpuPct < 50) {
                 cpuStatusEl.innerText = 'Nominal (Faible charge)';
                 cpuStatusEl.style.color = '#10b981';
-            } else if (cpuPct < 85) {
+            } else if (cpuPct < 80) {
                 cpuStatusEl.innerText = 'Actif (Charge modérée)';
                 cpuStatusEl.style.color = '#f59e0b';
             } else {
@@ -666,12 +667,12 @@ document.addEventListener('DOMContentLoaded', () => {
         setTxt('render-ram-sub', `${rMem.used_mb || 0} MB / ${rMem.total_mb || 512} MB`);
         setTxt('render-ram-used', `${rMem.used_mb || 0} MB`);
         setTxt('render-ram-free', `${rMem.free_mb || 0} MB`);
-        setTxt('render-ram-rss', `${rMem.process_rss_mb || 0} MB`);
+        setTxt('render-ram-cgroup', `${rMem.cgroup_used_mb || rMem.used_mb || 0} MB`);
         setProgress('render-ram-bar', ramPct);
 
         const diskPct = parseFloat(rDisk.percent || 0);
         setTxt('render-disk-pct', `${diskPct.toFixed(1)}%`);
-        setTxt('render-disk-sub', `${rDisk.used_gb || 0} GB / ${rDisk.total_gb || 0} GB`);
+        setTxt('render-disk-sub', `Système hôte conteneur`);
         setTxt('render-disk-used', `${rDisk.used_gb || 0} GB`);
         setTxt('render-disk-free', `${rDisk.free_gb || 0} GB`);
         setTxt('render-disk-total', `${rDisk.total_gb || 0} GB`);

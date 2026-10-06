@@ -225,8 +225,8 @@
                             <div class="infra-card-top">
                                 <div>
                                     <div class="infra-card-value" id="render-cpu-pct">0.0%</div>
-                                    <div class="infra-card-label">CPU Processeur</div>
-                                    <div class="infra-card-sub" id="render-cpu-sub">0 vCPU alloué</div>
+                                    <div class="infra-card-label">CPU Conteneur Render</div>
+                                    <div class="infra-card-sub" id="render-cpu-sub">Quota CGroup alloué</div>
                                 </div>
                                 <div class="infra-card-icon" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">⚡</div>
                             </div>
@@ -236,15 +236,15 @@
                         </div>
                         <div>
                             <div class="infra-details-row">
-                                <span class="infra-details-label">Cœurs Processeur</span>
+                                <span class="infra-details-label">Quota Processeur</span>
                                 <span class="infra-details-val" id="render-cpu-cores">1 vCPU</span>
                             </div>
                             <div class="infra-details-row">
-                                <span class="infra-details-label">Load Average (1m, 5m, 15m)</span>
-                                <span class="infra-details-val" id="render-cpu-load">-</span>
+                                <span class="infra-details-label">Serveur Hôte Render</span>
+                                <span class="infra-details-val" id="render-cpu-host">8 vCPU</span>
                             </div>
                             <div class="infra-details-row">
-                                <span class="infra-details-label">Statut CPU</span>
+                                <span class="infra-details-label">Statut Conteneur</span>
                                 <span class="infra-details-val" id="render-cpu-status" style="color: #10b981;">Nominal</span>
                             </div>
                         </div>
@@ -255,7 +255,7 @@
                             <div class="infra-card-top">
                                 <div>
                                     <div class="infra-card-value" id="render-ram-pct">0.0%</div>
-                                    <div class="infra-card-label">Mémoire RAM</div>
+                                    <div class="infra-card-label">Mémoire RAM Conteneur</div>
                                     <div class="infra-card-sub" id="render-ram-sub">0 MB / 512 MB</div>
                                 </div>
                                 <div class="infra-card-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">🧠</div>
@@ -266,7 +266,7 @@
                         </div>
                         <div>
                             <div class="infra-details-row">
-                                <span class="infra-details-label">Mémoire Utilisée</span>
+                                <span class="infra-details-label">Mémoire Utilisée (RSS)</span>
                                 <span class="infra-details-val" id="render-ram-used">0 MB</span>
                             </div>
                             <div class="infra-details-row">
@@ -274,8 +274,8 @@
                                 <span class="infra-details-val" id="render-ram-free">0 MB</span>
                             </div>
                             <div class="infra-details-row">
-                                <span class="infra-details-label">Process RSS</span>
-                                <span class="infra-details-val" id="render-ram-rss">0 MB</span>
+                                <span class="infra-details-label">CGroup Actif</span>
+                                <span class="infra-details-val" id="render-ram-cgroup">0 MB</span>
                             </div>
                         </div>
                     </div>

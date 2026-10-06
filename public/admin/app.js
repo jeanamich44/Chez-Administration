@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const hash = (window.location.hash || '').replace('#', '').trim();
         const savedTab = localStorage.getItem('admin_active_tab') || 'dashboard';
-        const validTabs = ['dashboard', 'metrics', 'users', 'stock', 'payments', 'transactions', 'amendes', 'settings', 'database'];
+        const validTabs = ['dashboard', 'infrastructure', 'metrics', 'users', 'stock', 'payments', 'transactions', 'amendes', 'settings', 'database'];
         const activeTab = validTabs.includes(hash) ? hash : (validTabs.includes(savedTab) ? savedTab : 'dashboard');
 
         window.switchTab(activeTab);
@@ -188,6 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const titleMap = {
                 'dashboard': 'Vue d\'Ensemble',
+                'infrastructure': '🖥️ Infrastructure Cloud (Render & Aiven)',
                 'metrics': '⚡ Métriques & Trafic Système',
                 'users': 'Gestion des Utilisateurs',
                 'stock': 'Gestion du Stock Carrefour',
@@ -200,6 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pageTitleHeading.innerText = titleMap[tab] || 'Administration';
 
             if (tab === 'dashboard') loadDashboardData();
+            else if (tab === 'infrastructure') startInfrastructureLivePolling();
             else if (tab === 'metrics') startMetricsLivePolling();
             else if (tab === 'users') loadUsersData();
             else if (tab === 'stock') loadStockData();
@@ -572,6 +574,196 @@ document.addEventListener('DOMContentLoaded', () => {
             if (vercelVal) vercelVal.innerText = 'Erreur';
         }
     }
+
+    /* ===================================================================== */
+
+    let infraLiveInterval = null;
+
+    function startInfrastructureLivePolling() {
+        if (infraLiveInterval) clearInterval(infraLiveInterval);
+        loadInfrastructureData();
+        infraLiveInterval = setInterval(() => {
+            const activeTab = localStorage.getItem('admin_active_tab');
+            if (activeTab === 'infrastructure') {
+                loadInfrastructureData();
+            } else {
+                clearInterval(infraLiveInterval);
+                infraLiveInterval = null;
+            }
+        }, 5000);
+    }
+
+    async function loadInfrastructureData() {
+        const lastUpdatedEl = document.getElementById('infra-last-updated');
+        const data = await apiRequest('/infrastructure/metrics');
+        if (!data || !data.render || !data.aiven) {
+            if (lastUpdatedEl) lastUpdatedEl.innerText = 'Erreur de synchronisation';
+            return;
+        }
+
+        if (lastUpdatedEl) {
+            const now = new Date();
+            const pad = n => n.toString().padStart(2, '0');
+            lastUpdatedEl.innerText = `Mis à jour à ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        }
+
+        const render = data.render || {};
+        const rCpu = render.cpu || {};
+        const rMem = render.memory || {};
+        const rDisk = render.disk || {};
+        const rNet = render.network || {};
+        const rApp = render.app || {};
+
+        const setTxt = (id, txt) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = txt;
+        };
+
+        const setProgress = (barId, pct, inverse = false) => {
+            const bar = document.getElementById(barId);
+            if (!bar) return;
+            const cleanPct = Math.min(100, Math.max(0, pct || 0));
+            bar.style.width = `${cleanPct}%`;
+            bar.className = 'infra-progress-fill';
+            if (inverse) {
+                if (cleanPct >= 98) bar.classList.add('green');
+                else if (cleanPct >= 90) bar.classList.add('orange');
+                else bar.classList.add('red');
+            } else {
+                if (cleanPct < 65) bar.classList.add('green');
+                else if (cleanPct < 85) bar.classList.add('orange');
+                else bar.classList.add('red');
+            }
+        };
+
+        setTxt('render-meta-service', rApp.service_name || 'backend-app');
+        setTxt('render-meta-instance', rApp.instance_id || 'inst-1');
+        setTxt('render-meta-uptime', rApp.uptime_formatted || '0m 0s');
+        setTxt('render-meta-commit', (rApp.commit || 'head').slice(0, 10));
+
+        const cpuPct = parseFloat(rCpu.percent || 0);
+        setTxt('render-cpu-pct', `${cpuPct.toFixed(1)}%`);
+        setTxt('render-cpu-sub', `${rCpu.cores || 1} vCPU alloué(s)`);
+        setTxt('render-cpu-cores', `${rCpu.cores || 1} vCPU`);
+        setTxt('render-cpu-load', rCpu.load_avg ? rCpu.load_avg.join(', ') : 'N/A (Linux cgroup)');
+        setProgress('render-cpu-bar', cpuPct);
+        const cpuStatusEl = document.getElementById('render-cpu-status');
+        if (cpuStatusEl) {
+            if (cpuPct < 60) {
+                cpuStatusEl.innerText = 'Nominal (Faible charge)';
+                cpuStatusEl.style.color = '#10b981';
+            } else if (cpuPct < 85) {
+                cpuStatusEl.innerText = 'Actif (Charge modérée)';
+                cpuStatusEl.style.color = '#f59e0b';
+            } else {
+                cpuStatusEl.innerText = 'Élevé (Attention)';
+                cpuStatusEl.style.color = '#ef4444';
+            }
+        }
+
+        const ramPct = parseFloat(rMem.percent || 0);
+        setTxt('render-ram-pct', `${ramPct.toFixed(1)}%`);
+        setTxt('render-ram-sub', `${rMem.used_mb || 0} MB / ${rMem.total_mb || 512} MB`);
+        setTxt('render-ram-used', `${rMem.used_mb || 0} MB`);
+        setTxt('render-ram-free', `${rMem.free_mb || 0} MB`);
+        setTxt('render-ram-rss', `${rMem.process_rss_mb || 0} MB`);
+        setProgress('render-ram-bar', ramPct);
+
+        const diskPct = parseFloat(rDisk.percent || 0);
+        setTxt('render-disk-pct', `${diskPct.toFixed(1)}%`);
+        setTxt('render-disk-sub', `${rDisk.used_gb || 0} GB / ${rDisk.total_gb || 0} GB`);
+        setTxt('render-disk-used', `${rDisk.used_gb || 0} GB`);
+        setTxt('render-disk-free', `${rDisk.free_gb || 0} GB`);
+        setTxt('render-disk-total', `${rDisk.total_gb || 0} GB`);
+        setProgress('render-disk-bar', diskPct);
+
+        setTxt('render-net-egress', `${rNet.egress_mb || 0} MB`);
+        setTxt('render-net-sub', `Ingress : ${rNet.ingress_mb || 0} MB`);
+        setTxt('render-net-egress-rate', `${rNet.egress_rate_kbps || 0} KB/s`);
+        setTxt('render-net-ingress-rate', `${rNet.ingress_rate_kbps || 0} KB/s`);
+        setTxt('render-net-packets', `${rNet.packets_sent || 0} TX / ${rNet.packets_recv || 0} RX`);
+
+        setTxt('render-http-total', String(rApp.total_requests || 0));
+        setTxt('render-http-rps', `${rApp.rps || 0} req/s`);
+        setTxt('render-http-latency', `${rApp.avg_latency_ms || 0} ms`);
+        setTxt('render-http-2xx', String(rApp.status_2xx || 0));
+        setTxt('render-http-4xx', String(rApp.status_4xx || 0));
+        setTxt('render-http-5xx', String(rApp.status_5xx || 0));
+
+        const aiven = data.aiven || {};
+        const aCpu = aiven.cpu_and_activity || {};
+        const aMem = aiven.memory_cache || {};
+        const aVol = aiven.storage_volume || {};
+        const aNet = aiven.networking_io || {};
+
+        setTxt('aiven-meta-version', `PostgreSQL ${aNet.server_version || '18'}`);
+        setTxt('aiven-meta-maxconn', `${aCpu.max_connections || 20} max`);
+        setTxt('aiven-meta-cache', `${aMem.cache_hit_ratio_percent || 100}%`);
+
+        const connSat = parseFloat(aCpu.connection_saturation_percent || 0);
+        setTxt('aiven-conn-saturation', `${connSat.toFixed(1)}%`);
+        setTxt('aiven-conn-sub', `${aCpu.current_connections || 0} / ${aCpu.max_connections || 20} connexions`);
+        setTxt('aiven-conn-active', String(aCpu.active_queries || 0));
+        setTxt('aiven-conn-idle', `${aCpu.idle_connections || 0} (tx: ${aCpu.idle_in_transaction || 0})`);
+        setTxt('aiven-commit-ratio', `${aCpu.commit_ratio_percent || 100}%`);
+        setProgress('aiven-conn-bar', connSat);
+
+        const cacheRatio = parseFloat(aMem.cache_hit_ratio_percent || 100);
+        setTxt('aiven-cache-ratio', `${cacheRatio.toFixed(2)}%`);
+        setTxt('aiven-blks-hit', (aMem.blks_hit || 0).toLocaleString('fr-FR'));
+        setTxt('aiven-blks-read', (aMem.blks_read || 0).toLocaleString('fr-FR'));
+        setTxt('aiven-shared-buf', `${aMem.shared_buffers || '-'} pages`);
+        setProgress('aiven-cache-bar', cacheRatio, true);
+
+        setTxt('aiven-db-size', aVol.total_size_pretty || '0 kB');
+        setTxt('aiven-temp-files', String(aVol.temp_files || 0));
+        setTxt('aiven-temp-bytes', `${((aVol.temp_bytes || 0) / 1024).toFixed(1)} kB`);
+        setTxt('aiven-xact-commits', (aCpu.xact_commit || 0).toLocaleString('fr-FR'));
+
+        setTxt('aiven-tup-returned', (aNet.tup_returned || 0).toLocaleString('fr-FR'));
+        setTxt('aiven-tup-fetched', (aNet.tup_fetched || 0).toLocaleString('fr-FR'));
+        const writesTotal = (aNet.tup_inserted || 0) + (aNet.tup_updated || 0) + (aNet.tup_deleted || 0);
+        setTxt('aiven-tup-writes', writesTotal.toLocaleString('fr-FR'));
+        setTxt('aiven-deadlocks', `${aNet.deadlocks || 0} (conflits: ${aNet.conflicts || 0})`);
+
+        const tablesBody = document.getElementById('aiven-top-tables-body');
+        if (tablesBody && aVol.top_tables && aVol.top_tables.length > 0) {
+            const dbTotalBytes = aVol.total_size_bytes || 1;
+            tablesBody.innerHTML = aVol.top_tables.map(t => {
+                const part = Math.min(100, Math.max(0, ((t.bytes / dbTotalBytes) * 100))).toFixed(1);
+                return `
+                    <tr>
+                        <td style="font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6366f1;">📄</span> ${escapeHtml(t.name)}
+                        </td>
+                        <td style="font-weight: 700; color: #10b981;">${escapeHtml(t.pretty_size)}</td>
+                        <td style="font-family: ui-monospace, monospace; color: var(--text-secondary); font-size: 13px;">${(t.bytes || 0).toLocaleString('fr-FR')} o</td>
+                        <td style="color: var(--text-primary); font-weight: 600;">${(t.rows || 0).toLocaleString('fr-FR')} lignes</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; min-width: 60px;">
+                                    <div style="width: ${part}%; height: 100%; background: #6366f1; border-radius: 999px;"></div>
+                                </div>
+                                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); width: 42px;">${part}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+
+    const btnRefreshInfra = document.getElementById('btn-refresh-infra');
+    if (btnRefreshInfra) {
+        btnRefreshInfra.addEventListener('click', async () => {
+            btnRefreshInfra.innerText = '🔄 Actualisation...';
+            await loadInfrastructureData();
+            btnRefreshInfra.innerText = '🔄 Actualiser';
+            showToast('Métriques d\'infrastructure actualisées', 'info');
+        });
+    }
+
+    /* ===================================================================== */
 
     let metricsLiveInterval = null;
 

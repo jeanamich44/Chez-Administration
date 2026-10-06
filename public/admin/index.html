@@ -33,6 +33,9 @@
                 <a class="nav-item active" data-tab="dashboard">
                     <span>📊</span> Vue d'Ensemble
                 </a>
+                <a class="nav-item" data-tab="infrastructure">
+                    <span>🖥️</span> Infrastructure Cloud
+                </a>
                 <a class="nav-item" data-tab="metrics">
                     <span>⚡</span> Métriques & Trafic
                 </a>
@@ -82,13 +85,13 @@
 
             <div id="tab-dashboard" class="tab-content">
                 <div class="system-status-pills">
-                    <div class="status-pill" id="status-pill-render" title="Backend Render">
+                    <div class="status-pill" id="status-pill-render" title="Backend Render (Cliquer pour voir les métriques)" style="cursor: pointer;" onclick="switchTab('infrastructure')">
                         <span class="status-dot"></span>
                         <span>Render :</span>
                         <strong id="status-val-render" style="color: var(--text-primary);">Vérification...</strong>
                         <span id="status-meta-render" class="status-meta-tag" style="display: none;"></span>
                     </div>
-                    <div class="status-pill" id="status-pill-db" title="Base de données PostgreSQL Aiven">
+                    <div class="status-pill" id="status-pill-db" title="Base de données PostgreSQL Aiven (Cliquer pour voir les métriques)" style="cursor: pointer;" onclick="switchTab('infrastructure')">
                         <span class="status-dot"></span>
                         <span>Aiven BDD :</span>
                         <strong id="status-val-db" style="color: var(--text-primary);">Vérification...</strong>
@@ -177,6 +180,358 @@
                                 <button id="btn-recent-sales-next" class="action-btn" style="padding: 6px 12px;">Suivant ▶</button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-infrastructure" class="tab-content" style="display: none;">
+                <div class="card-panel" style="margin-bottom: 24px; padding: 20px 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                        <div>
+                            <h2 style="font-size: 20px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px;">
+                                <span>🖥️</span> Infrastructure Cloud & Télémétrie
+                            </h2>
+                            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                                Supervision temps réel des ressources du conteneur Render et du cluster PostgreSQL Aiven
+                            </p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <span style="font-size: 12px; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 5px 12px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; gap: 6px;">
+                                <span style="width: 7px; height: 7px; background: #10b981; border-radius: 50%; display: inline-block;"></span> Live (5s)
+                            </span>
+                            <span id="infra-last-updated" style="font-size: 12px; color: var(--text-secondary); font-family: ui-monospace, monospace;">En attente...</span>
+                            <button id="btn-refresh-infra" class="action-btn" style="padding: 6px 14px; font-size: 13px;">
+                                🔄 Actualiser
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="infra-header-card">
+                    <div class="infra-section-title">
+                        <span>🚀</span> Conteneur Backend Render (FastAPI / Python)
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span class="infra-meta-chip">🆔 Service : <strong id="render-meta-service" style="color: var(--text-primary);">-</strong></span>
+                        <span class="infra-meta-chip">📦 Instance : <strong id="render-meta-instance" style="color: var(--text-primary);">-</strong></span>
+                        <span class="infra-meta-chip">⏱️ Uptime : <strong id="render-meta-uptime" style="color: #10b981;">0m 0s</strong></span>
+                        <span class="infra-meta-chip">🔖 Commit : <strong id="render-meta-commit" style="color: var(--text-primary);">-</strong></span>
+                    </div>
+                </div>
+
+                <div class="infra-cards-grid">
+                    <div class="infra-card">
+                        <div>
+                            <div class="infra-card-top">
+                                <div>
+                                    <div class="infra-card-value" id="render-cpu-pct">0.0%</div>
+                                    <div class="infra-card-label">CPU Processeur</div>
+                                    <div class="infra-card-sub" id="render-cpu-sub">0 vCPU alloué</div>
+                                </div>
+                                <div class="infra-card-icon" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">⚡</div>
+                            </div>
+                            <div class="infra-progress-track">
+                                <div id="render-cpu-bar" class="infra-progress-fill green" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Cœurs Processeur</span>
+                                <span class="infra-details-val" id="render-cpu-cores">1 vCPU</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Load Average (1m, 5m, 15m)</span>
+                                <span class="infra-details-val" id="render-cpu-load">-</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Statut CPU</span>
+                                <span class="infra-details-val" id="render-cpu-status" style="color: #10b981;">Nominal</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="infra-card">
+                        <div>
+                            <div class="infra-card-top">
+                                <div>
+                                    <div class="infra-card-value" id="render-ram-pct">0.0%</div>
+                                    <div class="infra-card-label">Mémoire RAM</div>
+                                    <div class="infra-card-sub" id="render-ram-sub">0 MB / 512 MB</div>
+                                </div>
+                                <div class="infra-card-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">🧠</div>
+                            </div>
+                            <div class="infra-progress-track">
+                                <div id="render-ram-bar" class="infra-progress-fill green" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Mémoire Utilisée</span>
+                                <span class="infra-details-val" id="render-ram-used">0 MB</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Mémoire Libre</span>
+                                <span class="infra-details-val" id="render-ram-free">0 MB</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Process RSS</span>
+                                <span class="infra-details-val" id="render-ram-rss">0 MB</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="infra-card">
+                        <div>
+                            <div class="infra-card-top">
+                                <div>
+                                    <div class="infra-card-value" id="render-disk-pct">0.0%</div>
+                                    <div class="infra-card-label">Volume Stockage Disque</div>
+                                    <div class="infra-card-sub" id="render-disk-sub">Racine Conteneur</div>
+                                </div>
+                                <div class="infra-card-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">💾</div>
+                            </div>
+                            <div class="infra-progress-track">
+                                <div id="render-disk-bar" class="infra-progress-fill green" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Disque Utilisé</span>
+                                <span class="infra-details-val" id="render-disk-used">0 GB</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Disque Disponible</span>
+                                <span class="infra-details-val" id="render-disk-free">0 GB</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Capacité Totale</span>
+                                <span class="infra-details-val" id="render-disk-total">0 GB</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="infra-card">
+                        <div>
+                            <div class="infra-card-top">
+                                <div>
+                                    <div class="infra-card-value" id="render-net-egress">0.0 MB</div>
+                                    <div class="infra-card-label">Egress Réseau Sortant</div>
+                                    <div class="infra-card-sub" id="render-net-sub">Ingress : 0.0 MB</div>
+                                </div>
+                                <div class="infra-card-icon" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;">🌐</div>
+                            </div>
+                            <div class="infra-progress-track">
+                                <div id="render-net-bar" class="infra-progress-fill green" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Débit Egress Sortant</span>
+                                <span class="infra-details-val" id="render-net-egress-rate">0.0 KB/s</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Débit Ingress Entrant</span>
+                                <span class="infra-details-val" id="render-net-ingress-rate">0.0 KB/s</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Paquets TX / RX</span>
+                                <span class="infra-details-val" id="render-net-packets">0 / 0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-panel" style="margin-bottom: 30px;">
+                    <div class="card-panel-header" style="margin-bottom: 16px;">
+                        <h3 class="card-panel-title" style="display: flex; align-items: center; gap: 8px;">
+                            <span>📡</span> Networking Applicatif & Requêtes HTTP Render
+                        </h3>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: var(--radius-sm); padding: 14px;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Total Requêtes Traitées</div>
+                            <div style="font-size: 22px; font-weight: 800; color: #6366f1;" id="render-http-total">0</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: var(--radius-sm); padding: 14px;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Débit Requêtes (RPS)</div>
+                            <div style="font-size: 22px; font-weight: 800; color: #10b981;" id="render-http-rps">0.0 req/s</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: var(--radius-sm); padding: 14px;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Latence Moyenne</div>
+                            <div style="font-size: 22px; font-weight: 800; color: #f59e0b;" id="render-http-latency">0.0 ms</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: var(--radius-sm); padding: 14px;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Succès (2xx HTTP)</div>
+                            <div style="font-size: 22px; font-weight: 800; color: #10b981;" id="render-http-2xx">0</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: var(--radius-sm); padding: 14px;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Erreurs Client (4xx)</div>
+                            <div style="font-size: 22px; font-weight: 800; color: #f59e0b;" id="render-http-4xx">0</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: var(--radius-sm); padding: 14px;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Erreurs Serveur (5xx)</div>
+                            <div style="font-size: 22px; font-weight: 800; color: #ef4444;" id="render-http-5xx">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="infra-header-card">
+                    <div class="infra-section-title">
+                        <span>🗄️</span> Cluster PostgreSQL Aiven Cloud
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span class="infra-meta-chip">🐘 Version : <strong id="aiven-meta-version" style="color: var(--text-primary);">-</strong></span>
+                        <span class="infra-meta-chip">🔒 SSL : <strong style="color: #10b981;">TLS Activé</strong></span>
+                        <span class="infra-meta-chip">🔌 Connexions Max : <strong id="aiven-meta-maxconn" style="color: var(--text-primary);">-</strong></span>
+                        <span class="infra-meta-chip">⚡ Cache Hit : <strong id="aiven-meta-cache" style="color: #10b981;">100%</strong></span>
+                    </div>
+                </div>
+
+                <div class="infra-cards-grid">
+                    <div class="infra-card">
+                        <div>
+                            <div class="infra-card-top">
+                                <div>
+                                    <div class="infra-card-value" id="aiven-conn-saturation">0.0%</div>
+                                    <div class="infra-card-label">Saturation des Connexions</div>
+                                    <div class="infra-card-sub" id="aiven-conn-sub">0 / 20 connexions</div>
+                                </div>
+                                <div class="infra-card-icon" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">🔌</div>
+                            </div>
+                            <div class="infra-progress-track">
+                                <div id="aiven-conn-bar" class="infra-progress-fill green" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Requêtes Actives</span>
+                                <span class="infra-details-val" id="aiven-conn-active">0</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Connexions Idle</span>
+                                <span class="infra-details-val" id="aiven-conn-idle">0</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Ratio de Commits</span>
+                                <span class="infra-details-val" id="aiven-commit-ratio" style="color: #10b981;">100%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="infra-card">
+                        <div>
+                            <div class="infra-card-top">
+                                <div>
+                                    <div class="infra-card-value" id="aiven-cache-ratio">100.0%</div>
+                                    <div class="infra-card-label">Buffer Cache Hit Ratio</div>
+                                    <div class="infra-card-sub">Performance RAM PostgreSQL</div>
+                                </div>
+                                <div class="infra-card-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">🎯</div>
+                            </div>
+                            <div class="infra-progress-track">
+                                <div id="aiven-cache-bar" class="infra-progress-fill green" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Blocs Lus en RAM</span>
+                                <span class="infra-details-val" id="aiven-blks-hit">0</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Blocs Lus sur Disque</span>
+                                <span class="infra-details-val" id="aiven-blks-read">0</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Configuration shared_buffers</span>
+                                <span class="infra-details-val" id="aiven-shared-buf">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="infra-card">
+                        <div>
+                            <div class="infra-card-top">
+                                <div>
+                                    <div class="infra-card-value" id="aiven-db-size">0 kB</div>
+                                    <div class="infra-card-label">Volume Stockage BDD</div>
+                                    <div class="infra-card-sub" id="aiven-db-sub">Données + Index</div>
+                                </div>
+                                <div class="infra-card-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">📦</div>
+                            </div>
+                            <div class="infra-progress-track">
+                                <div class="infra-progress-fill green" style="width: 10%;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Fichiers Temporaires</span>
+                                <span class="infra-details-val" id="aiven-temp-files">0</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Volume Données Temp</span>
+                                <span class="infra-details-val" id="aiven-temp-bytes">0 octets</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Transactions Validées</span>
+                                <span class="infra-details-val" id="aiven-xact-commits">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="infra-card">
+                        <div>
+                            <div class="infra-card-top">
+                                <div>
+                                    <div class="infra-card-value" id="aiven-tup-returned">0</div>
+                                    <div class="infra-card-label">Networking Tuples I/O</div>
+                                    <div class="infra-card-sub">Flux de lecture / écriture</div>
+                                </div>
+                                <div class="infra-card-icon" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;">🔄</div>
+                            </div>
+                            <div class="infra-progress-track">
+                                <div class="infra-progress-fill green" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Tuples Lus (Fetched)</span>
+                                <span class="infra-details-val" id="aiven-tup-fetched">0</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Tuples Écrits (Ins/Upd/Del)</span>
+                                <span class="infra-details-val" id="aiven-tup-writes">0</span>
+                            </div>
+                            <div class="infra-details-row">
+                                <span class="infra-details-label">Conflits / Deadlocks</span>
+                                <span class="infra-details-val" id="aiven-deadlocks">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-panel">
+                    <div class="card-panel-header" style="margin-bottom: 16px;">
+                        <h3 class="card-panel-title" style="display: flex; align-items: center; gap: 8px;">
+                            <span>📊</span> Répartition du Stockage par Table (Aiven PostgreSQL)
+                        </h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nom de la Table</th>
+                                    <th>Taille Totale (Données + Index)</th>
+                                    <th>Octets Bruts</th>
+                                    <th>Lignes Estimées</th>
+                                    <th>Part Estimée</th>
+                                </tr>
+                            </thead>
+                            <tbody id="aiven-top-tables-body">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 24px;">Chargement des données...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

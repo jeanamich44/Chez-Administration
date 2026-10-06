@@ -36,6 +36,7 @@ interface IptvSubscription {
   months: number;
   price: number;
   url: string | null;
+  host?: string | null;
   created_at: string | null;
 }
 
@@ -114,6 +115,25 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
     setCopiedField(field);
     toast.success("Copié !");
     setTimeout(() => setCopiedField(""), 2000);
+  };
+
+  const getServerUrl = (sub: IptvSubscription): string => {
+    if (sub.host && typeof sub.host === "string" && sub.host.trim()) {
+      const h = sub.host.trim();
+      return h.endsWith("/") ? h : `${h}/`;
+    }
+    if (sub.url) {
+      try {
+        const parsed = new URL(sub.url);
+        return `${parsed.protocol}//${parsed.host}/`;
+      } catch {
+        if (sub.url.startsWith("http")) {
+          return sub.url.endsWith("/") ? sub.url : `${sub.url}/`;
+        }
+      }
+    }
+    const base = (config.host || "http://cf.business-cloud-neo.com").trim();
+    return base.endsWith("/") ? base : `${base}/`;
   };
 
   const currentPrice = config.prices[String(selectedDuration)] || 0;
@@ -453,21 +473,21 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.06]">
+                  <div className="space-y-2 pt-2 border-t border-white/[0.06]">
                     <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.05]">
                       <div className="text-[9px] text-white/40 uppercase font-bold tracking-wider mb-0.5">
-                        Identifiant
+                        Host / Serveur
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs font-black text-white truncate max-w-[110px]">
-                          {sub.username}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-xs font-bold text-white break-all select-all leading-normal">
+                          {getServerUrl(sub)}
                         </span>
                         <button
                           type="button"
-                          onClick={() => handleCopy(sub.username, `user_${sub.id}`)}
-                          className="text-white/40 hover:text-white"
+                          onClick={() => handleCopy(getServerUrl(sub), `host_${sub.id}`)}
+                          className="text-white/40 hover:text-white shrink-0 p-1"
                         >
-                          {copiedField === `user_${sub.id}` ? (
+                          {copiedField === `host_${sub.id}` ? (
                             <Check size={12} className="text-emerald-400" />
                           ) : (
                             <Copy size={12} />
@@ -476,43 +496,52 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
                       </div>
                     </div>
 
-                    <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                      <div className="text-[9px] text-white/40 uppercase font-bold tracking-wider mb-0.5">
-                        Mot de passe
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                        <div className="text-[9px] text-white/40 uppercase font-bold tracking-wider mb-0.5">
+                          Identifiant
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs font-black text-white truncate max-w-[110px]">
+                            {sub.username}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(sub.username, `user_${sub.id}`)}
+                            className="text-white/40 hover:text-white"
+                          >
+                            {copiedField === `user_${sub.id}` ? (
+                              <Check size={12} className="text-emerald-400" />
+                            ) : (
+                              <Copy size={12} />
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs font-black text-primary truncate max-w-[110px]">
-                          {sub.password}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(sub.password, `pass_${sub.id}`)}
-                          className="text-white/40 hover:text-white"
-                        >
-                          {copiedField === `pass_${sub.id}` ? (
-                            <Check size={12} className="text-emerald-400" />
-                          ) : (
-                            <Copy size={12} />
-                          )}
-                        </button>
+
+                      <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                        <div className="text-[9px] text-white/40 uppercase font-bold tracking-wider mb-0.5">
+                          Mot de passe
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs font-black text-primary truncate max-w-[110px]">
+                            {sub.password}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(sub.password, `pass_${sub.id}`)}
+                            className="text-white/40 hover:text-white"
+                          >
+                            {copiedField === `pass_${sub.id}` ? (
+                              <Check size={12} className="text-emerald-400" />
+                            ) : (
+                              <Copy size={12} />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  {sub.url && (
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(sub.url || "", `m3u_${sub.id}`)}
-                      className="w-full py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-[10px] font-bold text-white/70 hover:text-white flex items-center justify-center gap-1.5"
-                    >
-                      {copiedField === `m3u_${sub.id}` ? (
-                        <Check size={12} className="text-emerald-400" />
-                      ) : (
-                        <Copy size={12} />
-                      )}
-                      <span>Copier le lien M3U complet</span>
-                    </button>
-                  )}
                 </div>
               ))}
             </div>

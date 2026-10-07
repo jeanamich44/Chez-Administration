@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,
   Briefcase,
@@ -117,9 +117,37 @@ export default function FicheDePaieClient({ onBack }: FicheDePaieClientProps) {
   const [previewPages, setPreviewPages] = useState<string[]>([]);
 
   const { cooldown, isBlocked, assertReady, startCooldown, formatTimer } = usePreviewCooldown("emploi", initData);
+  const [durationPrices, setDurationPrices] = useState<Record<number, number>>({
+    1: 8,
+    3: 20,
+    6: 40,
+    12: 60
+  });
+
+  useEffect(() => {
+    async function loadPrices() {
+      try {
+        const headers: Record<string, string> = {};
+        if (initData) headers["x-telegram-init-data"] = initData;
+        const res = await fetch("/api/proxy/generate-docs/config", { headers });
+        if (res.ok) {
+          const cfg = await res.json();
+          if (cfg.prices) {
+            setDurationPrices(prev => ({
+              1: Number(cfg.prices.fiche_de_paie_1m ?? cfg.prices.fiche_de_paie ?? prev[1]),
+              3: Number(cfg.prices.fiche_de_paie_3m ?? prev[3]),
+              6: Number(cfg.prices.fiche_de_paie_6m ?? prev[6]),
+              12: Number(cfg.prices.fiche_de_paie_12m ?? prev[12])
+            }));
+          }
+        }
+      } catch {}
+    }
+    loadPrices();
+  }, [initData]);
 
   const selectedDuration = DURATION_OPTIONS.find(d => d.months === formData.duree_mois) || DURATION_OPTIONS[1];
-  const totalPrice = selectedDuration.price;
+  const totalPrice = durationPrices[formData.duree_mois] ?? selectedDuration.price;
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => {
@@ -295,7 +323,9 @@ export default function FicheDePaieClient({ onBack }: FicheDePaieClientProps) {
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-black text-white">{opt.label}</span>
-                <span className="text-[10px] font-mono font-bold text-primary">{opt.price} €</span>
+                <span className="text-[10px] font-mono font-bold text-primary">
+                  {durationPrices[opt.months] ?? opt.price} €
+                </span>
               </div>
               <p className="text-[9px] text-white/40 truncate mt-0.5">{opt.sublabel}</p>
             </button>

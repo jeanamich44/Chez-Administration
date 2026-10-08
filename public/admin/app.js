@@ -2579,23 +2579,23 @@ document.addEventListener('DOMContentLoaded', () => {
             title: "RIB Bancaires",
             icon: "🏦",
             items: [
-                { key: "lbp", label: "La Banque Postale", default: 1 },
-                { key: "ca", label: "Crédit Agricole", default: 1 },
-                { key: "sg", label: "Société Générale", default: 1 },
-                { key: "cm", label: "Crédit Mutuel", default: 1 },
-                { key: "cic", label: "CIC", default: 1 },
-                { key: "bnp", label: "BNP Paribas", default: 1 },
-                { key: "ce", label: "Caisse d'Épargne", default: 1 },
-                { key: "bp", label: "Banque Populaire", default: 1 },
-                { key: "lcl", label: "LCL", default: 1 },
-                { key: "helios", label: "Helios", default: 1 },
-                { key: "noelse", label: "Noelse", default: 1 },
-                { key: "revolut", label: "Revolut", default: 1 },
-                { key: "qonto", label: "Qonto", default: 1 },
-                { key: "bfb", label: "BoursoBank Pro / BFB", default: 1 },
-                { key: "boursobank", label: "BoursoBank", default: 1 },
-                { key: "sumup", label: "SumUp", default: 1 },
-                { key: "mypos", label: "myPOS", default: 1 }
+                { key: "lbp", label: "La Banque Postale", default: 5 },
+                { key: "ca", label: "Crédit Agricole", default: 5 },
+                { key: "sg", label: "Société Générale", default: 5 },
+                { key: "cm", label: "Crédit Mutuel", default: 5 },
+                { key: "cic", label: "CIC", default: 5 },
+                { key: "bnp", label: "BNP Paribas", default: 5 },
+                { key: "ce", label: "Caisse d'Épargne", default: 5 },
+                { key: "bp", label: "Banque Populaire", default: 5 },
+                { key: "lcl", label: "LCL", default: 5 },
+                { key: "helios", label: "Helios", default: 5 },
+                { key: "noelse", label: "Noelse", default: 5 },
+                { key: "revolut", label: "Revolut", default: 5 },
+                { key: "qonto", label: "Qonto", default: 5 },
+                { key: "bfb", label: "BoursoBank Pro / BFB", default: 5 },
+                { key: "boursobank", label: "BoursoBank", default: 5 },
+                { key: "sumup", label: "SumUp", default: 5 },
+                { key: "mypos", label: "myPOS", default: 5 }
             ]
         },
         {
@@ -2605,8 +2605,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { key: "fiche_de_paie_1m", label: "Fiche de Paie — 1 mois", default: 8 },
                 { key: "fiche_de_paie_3m", label: "Fiche de Paie — 3 mois", default: 20 },
                 { key: "fiche_de_paie_6m", label: "Fiche de Paie — 6 mois", default: 40 },
-                { key: "fiche_de_paie_12m", label: "Fiche de Paie — 12 mois", default: 60 },
-                { key: "fiche_de_paie", label: "Fiche de Paie (Base)", default: 8 }
+                { key: "fiche_de_paie_12m", label: "Fiche de Paie — 12 mois", default: 60 }
             ]
         },
         {
@@ -2623,42 +2622,42 @@ document.addEventListener('DOMContentLoaded', () => {
             title: "Assurances",
             icon: "🛡️",
             items: [
-                { key: "maxance", label: "Assurance Maxance", default: 1 },
-                { key: "axa", label: "Assurance AXA", default: 1 }
+                { key: "maxance", label: "Assurance Maxance", default: 5 },
+                { key: "axa", label: "Assurance AXA", default: 5 }
             ]
         },
         {
             title: "Factures d'Achat",
             icon: "🧾",
             items: [
-                { key: "adidas", label: "Facture Adidas", default: 1 },
-                { key: "amazon", label: "Facture Amazon", default: 1 },
-                { key: "ami", label: "Facture AMI Paris", default: 1 },
-                { key: "boulanger", label: "Facture Boulanger", default: 1 },
-                { key: "burberry", label: "Facture Burberry", default: 1 },
-                { key: "cdiscount", label: "Facture Cdiscount", default: 1 },
-                { key: "chanel", label: "Facture Chanel", default: 1 },
-                { key: "dafy", label: "Facture Dafy Moto", default: 1 },
-                { key: "darty", label: "Facture Darty", default: 1 },
-                { key: "dior", label: "Facture Dior", default: 1 },
-                { key: "fnac", label: "Facture Fnac", default: 1 },
-                { key: "fred", label: "Facture Fred", default: 1 },
-                { key: "gaz", label: "Facture Gaz (Engie)", default: 1 },
-                { key: "jacquemus", label: "Facture Jacquemus", default: 1 },
-                { key: "loro_piana", label: "Facture Loro Piana", default: 1 },
-                { key: "nike", label: "Facture Nike", default: 1 },
-                { key: "nocibe", label: "Facture Nocibé", default: 1 },
-                { key: "pack_moto", label: "Facture Pack Moto", default: 1 },
-                { key: "sfr", label: "Facture SFR", default: 1 }
+                { key: "adidas", label: "Facture Adidas", default: 5 },
+                { key: "amazon", label: "Facture Amazon", default: 5 },
+                { key: "ami", label: "Facture AMI Paris", default: 5 },
+                { key: "boulanger", label: "Facture Boulanger", default: 5 },
+                { key: "burberry", label: "Facture Burberry", default: 5 },
+                { key: "cdiscount", label: "Facture Cdiscount", default: 5 },
+                { key: "chanel", label: "Facture Chanel", default: 5 },
+                { key: "dafy", label: "Facture Dafy Moto", default: 5 },
+                { key: "darty", label: "Facture Darty", default: 5 },
+                { key: "dior", label: "Facture Dior", default: 5 },
+                { key: "fnac", label: "Facture Fnac", default: 5 },
+                { key: "fred", label: "Facture Fred", default: 5 },
+                { key: "gaz", label: "Facture Gaz (Engie)", default: 5 },
+                { key: "jacquemus", label: "Facture Jacquemus", default: 5 },
+                { key: "loro_piana", label: "Facture Loro Piana", default: 5 },
+                { key: "nike", label: "Facture Nike", default: 5 },
+                { key: "nocibe", label: "Facture Nocibé", default: 5 },
+                { key: "pack_moto", label: "Facture Pack Moto", default: 5 },
+                { key: "sfr", label: "Facture SFR", default: 5 }
             ]
         },
         {
             title: "Justificatifs & Attestations",
             icon: "📑",
             items: [
-                { key: "attestation_edf", label: "Attestation EDF", default: 1 },
-                { key: "attestation_direct_energie", label: "Attestation Direct Énergie", default: 1 },
-                { key: "conduite_heures", label: "Heures de Conduite", default: 1 }
+                { key: "attestation_edf", label: "Attestation EDF", default: 5 },
+                { key: "attestation_direct_energie", label: "Attestation Direct Énergie", default: 5 },
+                { key: "conduite_heures", label: "Heures de Conduite", default: 5 }
             ]
         }
     ];

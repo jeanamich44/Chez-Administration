@@ -228,78 +228,78 @@ export default function DocumentPreviewViewer({
       onContextMenu={event => event.preventDefault()}
     >
       <div
-        className={`shrink-0 flex flex-wrap items-center justify-between gap-3 px-3 sm:px-5 py-3 border-b border-white/10 bg-slate-950/80 transition-all duration-300 ease-out ${
+        className={`shrink-0 border-b border-white/10 bg-slate-950/90 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 transition-all duration-300 ease-out ${
           entered && !closing ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"
         }`}
       >
-        <div className="min-w-0">
-          <p className="text-sm font-black italic text-white truncate">{title}</p>
-          <p className="text-[11px] text-white/40">Aperçu filigrané — zoom molette, glisser pour déplacer</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
+          <div className="min-w-0 max-w-[45%] sm:max-w-none order-1">
+            <p className="text-xs sm:text-sm font-black italic text-white truncate tracking-tight">{title}</p>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0 order-2 sm:order-3">
+            <div className="flex items-center rounded-lg bg-white/5 border border-white/10 p-0.5">
+              <button
+                type="button"
+                onClick={() => zoomBy(1 / ZOOM_STEP)}
+                className="w-7 h-7 rounded-md text-white/70 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer transition-colors"
+                aria-label="Dézoomer"
+              >
+                <Minus size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={fitToView}
+                className="px-1.5 h-7 rounded-md text-[11px] font-mono font-bold text-white/80 hover:text-white hover:bg-white/10 cursor-pointer transition-colors"
+                aria-label="Ajuster à l'écran"
+                title="Ajuster"
+              >
+                {percent}%
+              </button>
+              <button
+                type="button"
+                onClick={() => zoomBy(ZOOM_STEP)}
+                className="w-7 h-7 rounded-md text-white/70 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer transition-colors"
+                aria-label="Zoomer"
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={fitToView}
+              className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer transition-colors"
+              title="Ajuster à l'écran"
+              aria-label="Ajuster"
+            >
+              <Maximize2 size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={requestClose}
+              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer ml-0.5 transition-colors"
+              aria-label="Fermer"
+              title="Fermer"
+            >
+              <X size={15} />
+            </button>
+          </div>
+
           {onAction ? (
             <button
               type="button"
               onClick={onAction}
               disabled={isActionLoading || actionDisabled}
-              className="h-9 px-4 rounded-xl bg-primary text-slate-950 font-black uppercase text-xs tracking-wider flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 cursor-pointer"
+              className="h-9 px-4 rounded-xl bg-primary text-slate-950 font-black uppercase text-xs tracking-wider flex items-center justify-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-all shadow-md shadow-primary/20 cursor-pointer w-full sm:w-auto order-3 sm:order-2 shrink-0"
             >
               {isActionLoading ? (
-                <RefreshCw size={14} className="animate-spin" />
+                <RefreshCw size={13} className="animate-spin" />
               ) : (
-                <Download size={14} />
+                <Download size={13} />
               )}
-              <span>{actionLabel || "Télécharger"}</span>
+              <span className="truncate">{actionLabel || "Télécharger"}</span>
             </button>
           ) : null}
-          <div className="flex items-center gap-1 rounded-xl bg-white/5 border border-white/10 p-1">
-            <button
-              type="button"
-              onClick={() => zoomBy(1 / ZOOM_STEP)}
-              className="w-9 h-9 rounded-lg text-white/80 hover:bg-white/10 flex items-center justify-center cursor-pointer"
-              aria-label="Dézoomer"
-            >
-              <Minus size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={fitToView}
-              className="min-w-[4.25rem] px-2 h-9 rounded-lg text-xs font-mono font-bold text-white/80 hover:bg-white/10 cursor-pointer"
-              aria-label="Ajuster à l'écran"
-            >
-              {percent}%
-            </button>
-            <button
-              type="button"
-              onClick={() => zoomBy(ZOOM_STEP)}
-              className="w-9 h-9 rounded-lg text-white/80 hover:bg-white/10 flex items-center justify-center cursor-pointer"
-              aria-label="Zoomer"
-            >
-              <Plus size={16} />
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={fitToView}
-            className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
-          >
-            <Maximize2 size={14} /> Ajuster
-          </button>
-          <button
-            type="button"
-            onClick={recenter}
-            className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
-          >
-            <Crosshair size={14} /> Recentrer
-          </button>
-          <button
-            type="button"
-            onClick={requestClose}
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer"
-            aria-label="Fermer"
-          >
-            <X size={18} />
-          </button>
         </div>
       </div>
 

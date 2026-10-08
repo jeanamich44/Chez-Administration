@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageSquare, Bell, Copy, Shield, ExternalLink } from "lucide-react";
+import { MessageSquare, Bell, Copy, Shield } from "lucide-react";
 import { useTelegram } from "@/components/TelegramContext";
 import { useToast } from "@/components/NotificationToast";
 
@@ -44,6 +44,19 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
       tg.openLink(targetUrl);
     } else if (typeof window !== "undefined") {
       window.open(targetUrl, "_blank");
+    }
+  };
+
+  const handleOpenTelegramLink = (url: string | null) => {
+    if (!url) return;
+    haptic("selection");
+    const tg = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null;
+    if (tg?.openTelegramLink) {
+      tg.openTelegramLink(url);
+    } else if (tg?.openLink) {
+      tg.openLink(url);
+    } else if (typeof window !== "undefined") {
+      window.open(url, "_blank");
     }
   };
 
@@ -97,21 +110,27 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
           </h3>
           <button
             type="button"
-            onClick={handleOpenWebPanel}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all text-left gap-2.5"
+            onClick={() => {
+              haptic("impact");
+              if (onOpenAdmin) {
+                onOpenAdmin();
+              } else {
+                handleOpenWebPanel();
+              }
+            }}
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all text-left gap-2.5 cursor-pointer"
           >
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 text-primary flex items-center justify-center shrink-0">
                 <Shield size={15} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-black text-white truncate">Panel d'Administration Web</p>
-                <p className="text-[10px] text-white/50 truncate">Ouvrir dans le navigateur externe</p>
+                <p className="text-xs font-black text-white truncate">Panel d'Administration</p>
+                <p className="text-[10px] text-white/50 truncate">Gestion du bot & services</p>
               </div>
             </div>
             <span className="text-[9px] bg-primary text-slate-950 font-black px-2 py-1 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
-              <span>NAVIGATEUR</span>
-              <ExternalLink size={9} />
+              <span>OUVRIR</span>
             </span>
           </button>
         </div>
@@ -124,12 +143,10 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
           </h3>
 
           {supportUrl && (
-            <a
-              href={supportUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => haptic("selection")}
-              className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors"
+            <button
+              type="button"
+              onClick={() => handleOpenTelegramLink(supportUrl)}
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
@@ -141,16 +158,14 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
                 </div>
               </div>
               <span className="text-[10px] text-primary font-bold">{supportHandle}</span>
-            </a>
+            </button>
           )}
 
           {supportUrl2 && (
-            <a
-              href={supportUrl2}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => haptic("selection")}
-              className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors"
+            <button
+              type="button"
+              onClick={() => handleOpenTelegramLink(supportUrl2)}
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
@@ -162,16 +177,14 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
                 </div>
               </div>
               <span className="text-[10px] text-primary font-bold">{supportHandle2}</span>
-            </a>
+            </button>
           )}
 
           {channelUrl && (
-            <a
-              href={channelUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => haptic("selection")}
-              className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors"
+            <button
+              type="button"
+              onClick={() => handleOpenTelegramLink(channelUrl)}
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
@@ -183,7 +196,7 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
                 </div>
               </div>
               <span className="text-[10px] text-amber-400 font-bold">Rejoindre</span>
-            </a>
+            </button>
           )}
         </div>
       )}

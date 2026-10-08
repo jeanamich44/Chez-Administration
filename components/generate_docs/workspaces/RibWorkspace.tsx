@@ -362,7 +362,7 @@ export default function RibWorkspace({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const [ribPrice, setRibPrice] = useState(1);
+  const [ribPrice, setRibPrice] = useState(5);
   const { cooldown, isBlocked, allowed, assertReady, startCooldown, formatTimer } = usePreviewCooldown("rib");
   const [schema, setSchema] = useState<EditorSchema | null>(() => initialCached?.customConfig || null);
   const [customTexts, setCustomTexts] = useState<Record<string, string>>(() => {

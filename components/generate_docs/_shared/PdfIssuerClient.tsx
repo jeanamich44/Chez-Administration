@@ -1163,7 +1163,7 @@ export default function PdfIssuerClient({
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
-  const [price, setPrice] = useState(1);
+  const [price, setPrice] = useState(5);
   const { cooldown, isBlocked, allowed, assertReady, startCooldown, formatTimer } = usePreviewCooldown(category);
 
   useEffect(() => {

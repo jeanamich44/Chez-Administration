@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, Download, Minus, Plus, RefreshCw, X } from "lucide-react";
-
-/* ===================================================================== */
+import { ChevronLeft, ChevronRight, Crosshair, Download, Maximize2, Minus, Plus, RefreshCw, X } from "lucide-react";
 
 const MIN_SCALE = 0.2;
 const MAX_SCALE = 8;
@@ -15,8 +13,6 @@ type View = { scale: number; x: number; y: number };
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
-
-/* ===================================================================== */
 
 export default function MultiPagePreviewViewer({
   pages,
@@ -47,6 +43,7 @@ export default function MultiPagePreviewViewer({
   const [entered, setEntered] = useState(false);
   const [closing, setClosing] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -74,7 +71,7 @@ export default function MultiPagePreviewViewer({
     const viewport = viewportRef.current;
     const { w, h } = naturalRef.current;
     if (!viewport || w <= 0 || h <= 0) return;
-    const pad = 16;
+    const pad = 24;
     const scale = Math.min((viewport.clientWidth - pad) / w, (viewport.clientHeight - pad) / h);
     const next = {
       scale,
@@ -82,6 +79,18 @@ export default function MultiPagePreviewViewer({
       y: (viewport.clientHeight - h * scale) / 2
     };
     setViewBoth(next);
+  }, [setViewBoth]);
+
+  const recenter = useCallback(() => {
+    const viewport = viewportRef.current;
+    const { w, h } = naturalRef.current;
+    const { scale } = viewRef.current;
+    if (!viewport || w <= 0 || h <= 0) return;
+    setViewBoth({
+      scale,
+      x: (viewport.clientWidth - w * scale) / 2,
+      y: (viewport.clientHeight - h * scale) / 2
+    });
   }, [setViewBoth]);
 
   const zoomAt = useCallback(
@@ -112,6 +121,11 @@ export default function MultiPagePreviewViewer({
     },
     [zoomAt]
   );
+
+  const goToPage = useCallback((idx: number) => {
+    setCurrentPage(idx);
+    setReady(false);
+  }, []);
 
   useEffect(() => {
     if (!mounted) return;
@@ -155,17 +169,26 @@ export default function MultiPagePreviewViewer({
       if (e.key === "Escape") {
         e.preventDefault();
         requestClose();
-      } else if (e.key === "ArrowLeft") {
+      } else if (e.key === "+" || e.key === "=") {
         e.preventDefault();
-        setCurrentPage(p => Math.max(0, p - 1));
-      } else if (e.key === "ArrowRight") {
+        zoomBy(ZOOM_STEP);
+      } else if (e.key === "-") {
         e.preventDefault();
-        setCurrentPage(p => Math.min(pages.length - 1, p + 1));
+        zoomBy(1 / ZOOM_STEP);
+      } else if (e.key === "0") {
+        e.preventDefault();
+        fitToView();
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        if (currentPage > 0) goToPage(currentPage - 1);
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        if (currentPage < pages.length - 1) goToPage(currentPage + 1);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [pages.length, requestClose]);
+  }, [fitToView, requestClose, zoomBy, currentPage, pages.length, goToPage]);
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
@@ -203,7 +226,7 @@ export default function MultiPagePreviewViewer({
   };
 
   const percent = Math.round(view.scale * 100);
-  const currentUrl = pages[currentPage];
+  const currentSrc = pages[currentPage] ? `data:image/jpeg;base64,${pages[currentPage]}` : null;
 
   if (!mounted || pages.length === 0) return null;
 
@@ -213,143 +236,193 @@ export default function MultiPagePreviewViewer({
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className={`fixed inset-0 z-[9999] flex flex-col bg-slate-950/98 backdrop-blur-md transition-opacity duration-260 ease-out select-none ${
+      className={`fixed inset-0 z-[9999] flex flex-col bg-slate-950/95 backdrop-blur-md transition-opacity duration-260 ease-out select-none ${
         entered && !closing ? "opacity-100" : "opacity-0"
       }`}
       onContextMenu={event => event.preventDefault()}
     >
       <div
-        className={`shrink-0 flex items-center justify-between gap-2 px-3 py-2.5 border-b border-white/10 bg-slate-950/90 transition-all duration-300 ease-out ${
+        className={`shrink-0 flex flex-wrap items-center justify-between gap-3 px-3 sm:px-5 py-3 border-b border-white/10 bg-slate-950/80 transition-all duration-300 ease-out ${
           entered && !closing ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"
         }`}
       >
-        <div className="min-w-0 pr-2">
-          <p className="text-xs font-black italic text-white truncate">{title}</p>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-[10px] text-primary font-bold">
-              Page {currentPage + 1}/{pages.length}
-            </span>
-            <span className="text-white/20 text-[10px]">•</span>
-            <span className="text-[10px] text-white/40">Aperçu filigrané</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          {pages.length > 1 && (
-            <div className="flex items-center rounded-lg bg-white/5 border border-white/10 p-0.5 mr-1">
+        <div className="min-w-0 flex items-center gap-3">
+          <p className="text-sm font-black italic text-white truncate">{title}</p>
+          {pages.length > 1 ? (
+            <div className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-2 py-1">
               <button
                 type="button"
-                disabled={currentPage <= 0}
-                onClick={() => {
-                  setReady(false);
-                  setCurrentPage(p => Math.max(0, p - 1));
-                }}
-                className="w-7 h-7 rounded text-white/80 hover:bg-white/10 disabled:opacity-30 flex items-center justify-center cursor-pointer"
+                onClick={() => currentPage > 0 && goToPage(currentPage - 1)}
+                disabled={currentPage === 0}
+                className="w-6 h-6 rounded flex items-center justify-center text-white/70 hover:bg-white/10 disabled:opacity-30 cursor-pointer"
               >
                 <ChevronLeft size={14} />
               </button>
-              <span className="px-1.5 text-[10px] font-mono font-bold text-white/80">
-                {currentPage + 1}/{pages.length}
+              <span className="text-xs font-bold text-white/80 tabular-nums min-w-[3.5rem] text-center">
+                {currentPage + 1} / {pages.length}
               </span>
               <button
                 type="button"
-                disabled={currentPage >= pages.length - 1}
-                onClick={() => {
-                  setReady(false);
-                  setCurrentPage(p => Math.min(pages.length - 1, p + 1));
-                }}
-                className="w-7 h-7 rounded text-white/80 hover:bg-white/10 disabled:opacity-30 flex items-center justify-center cursor-pointer"
+                onClick={() => currentPage < pages.length - 1 && goToPage(currentPage + 1)}
+                disabled={currentPage === pages.length - 1}
+                className="w-6 h-6 rounded flex items-center justify-center text-white/70 hover:bg-white/10 disabled:opacity-30 cursor-pointer"
               >
                 <ChevronRight size={14} />
               </button>
             </div>
-          )}
-
-          {onAction && (
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {onAction ? (
             <button
               type="button"
               onClick={onAction}
               disabled={isActionLoading || actionDisabled}
-              className="h-8 px-3 rounded-xl bg-primary text-slate-950 font-black uppercase text-[10px] tracking-wider flex items-center gap-1.5 hover:bg-primary/90 disabled:opacity-50 transition-all shadow-md shadow-primary/20 cursor-pointer"
+              className="h-9 px-4 rounded-xl bg-primary text-slate-950 font-black uppercase text-xs tracking-wider flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 cursor-pointer"
             >
               {isActionLoading ? (
-                <RefreshCw size={12} className="animate-spin" />
+                <RefreshCw size={14} className="animate-spin" />
               ) : (
-                <Download size={12} />
+                <Download size={14} />
               )}
-              <span>{actionLabel || "PDF"}</span>
+              <span>{actionLabel || "Télécharger"}</span>
             </button>
-          )}
-
-          <div className="flex items-center rounded-lg bg-white/5 border border-white/10 p-0.5">
+          ) : null}
+          <div className="flex items-center gap-1 rounded-xl bg-white/5 border border-white/10 p-1">
             <button
               type="button"
               onClick={() => zoomBy(1 / ZOOM_STEP)}
-              className="w-7 h-7 rounded text-white/80 hover:bg-white/10 flex items-center justify-center cursor-pointer"
+              className="w-9 h-9 rounded-lg text-white/80 hover:bg-white/10 flex items-center justify-center cursor-pointer"
+              aria-label="Dézoomer"
             >
-              <Minus size={13} />
+              <Minus size={16} />
             </button>
             <button
               type="button"
               onClick={fitToView}
-              className="px-1.5 h-7 rounded text-[10px] font-mono font-bold text-white/80 hover:bg-white/10 cursor-pointer"
+              className="min-w-[4.25rem] px-2 h-9 rounded-lg text-xs font-mono font-bold text-white/80 hover:bg-white/10 cursor-pointer"
+              aria-label="Ajuster à l'écran"
             >
               {percent}%
             </button>
             <button
               type="button"
               onClick={() => zoomBy(ZOOM_STEP)}
-              className="w-7 h-7 rounded text-white/80 hover:bg-white/10 flex items-center justify-center cursor-pointer"
+              className="w-9 h-9 rounded-lg text-white/80 hover:bg-white/10 flex items-center justify-center cursor-pointer"
+              aria-label="Zoomer"
             >
-              <Plus size={13} />
+              <Plus size={16} />
             </button>
           </div>
-
+          <button
+            type="button"
+            onClick={fitToView}
+            className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+          >
+            <Maximize2 size={14} /> Ajuster
+          </button>
+          <button
+            type="button"
+            onClick={recenter}
+            className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+          >
+            <Crosshair size={14} /> Recentrer
+          </button>
           <button
             type="button"
             onClick={requestClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer ml-1"
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer"
+            aria-label="Fermer"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
       </div>
 
-      <div
-        ref={viewportRef}
-        className="relative flex-1 overflow-hidden cursor-grab active:cursor-grabbing touch-none"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onDoubleClick={fitToView}
-      >
-        {!ready && (
-          <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold uppercase tracking-widest text-white/40">
-            Chargement page {currentPage + 1}…
+      <div className="flex-1 flex overflow-hidden">
+        {pages.length > 1 ? (
+          <div
+            className={`shrink-0 border-r border-white/10 bg-slate-950/60 overflow-y-auto overflow-x-hidden transition-all duration-200 ${
+              sidebarOpen ? "w-[140px]" : "w-0"
+            }`}
+          >
+            <div className="p-3 flex flex-col gap-3">
+              {pages.map((page, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => goToPage(idx)}
+                  className={`group relative rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
+                    idx === currentPage
+                      ? "border-primary shadow-lg shadow-primary/20"
+                      : "border-white/10 hover:border-white/30"
+                  }`}
+                >
+                  <img
+                    src={`data:image/jpeg;base64,${page}`}
+                    alt=""
+                    draggable={false}
+                    className="w-full h-auto block"
+                  />
+                  <div className={`absolute inset-x-0 bottom-0 py-1 text-center text-[11px] font-black ${
+                    idx === currentPage
+                      ? "bg-primary text-slate-950"
+                      : "bg-slate-950/80 text-white/70 group-hover:text-white"
+                  }`}>
+                    {idx + 1}
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-        {currentUrl && (
-          <img
-            key={currentUrl}
-            src={currentUrl}
-            alt=""
-            draggable={false}
-            onLoad={event => {
-              const img = event.currentTarget;
-              naturalRef.current = { w: img.naturalWidth, h: img.naturalHeight };
-              setReady(true);
-              requestAnimationFrame(fitToView);
-            }}
-            className="absolute top-0 left-0 max-w-none select-none pointer-events-none"
-            style={{
-              opacity: ready && entered && !closing ? 1 : 0,
-              transition: "opacity 280ms ease-out",
-              transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
-              transformOrigin: "0 0"
-            }}
-          />
-        )}
+        ) : null}
+
+        {pages.length > 1 ? (
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="shrink-0 w-5 flex items-center justify-center bg-white/[0.02] hover:bg-white/5 border-r border-white/10 text-white/40 hover:text-white/80 transition-colors cursor-pointer"
+          >
+            {sidebarOpen ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
+          </button>
+        ) : null}
+
+        <div
+          ref={viewportRef}
+          className="relative flex-1 overflow-hidden cursor-grab active:cursor-grabbing touch-none"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onDoubleClick={fitToView}
+        >
+          {!ready ? (
+            <div className="absolute inset-0 flex items-center justify-center text-xs font-bold uppercase tracking-widest text-white/40">
+              Chargement de l'aperçu…
+            </div>
+          ) : null}
+          {currentSrc ? (
+            <img
+              key={currentPage}
+              src={currentSrc}
+              alt=""
+              draggable={false}
+              onLoad={event => {
+                const img = event.currentTarget;
+                naturalRef.current = { w: img.naturalWidth, h: img.naturalHeight };
+                setReady(true);
+                requestAnimationFrame(fitToView);
+              }}
+              className="absolute top-0 left-0 max-w-none select-none pointer-events-none"
+              style={{
+                opacity: ready && entered && !closing ? 1 : 0,
+                transition: "opacity 280ms ease-out",
+                transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
+                transformOrigin: "0 0"
+              }}
+            />
+          ) : null}
+        </div>
       </div>
     </div>,
     document.body

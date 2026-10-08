@@ -2,8 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 
-/* ===================================================================== */
-
 export interface CachedFormRecord {
   id?: string;
   category: string;
@@ -13,8 +11,6 @@ export interface CachedFormRecord {
   schema: any;
   cachedAt: number;
 }
-
-/* ===================================================================== */
 
 const MEMORY_CACHE = new Map<string, CachedFormRecord>();
 
@@ -103,14 +99,8 @@ export function setCachedFormSchema(
   return record;
 }
 
-export async function fetchFormSchema(category: string, slug: string, initData?: string): Promise<CachedFormRecord | null> {
-  const headers: Record<string, string> = {};
-  if (initData) headers["x-telegram-init-data"] = initData;
-
-  const res = await fetch(`/api/proxy/generate-docs/forms/${category}/${slug}`, {
-    cache: "no-store",
-    headers
-  });
+export async function fetchFormSchema(category: string, slug: string): Promise<CachedFormRecord | null> {
+  const res = await fetch(`/api/generate-docs/forms/${category}/${slug}`, { cache: "no-store" });
   if (!res.ok) {
     const key = `${category}:${slug}`;
     MEMORY_CACHE.delete(key);
@@ -138,16 +128,14 @@ export async function fetchFormSchema(category: string, slug: string, initData?:
   });
 }
 
-/* ===================================================================== */
-
-export function useFormSchema(category: string, slug: string, initData?: string) {
+export function useFormSchema(category: string, slug: string) {
   const [record, setRecord] = useState<CachedFormRecord | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const updated = await fetchFormSchema(category, slug, initData);
+      const updated = await fetchFormSchema(category, slug);
       if (updated) {
         setRecord(updated);
         setError(null);
@@ -161,7 +149,7 @@ export function useFormSchema(category: string, slug: string, initData?: string)
       setError(err?.message || "Erreur de chargement");
       setIsLoading(false);
     }
-  }, [category, slug, initData]);
+  }, [category, slug]);
 
   useEffect(() => {
     let isMounted = true;
@@ -177,13 +165,7 @@ export function useFormSchema(category: string, slug: string, initData?: string)
       }
 
       try {
-        const headers: Record<string, string> = {};
-        if (initData) headers["x-telegram-init-data"] = initData;
-
-        const res = await fetch(`/api/proxy/generate-docs/forms/${category}/${slug}`, {
-          cache: "no-store",
-          headers
-        });
+        const res = await fetch(`/api/generate-docs/forms/${category}/${slug}`, { cache: "no-store" });
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
           const msg = errData.detail || (res.status === 403 ? "Accès restreint à ce document." : "Ce document est actuellement indisponible.");
@@ -241,7 +223,7 @@ export function useFormSchema(category: string, slug: string, initData?: string)
     return () => {
       isMounted = false;
     };
-  }, [category, slug, initData]);
+  }, [category, slug]);
 
   return {
     schema: record?.schema || null,

@@ -1,178 +1,152 @@
 "use client";
 
-import {
-  ArrowRight,
-  Briefcase,
-  CreditCard,
-  FileCheck,
-  FileText,
-  Lock,
-  Shield
-} from "lucide-react";
-import { useTelegram } from "@/components/TelegramContext";
+import React from "react";
+import { ArrowRight, Briefcase, CreditCard, FileCheck, FileText, Lock, Shield, ChevronLeft } from "lucide-react";
 
 /* ===================================================================== */
 
-interface DocCategoryItem {
-  id: string;
+interface DocCategory {
+  slug: string;
   name: string;
   badge: string;
-  badgeColor: string;
   description: string;
-  icon: typeof FileText;
-  iconColor: string;
-  iconBg: string;
-  border: string;
-  count: string;
+  icon: React.ReactNode;
+  isAvailable: boolean;
 }
 
-const CATEGORIES: DocCategoryItem[] = [
+const CATEGORIES: DocCategory[] = [
   {
-    id: "emploi",
-    name: "Emploi & Salaires",
-    badge: "BULLETINS",
-    badgeColor: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
-    description: "Bulletins de paie et fiches de salaire 1, 3, 6 et 12 mois.",
-    icon: Briefcase,
-    iconColor: "text-indigo-400",
-    iconBg: "bg-indigo-500/10 border-indigo-500/20",
-    border: "border-indigo-500/20 hover:border-indigo-400/40",
-    count: "4 durées"
+    slug: "emploi",
+    name: "Emploi et Travail",
+    badge: "EMPLOI",
+    description: "Fiches de paie et bulletins de salaire conformes au format PDF",
+    icon: <Briefcase size={20} />,
+    isAvailable: true,
   },
   {
-    id: "rib",
+    slug: "rib",
     name: "RIB Bancaires",
-    badge: "17 BANQUES",
-    badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    description: "Relevés d'identité bancaire traditionnels et néobanques.",
-    icon: CreditCard,
-    iconColor: "text-emerald-400",
-    iconBg: "bg-emerald-500/10 border-emerald-500/20",
-    border: "border-emerald-500/20 hover:border-emerald-400/40",
-    count: "17 banques"
+    badge: "DOCS",
+    description: "Générateur de Relevés d'Identité Bancaire (La Banque Postale, Société Générale...)",
+    icon: <CreditCard size={20} />,
+    isAvailable: true,
   },
   {
-    id: "releve",
+    slug: "releve",
     name: "Relevés Bancaires",
-    badge: "COMPTES",
-    badgeColor: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    description: "Relevés de compte bancaire La Banque Postale 1, 3, 6, 12 mois.",
-    icon: FileText,
-    iconColor: "text-blue-400",
-    iconBg: "bg-blue-500/10 border-blue-500/20",
-    border: "border-blue-500/20 hover:border-blue-400/40",
-    count: "4 durées"
+    badge: "BANQUE",
+    description: "Générateur de Relevés de Compte Bancaire (La Banque Postale, BNP, Société Générale...)",
+    icon: <FileText size={20} />,
+    isAvailable: true,
   },
   {
-    id: "facture",
-    name: "Factures d'Achat",
-    badge: "19 ENSEIGNES",
-    badgeColor: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    description: "Factures Luxe, E-Commerce, Magasins et Domicile / Énergie.",
-    icon: FileText,
-    iconColor: "text-amber-400",
-    iconBg: "bg-amber-500/10 border-amber-500/20",
-    border: "border-amber-500/20 hover:border-amber-400/40",
-    count: "19 marques"
+    slug: "assurance",
+    name: "Assurances",
+    badge: "AUTO",
+    description: "Justificatifs d'assurance véhicules (Voiture, Moto, Scooter) au format PDF",
+    icon: <Shield size={20} />,
+    isAvailable: true,
   },
   {
-    id: "assurance",
-    name: "Assurances Véhicules",
-    badge: "AUTO & MOTO",
-    badgeColor: "bg-sky-500/10 text-sky-400 border-sky-500/20",
-    description: "Justificatifs et mémos d'assurance véhicule (Axa, Maxance).",
-    icon: Shield,
-    iconColor: "text-sky-400",
-    iconBg: "bg-sky-500/10 border-sky-500/20",
-    border: "border-sky-500/20 hover:border-sky-400/40",
-    count: "2 organismes"
+    slug: "facture",
+    name: "Factures",
+    badge: "FACTURE",
+    description: "Factures Adidas, Amazon, Fnac, Nike, AMI et Burberry au format PDF",
+    icon: <FileText size={20} />,
+    isAvailable: true,
   },
   {
-    id: "justificatif",
-    name: "Justificatifs & Attestations",
-    badge: "OFFICIEL",
-    badgeColor: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-    description: "Attestations de titulaire EDF, Direct Énergie, et conduite.",
-    icon: FileCheck,
-    iconColor: "text-rose-400",
-    iconBg: "bg-rose-500/10 border-rose-500/20",
-    border: "border-rose-500/20 hover:border-rose-400/40",
-    count: "3 modèles"
+    slug: "justificatif",
+    name: "Justificatifs",
+    badge: "ATTESTATION",
+    description: "Justificatifs d'heures de conduite et attestation EDF au format PDF",
+    icon: <FileCheck size={20} />,
+    isAvailable: true,
   }
 ];
 
 /* ===================================================================== */
 
 interface GenerateDocsHubProps {
-  onSelectCategory: (category: string) => void;
+  onSelectCategory: (slug: string) => void;
+  onBack: () => void;
 }
 
-export default function GenerateDocsHub({ onSelectCategory }: GenerateDocsHubProps) {
-  const { haptic, isCategoryActive } = useTelegram();
-
+export default function GenerateDocsHub({ onSelectCategory, onBack }: GenerateDocsHubProps) {
   return (
-    <div className="space-y-3 pb-20 fade-in">
-      <div className="px-1 mb-2">
-        <h2 className="text-sm font-black italic text-white uppercase tracking-tight">
-          Catalogue de documents
-        </h2>
-        <p className="text-[10px] text-white/40 font-medium leading-relaxed">
-          Sélectionnez la catégorie de document à générer en PDF certifié
+    <main className="min-h-screen pt-4 pb-24 px-4 w-full max-w-md mx-auto">
+      <div className="mb-6">
+        <button 
+          onClick={onBack}
+          className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white/40 hover:text-primary transition-colors mb-4"
+        >
+          <ChevronLeft size={16} /> Services
+        </button>
+        <h1 className="text-2xl font-black italic text-white mb-2 leading-tight">
+          GÉNÉRATION DE <br/><span className="text-primary">DOCUMENTS</span>
+        </h1>
+        <p className="text-white/40 font-bold tracking-wider uppercase text-[10px]">
+          Sélectionnez la catégorie de document à générer au format PDF
         </p>
       </div>
 
-      <div className="space-y-2.5">
-        {CATEGORIES.map(cat => {
-          const Icon = cat.icon;
-          const active = isCategoryActive(cat.id);
+      <div className="flex flex-col gap-3">
+        {CATEGORIES.map((cat) => {
+          const catContent = (
+            <>
+              <div className="w-full flex items-center justify-between mb-4 z-10">
+                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-primary border border-white/10">
+                  {cat.icon}
+                </div>
+                <span className="px-2 py-1 rounded-full text-[9px] font-black tracking-wider uppercase bg-primary/20 text-primary border border-primary/30">
+                  {cat.badge}
+                </span>
+              </div>
+
+              <div className="relative z-10 w-full flex flex-col">
+                <h3 className="text-lg font-black italic mb-1 text-white tracking-tight flex items-center gap-2">
+                  {cat.name}
+                  {!cat.isAvailable && <Lock size={14} className="text-amber-400/80" />}
+                </h3>
+                <p className="text-[11px] text-white/50 mb-4 font-medium leading-relaxed">
+                  {cat.description}
+                </p>
+
+                {cat.isAvailable ? (
+                  <div className="mt-auto flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary">
+                    Accéder <ArrowRight size={12} />
+                  </div>
+                ) : (
+                  <div className="mt-auto flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-amber-400/80">
+                    <Lock size={12} className="text-amber-400" /> Bientôt
+                  </div>
+                )}
+              </div>
+            </>
+          );
+
+          if (cat.isAvailable) {
+            return (
+              <div
+                key={cat.slug}
+                onClick={() => onSelectCategory(cat.slug)}
+                className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col items-start relative overflow-hidden transition-all active:scale-[0.98] cursor-pointer"
+              >
+                {catContent}
+              </div>
+            );
+          }
 
           return (
-            <button
-              key={cat.id}
-              type="button"
-              disabled={!active}
-              onClick={() => {
-                haptic("selection");
-                onSelectCategory(cat.id);
-              }}
-              className={`w-full bg-[#0f121d]/90 backdrop-blur-md p-3.5 rounded-2xl border ${cat.border} active:scale-[0.98] transition-all text-left flex items-center justify-between group shadow-sm ${
-                !active ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-              }`}
+            <div
+              key={cat.slug}
+              className="bg-white/5 backdrop-blur-md border border-white/5 rounded-2xl p-4 flex flex-col items-start relative overflow-hidden opacity-50 select-none"
             >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div
-                  className={`w-10 h-10 rounded-xl ${cat.iconBg} flex items-center justify-center ${cat.iconColor} shrink-0 group-hover:scale-105 transition-transform`}
-                >
-                  <Icon size={18} />
-                </div>
-
-                <div className="min-w-0 flex-1 pr-2">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <h3 className="text-xs font-black italic text-white leading-tight">
-                      {cat.name}
-                    </h3>
-                    <span
-                      className={`px-1.5 py-0.5 rounded-full border text-[7px] font-black tracking-wider uppercase shrink-0 ${cat.badgeColor}`}
-                    >
-                      {cat.badge}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-white/40 font-medium leading-relaxed line-clamp-1">
-                    {cat.description}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[9px] font-mono text-white/30 hidden sm:inline">{cat.count}</span>
-                <div className="w-7 h-7 rounded-lg bg-white/[0.03] border border-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-slate-950 transition-all shrink-0">
-                  <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
-                </div>
-              </div>
-            </button>
+              {catContent}
+            </div>
           );
         })}
       </div>
-    </div>
+    </main>
   );
 }

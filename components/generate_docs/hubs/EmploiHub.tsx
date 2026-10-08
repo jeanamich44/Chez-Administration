@@ -1,23 +1,17 @@
 "use client";
 
-import {
-  ArrowLeft,
-  ArrowRight,
-  Briefcase,
-  FileCheck,
-  FileText,
-  Lock
-} from "lucide-react";
-import { useTelegram } from "@/components/TelegramContext";
+import React from "react";
+import { ArrowRight, Lock, ChevronLeft } from "lucide-react";
 
 /* ===================================================================== */
 
 interface EmploiDocOption {
   slug: string;
   name: string;
-  badge: string;
+  badge?: string;
   description: string;
   logo: string;
+  headerBg: string;
   isAvailable: boolean;
 }
 
@@ -25,118 +19,121 @@ const EMPLOI_DOCS: EmploiDocOption[] = [
   {
     slug: "fiche_de_paie",
     name: "Fiche de Paie",
-    badge: "1 À 12 MOIS",
-    description: "Bulletin de paie conforme avec cumuls et calculs automatiques",
+    badge: "OFFICIEL",
+    description: "• Bulletin de paie & fiche de salaire conforme\n• Pack 1, 3, 6 ou 12 mois avec continuité\n• Calculs automatiques",
     logo: "/logos/fiche_de_paie.svg",
-    isAvailable: true
+    headerBg: "bg-gradient-to-br from-sky-900/40 to-slate-950/80 border-sky-500/30",
+    isAvailable: true,
   },
   {
     slug: "contrat_travail",
     name: "Contrat de Travail",
-    badge: "BIENTÔT",
-    description: "Contrat CDI ou CDD avec clauses légales",
+    badge: "CDI / CDD",
+    description: "• Contrat à durée indéterminée ou déterminée\n• Clauses conformes et mentions légales",
     logo: "/logos/fiche_de_paie.svg",
-    isAvailable: false
+    headerBg: "bg-gradient-to-br from-indigo-900/40 to-slate-950/80 border-indigo-500/30",
+    isAvailable: false,
   },
   {
     slug: "attestation_france_travail",
     name: "Attestation France Travail",
-    badge: "BIENTÔT",
-    description: "Attestation employeur pôle emploi et fin de contrat",
+    badge: "EMPLOYEUR",
+    description: "• Attestation employeur pôle emploi\n• Justificatif de fin de contrat et indemnités",
     logo: "/logos/fiche_de_paie.svg",
-    isAvailable: false
+    headerBg: "bg-gradient-to-br from-emerald-900/40 to-slate-950/80 border-emerald-500/30",
+    isAvailable: false,
   }
 ];
 
 /* ===================================================================== */
 
 interface EmploiHubProps {
+  onSelectItem: (slug: string) => void;
   onBack: () => void;
-  onSelectDoc: (slug: string) => void;
 }
 
-export default function EmploiHub({ onBack, onSelectDoc }: EmploiHubProps) {
-  const { haptic } = useTelegram();
-
+export default function EmploiHub({ onSelectItem, onBack }: EmploiHubProps) {
   return (
-    <div className="space-y-3 pb-20 fade-in">
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
+    <main className="min-h-screen pt-4 pb-24 px-4 w-full max-w-md mx-auto">
+      <div className="mb-6">
+        <button 
           onClick={onBack}
-          className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-white/60 hover:text-white transition-colors bg-white/[0.04] border border-white/10 px-3 py-1.5 rounded-xl active:scale-95"
+          className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white/40 hover:text-primary transition-colors mb-4"
         >
-          <ArrowLeft size={13} />
-          <span>Catégories</span>
+          <ChevronLeft size={16} /> Docs
         </button>
-      </div>
-
-      <div className="px-1">
-        <h2 className="text-sm font-black italic text-white uppercase tracking-tight">
-          Emploi & Travail
-        </h2>
-        <p className="text-[10px] text-white/40 font-medium leading-relaxed">
-          Sélectionnez un document professionnel à générer au format PDF
+        <h1 className="text-2xl font-black italic text-white mb-2 leading-tight">
+          EMPLOI ET <br/><span className="text-primary">TRAVAIL</span>
+        </h1>
+        <p className="text-white/40 font-bold tracking-wider uppercase text-[10px]">
+          Sélectionnez un document professionnel
         </p>
       </div>
 
-      <div className="space-y-2.5">
-        {EMPLOI_DOCS.map(item => (
-          <button
-            key={item.slug}
-            type="button"
-            disabled={!item.isAvailable}
-            onClick={() => {
-              if (!item.isAvailable) return;
-              haptic("selection");
-              onSelectDoc(item.slug);
-            }}
-            className={`w-full bg-[#0f121d]/90 backdrop-blur-md p-3.5 rounded-2xl border transition-all text-left flex items-center justify-between group shadow-sm ${
-              item.isAvailable
-                ? "border-white/[0.08] hover:border-indigo-500/40 active:scale-[0.98] cursor-pointer"
-                : "border-white/5 opacity-50 cursor-not-allowed"
-            }`}
-          >
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
-                <Briefcase size={18} />
-              </div>
-
-              <div className="min-w-0 flex-1 pr-2">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <h3 className="text-xs font-black text-white leading-tight truncate">
-                    {item.name}
-                  </h3>
-                  <span
-                    className={`px-1.5 py-0.5 rounded-full border text-[7px] font-black tracking-wider uppercase shrink-0 ${
-                      item.isAvailable
-                        ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
-                        : "bg-white/5 text-white/40 border-white/10"
-                    }`}
-                  >
-                    {item.badge}
+      <div className="flex flex-col gap-3">
+        {EMPLOI_DOCS.map((doc) => {
+          const cardContent = (
+            <>
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center p-2 shadow-lg">
+                  <img
+                    src={doc.logo}
+                    alt={doc.name}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                {doc.badge && (
+                  <span className="px-2 py-1 rounded-full text-[9px] font-black tracking-wider uppercase bg-primary/20 text-primary border border-primary/30">
+                    {doc.badge}
                   </span>
-                </div>
-                <p className="text-[10px] text-white/40 font-medium line-clamp-1">
-                  {item.description}
-                </p>
+                )}
               </div>
-            </div>
 
-            <div className="shrink-0">
-              {item.isAvailable ? (
-                <div className="w-7 h-7 rounded-lg bg-white/[0.03] border border-white/5 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-slate-950 transition-all">
-                  <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
-                </div>
-              ) : (
-                <div className="w-7 h-7 rounded-lg bg-white/[0.02] border border-white/5 flex items-center justify-center text-white/30">
-                  <Lock size={12} />
-                </div>
-              )}
+              <h3 className="text-lg font-black italic text-white mb-2 flex items-center gap-2">
+                {doc.name}
+                {!doc.isAvailable && <Lock size={14} className="text-amber-400/80" />}
+              </h3>
+
+              <p className="text-[11px] text-white/60 font-medium whitespace-pre-line leading-relaxed mb-4 flex-1">
+                {doc.description}
+              </p>
+
+              <div className="pt-3 border-t border-white/5 flex items-center justify-between text-[9px] font-black uppercase tracking-widest">
+                {doc.isAvailable ? (
+                  <span className="text-primary flex items-center gap-2">
+                    Générer <ArrowRight size={12} />
+                  </span>
+                ) : (
+                  <span className="text-amber-400/70 flex items-center gap-1.5">
+                    <Lock size={12} /> Bientôt
+                  </span>
+                )}
+              </div>
+            </>
+          );
+
+          if (doc.isAvailable) {
+            return (
+              <div
+                key={doc.slug}
+                onClick={() => onSelectItem(doc.slug)}
+                className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col relative overflow-hidden active:scale-[0.98] transition-all cursor-pointer"
+              >
+                {cardContent}
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={doc.slug}
+              className="bg-white/5 backdrop-blur-md border border-white/5 rounded-2xl p-4 flex flex-col relative overflow-hidden opacity-50 select-none"
+            >
+              {cardContent}
             </div>
-          </button>
-        ))}
+          );
+        })}
       </div>
-    </div>
+    </main>
   );
 }

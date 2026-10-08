@@ -2,8 +2,6 @@
 
 import React, { useRef } from "react";
 
-/* ===================================================================== */
-
 interface ImmatriculationInputProps {
   value: string;
   onChange: (val: string) => void;
@@ -24,7 +22,7 @@ export function parseImmatriculation(val: unknown): [string, string, string] {
     ];
   }
   if (s.includes(" ")) {
-    const parts = s.split(/\s+/);
+    const parts = s.split(/\\s+/);
     return [
       (parts[0] || "").replace(/[^A-Z0-9]/g, "").slice(0, 4),
       (parts[1] || "").replace(/[^A-Z0-9]/g, "").slice(0, 4),
@@ -41,8 +39,6 @@ export function parseImmatriculation(val: unknown): [string, string, string] {
   }
   return [clean.slice(0, 4), "", ""];
 }
-
-/* ===================================================================== */
 
 export default function ImmatriculationInput({
   value,
@@ -63,7 +59,7 @@ export default function ImmatriculationInput({
       onChange("");
       return;
     }
-    onChange(`${newP1}-${newP2}-${newP3}`.replace(/-+$/, ""));
+    onChange(`${newP1}-${newP2}-${newP3}`);
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -71,85 +67,108 @@ export default function ImmatriculationInput({
     const text = e.clipboardData.getData("text");
     if (!text) return;
     const [cp1, cp2, cp3] = parseImmatriculation(text);
-    update(cp1, cp2, cp3);
-    if (cp3 && input3Ref.current) {
-      input3Ref.current.focus();
-    } else if (cp2 && input2Ref.current) {
-      input2Ref.current.focus();
+    if (cp1 || cp2 || cp3) {
+      update(cp1, cp2, cp3);
+      if (cp3) {
+        input3Ref.current?.focus();
+      } else if (cp2) {
+        input2Ref.current?.focus();
+      } else {
+        input1Ref.current?.focus();
+      }
     }
   };
 
-  const borderClass = hasError
-    ? "border-rose-500/80 focus-within:border-rose-500"
-    : "border-white/10 focus-within:border-primary";
-
   return (
-    <div className={`relative flex items-center gap-1.5 w-full ${className}`}>
-      <div className="flex items-center gap-1.5 w-full">
-        <input
-          ref={input1Ref}
-          type="text"
-          value={p1}
-          placeholder={ph1}
-          maxLength={4}
-          onPaste={handlePaste}
-          onChange={e => {
-            const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-            update(v, p2, p3);
-            if (v.length >= 2 && input2Ref.current) {
-              input2Ref.current.focus();
-              input2Ref.current.select();
-            }
-          }}
-          className={`w-1/3 bg-white/5 border ${borderClass} rounded-xl px-2 py-2 text-center text-xs font-mono font-bold uppercase tracking-wider text-white outline-none`}
-        />
+    <div
+      className={
+        className ||
+        `w-full bg-white/5 border ${
+          hasError
+            ? "border-rose-500/80 focus-within:border-rose-500"
+            : "border-white/10 focus-within:border-primary"
+        } rounded-xl h-[46px] px-4 flex items-center justify-center gap-2 sm:gap-3 transition-colors`
+      }
+    >
+      <input
+        ref={input1Ref}
+        type="text"
+        maxLength={4}
+        value={p1}
+        placeholder={ph1 || "AA"}
+        onChange={e => {
+          const raw = e.target.value;
+          if (raw.endsWith("-") || raw.endsWith(" ")) {
+            const next = raw.slice(0, -1).replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 4);
+            update(next, p2, p3);
+            input2Ref.current?.focus();
+            return;
+          }
+          const next = raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 4);
+          update(next, p2, p3);
+        }}
+        onKeyDown={e => {
+          if (e.key === "-" || e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            input2Ref.current?.focus();
+          }
+        }}
+        onPaste={handlePaste}
+        className="w-14 sm:w-16 bg-transparent text-center font-mono font-bold text-sm sm:text-base text-white uppercase outline-none placeholder:text-white/20 tracking-wider"
+      />
 
-        <span className="text-white/30 font-bold text-xs">-</span>
+      <span className="text-white/40 font-bold select-none text-sm sm:text-base">-</span>
 
-        <input
-          ref={input2Ref}
-          type="text"
-          value={p2}
-          placeholder={ph2}
-          maxLength={4}
-          onPaste={handlePaste}
-          onKeyDown={e => {
-            if (e.key === "Backspace" && !p2 && input1Ref.current) {
-              input1Ref.current.focus();
-            }
-          }}
-          onChange={e => {
-            const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-            update(p1, v, p3);
-            if (v.length >= 3 && input3Ref.current) {
-              input3Ref.current.focus();
-              input3Ref.current.select();
-            }
-          }}
-          className={`w-1/3 bg-white/5 border ${borderClass} rounded-xl px-2 py-2 text-center text-xs font-mono font-bold uppercase tracking-wider text-white outline-none`}
-        />
+      <input
+        ref={input2Ref}
+        type="text"
+        maxLength={4}
+        value={p2}
+        placeholder={ph2 || "123"}
+        onChange={e => {
+          const raw = e.target.value;
+          if (raw.endsWith("-") || raw.endsWith(" ")) {
+            const next = raw.slice(0, -1).replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 4);
+            update(p1, next, p3);
+            input3Ref.current?.focus();
+            return;
+          }
+          const next = raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 4);
+            update(p1, next, p3);
+        }}
+        onKeyDown={e => {
+          if (e.key === "-" || e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            input3Ref.current?.focus();
+          } else if (e.key === "Backspace" && !p2) {
+            input1Ref.current?.focus();
+          }
+        }}
+        onPaste={handlePaste}
+        className="w-14 sm:w-16 bg-transparent text-center font-mono font-bold text-sm sm:text-base text-white uppercase outline-none placeholder:text-white/20 tracking-wider"
+      />
 
-        <span className="text-white/30 font-bold text-xs">-</span>
+      <span className="text-white/40 font-bold select-none text-sm sm:text-base">-</span>
 
-        <input
-          ref={input3Ref}
-          type="text"
-          value={p3}
-          placeholder={ph3}
-          maxLength={4}
-          onPaste={handlePaste}
-          onKeyDown={e => {
-            if (e.key === "Backspace" && !p3 && input2Ref.current) {
-              input2Ref.current.focus();
-            }
-          }}
-          onChange={e => {
-            const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-            update(p1, p2, v);
-          }}
-          className={`w-1/3 bg-white/5 border ${borderClass} rounded-xl px-2 py-2 text-center text-xs font-mono font-bold uppercase tracking-wider text-white outline-none`}
-        />
-      </div>
+      <input
+        ref={input3Ref}
+        type="text"
+        maxLength={4}
+        value={p3}
+        placeholder={ph3 || "AA"}
+        onChange={e => {
+          const raw = e.target.value;
+          const next = raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 4);
+          update(p1, p2, next);
+        }}
+        onKeyDown={e => {
+          if (e.key === "Backspace" && !p3) {
+            input2Ref.current?.focus();
+          }
+        }}
+        onPaste={handlePaste}
+        className="w-14 sm:w-16 bg-transparent text-center font-mono font-bold text-sm sm:text-base text-white uppercase outline-none placeholder:text-white/20 tracking-wider"
+      />
     </div>
   );
 }

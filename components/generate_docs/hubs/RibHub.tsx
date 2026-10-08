@@ -1,27 +1,20 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Landmark,
-  Search,
-  Zap
-} from "lucide-react";
-import { useTelegram } from "@/components/TelegramContext";
+import React from "react";
+import { ArrowRight, Lock, Landmark, Zap, ChevronLeft } from "lucide-react";
 
 /* ===================================================================== */
-
-export type RibCategory = "physique" | "neobanque";
 
 interface BankOption {
   slug: string;
   name: string;
-  badge: string;
+  badge?: string;
   description: string;
   logo: string;
   logoClass?: string;
-  category: RibCategory;
+  headerBg: string;
+  isAvailable: boolean;
+  category: "physique" | "neobanque";
 }
 
 const BANKS: BankOption[] = [
@@ -29,151 +22,186 @@ const BANKS: BankOption[] = [
     slug: "lbp",
     name: "La Banque Postale",
     badge: "FR",
-    description: "11 champs • Format PDF officiel",
+    description: "• Générateur de RIB La Banque Postale\n• Format PDF / Preview Gratuite\n• 11 Champs à remplir",
     logo: "/logos/lbp.svg",
-    logoClass: "scale-125 -translate-x-1",
+    logoClass: "scale-125 -translate-x-2",
+    headerBg: "bg-gradient-to-br from-blue-900/40 to-slate-950/80 border-blue-500/30",
+    isAvailable: true,
     category: "physique"
   },
   {
     slug: "ca",
     name: "Crédit Agricole",
     badge: "FR",
-    description: "15 champs • Format PDF officiel",
+    description: "• Générateur de RIB Crédit Agricole\n• Format PDF / Preview Gratuite\n• 15 Champs à remplir",
     logo: "/logos/ca.svg",
     logoClass: "scale-110",
+    headerBg: "bg-gradient-to-br from-emerald-900/40 to-slate-950/80 border-emerald-500/30",
+    isAvailable: true,
     category: "physique"
   },
   {
     slug: "sg",
     name: "Société Générale",
     badge: "FR",
-    description: "10 champs • Format PDF officiel",
+    description: "• Générateur de RIB Société Générale\n• Format PDF / Preview Gratuite\n• 10 Champs à remplir",
     logo: "/logos/sg.svg",
+    headerBg: "bg-gradient-to-br from-red-900/40 to-slate-950/80 border-red-500/30",
+    isAvailable: true,
     category: "physique"
   },
   {
     slug: "cm",
     name: "Crédit Mutuel",
     badge: "FR",
-    description: "11 champs • Format PDF officiel",
+    description: "• Générateur de RIB Crédit Mutuel\n• Format PDF / Preview Gratuite\n• 11 Champs à remplir",
     logo: "/logos/cm.svg",
-    logoClass: "scale-110",
+    logoClass: "scale-115",
+    headerBg: "bg-gradient-to-br from-rose-900/40 to-slate-950/80 border-rose-500/30",
+    isAvailable: true,
     category: "physique"
   },
   {
     slug: "cic",
     name: "CIC",
     badge: "FR",
-    description: "11 champs • Format PDF officiel",
+    description: "• Générateur de RIB CIC\n• Format PDF / Preview Gratuite\n• 11 Champs à remplir",
     logo: "/logos/cic.svg",
-    logoClass: "scale-135",
+    logoClass: "scale-150",
+    headerBg: "bg-gradient-to-br from-cyan-900/40 to-slate-950/80 border-cyan-500/30",
+    isAvailable: true,
     category: "physique"
   },
   {
     slug: "bnp",
     name: "BNP Paribas",
     badge: "FR",
-    description: "10 champs • Format PDF officiel",
+    description: "• Générateur de RIB BNP Paribas\n• Format PDF / Preview Gratuite\n• 10 Champs à remplir",
     logo: "/logos/bnp.svg",
-    logoClass: "scale-120",
+    logoClass: "scale-135",
+    headerBg: "bg-gradient-to-br from-emerald-950/40 to-slate-950/80 border-emerald-500/30",
+    isAvailable: true,
     category: "physique"
   },
   {
     slug: "ce",
     name: "Caisse d'Épargne",
     badge: "FR",
-    description: "10 champs • Format PDF officiel",
+    description: "• Générateur de RIB Caisse d'Épargne\n• Format PDF / Preview Gratuite\n• 10 Champs à remplir",
     logo: "/logos/caisse_depargne.svg",
-    logoClass: "scale-115",
+    logoClass: "scale-120",
+    headerBg: "bg-gradient-to-br from-red-950/40 to-slate-950/80 border-red-500/30",
+    isAvailable: true,
     category: "physique"
   },
   {
     slug: "bp",
     name: "Banque Populaire",
     badge: "FR",
-    description: "10 champs • Format PDF officiel",
+    description: "• Générateur de RIB Banque Populaire\n• Format PDF / Preview Gratuite\n• 10 Champs à remplir",
     logo: "/logos/banque_populaire.svg",
     logoClass: "scale-90",
+    headerBg: "bg-gradient-to-br from-cyan-950/40 to-slate-950/80 border-cyan-500/30",
+    isAvailable: true,
     category: "physique"
   },
   {
     slug: "lcl",
     name: "LCL",
     badge: "FR",
-    description: "8 champs • Format PDF officiel",
+    description: "• Générateur de RIB LCL\n• Format PDF / Preview Gratuite\n• 8 Champs à remplir",
     logo: "/logos/lcl.svg",
-    logoClass: "scale-120",
+    logoClass: "scale-135",
+    headerBg: "bg-gradient-to-br from-blue-950/40 to-slate-950/80 border-blue-500/30",
+    isAvailable: true,
     category: "physique"
   },
   {
     slug: "helios",
     name: "Helios",
     badge: "FR",
-    description: "9 champs • Néobanque éthique",
+    description: "• Générateur de RIB Helios\n• Format PDF / Preview Gratuite\n• 9 Champs à remplir",
     logo: "/logos/helios.svg",
     logoClass: "scale-110",
+    headerBg: "bg-gradient-to-br from-cyan-900/40 to-slate-950/80 border-cyan-500/30",
+    isAvailable: true,
     category: "neobanque"
   },
   {
     slug: "noelse",
     name: "Noelse",
     badge: "FR",
-    description: "7 champs • Néobanque moderne",
+    description: "• Générateur de RIB Noelse\n• Format PDF / Preview Gratuite\n• 7 Champs à remplir",
     logo: "/logos/noelse.svg",
-    logoClass: "scale-120",
+    logoClass: "brightness-0 invert scale-130",
+    headerBg: "bg-gradient-to-br from-indigo-950/40 to-slate-950/80 border-indigo-500/30",
+    isAvailable: true,
     category: "neobanque"
   },
   {
     slug: "revolut",
     name: "Revolut",
     badge: "EU",
-    description: "8 champs • Format multidevises",
+    description: "• Générateur de RIB Revolut\n• Format PDF / Preview Gratuite\n• 8 Champs à remplir",
     logo: "/logos/revolut.svg",
+    logoClass: "brightness-0 invert",
+    headerBg: "bg-gradient-to-br from-purple-900/40 to-slate-950/80 border-purple-500/30",
+    isAvailable: true,
     category: "neobanque"
   },
   {
     slug: "qonto",
     name: "Qonto",
     badge: "FR",
-    description: "9 champs • Compte professionnel",
+    description: "• Générateur de RIB Qonto\n• Format PDF / Preview Gratuite\n• 9 Champs à remplir",
     logo: "/logos/qonto.svg",
-    logoClass: "scale-125",
+    logoClass: "brightness-0 invert scale-130",
+    headerBg: "bg-gradient-to-br from-violet-900/40 to-slate-950/80 border-violet-500/30",
+    isAvailable: true,
     category: "neobanque"
   },
   {
     slug: "bfb",
     name: "BforBank",
     badge: "FR",
-    description: "8 champs • Banque 100% en ligne",
+    description: "• Générateur de RIB BforBank\n• Format PDF / Preview Gratuite\n• 8 Champs à remplir",
     logo: "/logos/bfb.svg",
-    logoClass: "scale-75",
+    logoClass: "brightness-0 invert scale-75",
+    headerBg: "bg-gradient-to-br from-blue-800/30 to-slate-950/80 border-blue-400/30",
+    isAvailable: true,
     category: "neobanque"
   },
   {
     slug: "boursobank",
     name: "BoursoBank",
     badge: "FR",
-    description: "9 champs • Leader banque en ligne",
+    description: "• Générateur de RIB BoursoBank\n• Format PDF / Preview Gratuite\n• 9 Champs à remplir",
     logo: "/logos/boursobank.svg",
-    logoClass: "scale-125",
+    logoClass: "scale-135",
+    headerBg: "bg-gradient-to-br from-pink-950/40 to-slate-950/80 border-pink-500/30",
+    isAvailable: true,
     category: "neobanque"
   },
   {
     slug: "sumup",
     name: "SumUp",
     badge: "EU",
-    description: "9 champs • Compte pro & encaissements",
+    description: "• Générateur de RIB SumUp\n• Format PDF / Preview Gratuite\n• 9 Champs à remplir",
     logo: "/logos/sumup.svg",
-    logoClass: "scale-110",
+    logoClass: "brightness-0 invert scale-115",
+    headerBg: "bg-gradient-to-br from-slate-900/60 to-cyan-950/40 border-cyan-500/30",
+    isAvailable: true,
     category: "neobanque"
   },
   {
     slug: "mypos",
     name: "MyPos",
     badge: "EU",
-    description: "10 champs • Solution de paiement",
+    description: "• Générateur de RIB MyPos\n• Format PDF / Preview Gratuite\n• 10 Champs à remplir",
     logo: "/logos/mypos.svg",
-    logoClass: "scale-110",
+    logoClass: "scale-115",
+    headerBg: "bg-gradient-to-br from-blue-950/40 to-slate-950/80 border-blue-500/30",
+    isAvailable: true,
     category: "neobanque"
   }
 ];
@@ -181,132 +209,109 @@ const BANKS: BankOption[] = [
 /* ===================================================================== */
 
 interface RibHubProps {
+  onSelectItem: (slug: string) => void;
   onBack: () => void;
-  onSelectBank: (slug: string) => void;
 }
 
-export default function RibHub({ onBack, onSelectBank }: RibHubProps) {
-  const { haptic } = useTelegram();
-  const [query, setQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<"all" | RibCategory>("all");
+export default function RibHub({ onSelectItem, onBack }: RibHubProps) {
+  const physicalBanks = BANKS.filter((b) => b.category === "physique");
+  const neobanks = BANKS.filter((b) => b.category === "neobanque");
 
-  const filteredBanks = useMemo(() => {
-    return BANKS.filter(item => {
-      const matchCategory = selectedCategory === "all" || item.category === selectedCategory;
-      const matchQuery =
-        !query.trim() ||
-        item.name.toLowerCase().includes(query.toLowerCase()) ||
-        item.description.toLowerCase().includes(query.toLowerCase());
-      return matchCategory && matchQuery;
-    });
-  }, [query, selectedCategory]);
+  const renderBankCard = (bank: BankOption) => {
+    const bankContent = (
+      <>
+        <div className={`w-full h-24 border rounded-xl p-3 flex items-center justify-center relative overflow-hidden mb-4 ${bank.headerBg}`}>
+          <img
+            src={bank.logo}
+            alt={bank.name}
+            className={`h-12 w-auto max-w-[90%] object-contain filter drop-shadow-md ${bank.logoClass || ""}`}
+          />
+        </div>
+
+        <div className="relative z-10 w-full flex flex-col flex-grow">
+          <h3 className="text-base font-black italic mb-2 text-white tracking-tight flex items-center gap-2">
+            {bank.name}
+            {!bank.isAvailable && <Lock size={14} className="text-amber-400/80" />}
+          </h3>
+          <div className="text-[11px] text-white/60 mb-4 font-medium whitespace-pre-line leading-relaxed">
+            {bank.description}
+          </div>
+
+          {bank.isAvailable ? (
+             <div className="mt-auto flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary">
+               Générer RIB <ArrowRight size={12} />
+             </div>
+          ) : (
+             <div className="mt-auto flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-amber-400/80">
+               <Lock size={12} className="text-amber-400" /> Indisponible
+             </div>
+          )}
+        </div>
+      </>
+    );
+
+    if (bank.isAvailable) {
+      return (
+        <div
+          key={bank.slug}
+          onClick={() => onSelectItem(bank.slug)}
+          className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col items-start relative overflow-hidden active:scale-[0.98] transition-all cursor-pointer"
+        >
+          {bankContent}
+        </div>
+      );
+    }
+
+    return (
+      <div
+        key={bank.slug}
+        className="bg-white/5 backdrop-blur-md border border-white/5 rounded-2xl p-4 flex flex-col items-start relative overflow-hidden opacity-50 select-none"
+      >
+        {bankContent}
+      </div>
+    );
+  };
 
   return (
-    <div className="space-y-3 pb-20 fade-in">
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
+    <main className="min-h-screen pt-4 pb-24 px-4 w-full max-w-md mx-auto">
+      <div className="mb-6">
+        <button 
           onClick={onBack}
-          className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-white/60 hover:text-white transition-colors bg-white/[0.04] border border-white/10 px-3 py-1.5 rounded-xl active:scale-95"
+          className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white/40 hover:text-primary transition-colors mb-4"
         >
-          <ArrowLeft size={13} />
-          <span>Catégories</span>
+          <ChevronLeft size={16} /> Docs
         </button>
-        <span className="text-[10px] font-mono text-white/40 uppercase">
-          {filteredBanks.length} banque{filteredBanks.length > 1 ? "s" : ""}
-        </span>
-      </div>
-
-      <div className="px-1">
-        <h2 className="text-sm font-black italic text-white uppercase tracking-tight">
-          RIB Bancaires
-        </h2>
-        <p className="text-[10px] text-white/40 font-medium leading-relaxed">
-          Sélectionnez l'établissement pour éditer votre Relevé d'Identité Bancaire
+        <h1 className="text-2xl font-black italic text-white mb-2 leading-tight">
+          GÉNÉRATEUR DE <br/><span className="text-primary">RIB</span>
+        </h1>
+        <p className="text-white/40 font-bold tracking-wider uppercase text-[10px]">
+          Sélectionnez votre établissement bancaire
         </p>
       </div>
 
-      <div className="relative">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-        <input
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Rechercher une banque..."
-          className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-white/30 outline-none focus:border-primary"
-        />
-      </div>
+      <section className="mb-8">
+        <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/10">
+          <Landmark className="w-5 h-5 text-primary" />
+          <h2 className="text-sm font-black italic text-white tracking-wide">
+            BANQUES PHYSIQUES
+          </h2>
+        </div>
+        <div className="flex flex-col gap-3">
+          {physicalBanks.map(renderBankCard)}
+        </div>
+      </section>
 
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-        {[
-          { id: "all", label: "Toutes (17)" },
-          { id: "physique", label: "Traditionnelles (9)", icon: Landmark },
-          { id: "neobanque", label: "Néobanques (8)", icon: Zap }
-        ].map(tab => {
-          const Icon = tab.icon;
-          const isSelected = selectedCategory === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                haptic("selection");
-                setSelectedCategory(tab.id as "all" | RibCategory);
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider shrink-0 transition-colors flex items-center gap-1.5 ${
-                isSelected
-                  ? "bg-primary text-slate-950 shadow-md shadow-primary/20"
-                  : "bg-white/5 text-white/60 border border-white/5 hover:border-white/10"
-              }`}
-            >
-              {Icon && <Icon size={12} />}
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="space-y-2">
-        {filteredBanks.map(item => (
-          <button
-            key={item.slug}
-            type="button"
-            onClick={() => {
-              haptic("selection");
-              onSelectBank(item.slug);
-            }}
-            className="w-full bg-[#0f121d]/90 backdrop-blur-md p-3 rounded-2xl border border-white/[0.08] hover:border-primary/40 active:scale-[0.98] transition-all text-left flex items-center justify-between group shadow-sm cursor-pointer"
-          >
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-12 h-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 overflow-hidden border border-white/20">
-                <img
-                  src={item.logo}
-                  alt={item.name}
-                  className={`max-h-full max-w-full object-contain ${item.logoClass || ""}`}
-                />
-              </div>
-
-              <div className="min-w-0 flex-1 pr-2">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xs font-black text-white leading-tight truncate">
-                    {item.name}
-                  </h3>
-                  <span className="px-1.5 py-0.2 rounded-md bg-white/5 border border-white/10 text-[8px] font-mono font-bold text-white/60 shrink-0">
-                    {item.badge}
-                  </span>
-                </div>
-                <p className="text-[10px] text-white/40 font-medium truncate mt-0.5">
-                  {item.description}
-                </p>
-              </div>
-            </div>
-
-            <div className="w-7 h-7 rounded-lg bg-white/[0.03] border border-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-slate-950 transition-all shrink-0">
-              <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
+      <section>
+        <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/10">
+          <Zap className="w-5 h-5 text-indigo-400" />
+          <h2 className="text-sm font-black italic text-white tracking-wide">
+            NÉOBANQUES
+          </h2>
+        </div>
+        <div className="flex flex-col gap-3">
+          {neobanks.map(renderBankCard)}
+        </div>
+      </section>
+    </main>
   );
 }

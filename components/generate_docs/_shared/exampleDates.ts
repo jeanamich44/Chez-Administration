@@ -28,6 +28,7 @@ const FR_MONTHS_SHORT = [
   "nov.",
   "déc."
 ];
+const JOURS = ["Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim."] as const;
 const JOURS_FULL = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"] as const;
 
 function pad(value: number, width = 2) {
@@ -45,8 +46,6 @@ function lastWeekday(today: Date, weekday: number) {
 function mondayIndex(date: Date) {
   return date.getDay() === 0 ? 6 : date.getDay() - 1;
 }
-
-/* ===================================================================== */
 
 export function adidasInvoice(date = new Date()) {
   return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()}`;
@@ -67,7 +66,7 @@ export function amazonOrder(date = new Date()) {
 }
 
 export function fnacWeb(date = new Date()) {
-  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear() % 100}`;
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${pad(date.getFullYear() % 100)}`;
 }
 
 export function fnacMagasin(date = new Date()) {
@@ -110,7 +109,7 @@ export function amiInvoice(date = new Date()) {
 }
 
 export function burberryOrder(date = new Date()) {
-  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear() % 100}`;
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${pad(date.getFullYear() % 100)}`;
 }
 
 export function edfAttestation(date = new Date()) {
@@ -157,7 +156,7 @@ export function isoDate(date = new Date()) {
 }
 
 export function slashDateYY(date = new Date()) {
-  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear() % 100}`;
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${pad(date.getFullYear() % 100)}`;
 }
 
 export function parisDate(date = new Date()) {

@@ -11,6 +11,21 @@ import { useEffect, useRef, useState } from "react";
 
 /* ===================================================================== */
 
+const FR_MONTHS = [
+  "janvier",
+  "février",
+  "mars",
+  "avril",
+  "mai",
+  "juin",
+  "juillet",
+  "août",
+  "septembre",
+  "octobre",
+  "novembre",
+  "décembre"
+];
+
 const FR_MONTHS_CAP = [
   "Janvier",
   "Février",
@@ -138,8 +153,8 @@ function parseInputDate(str: string): Date | null {
   const s = str
     .trim()
     .toLowerCase()
-    .replace(/^[a-zA-ZÀ-ÿ\s'-]+,\s*le\s*/i, "")
-    .replace(/,\s*\d{1,2}:\d{2}(?::\d{2})?(?:\s*(?:gmt|utc))?$/i, "")
+    .replace(/^[a-zA-ZÀ-ÿ\\s'-]+,\\s*le\\s*/i, "")
+    .replace(/,\\s*\\d{1,2}:\\d{2}(?::\\d{2})?(?:\\s*(?:gmt|utc))?$/i, "")
     .trim();
 
   const frMatch = s.match(/^(\d{1,2})\s+([a-zA-ZÀ-ÿ.]+)\s+(\d{4})$/);
@@ -201,6 +216,25 @@ function parseInputDate(str: string): Date | null {
   return null;
 }
 
+function formatDate(d: Date, format: "french" | "slash" | "english" | "month_first" | "dot" | "french_short"): string {
+  if (format === "french_short") {
+    return `${d.getDate()} ${FR_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  if (format === "dot") {
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+  }
+  if (format === "slash") {
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  }
+  if (format === "english") {
+    return `${pad(d.getDate())} ${EN_MONTHS_CAP[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  if (format === "month_first") {
+    return `${FR_MONTHS_CAP[d.getMonth()]} ${pad(d.getDate())} ${d.getFullYear()}`;
+  }
+  return `${d.getDate()} ${FR_MONTHS_CAP[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 /* ===================================================================== */
 
 interface CustomDatePickerProps {
@@ -224,7 +258,7 @@ export default function CustomDatePicker({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const isIso = dateFormat === "iso" || /^\d{4}-\d{2}-\d{2}$/.test(value || "");
+  const isIso = dateFormat === "iso" || /^\\d{4}-\\d{2}-\\d{2}$/.test(value || "");
   const sep = dateFormat === "dot" || (!isIso && (value || "").includes(".")) ? "." : isIso ? "-" : "/";
   const sepIndices = isIso ? [4, 7] : [2, 5];
 
@@ -448,7 +482,7 @@ export default function CustomDatePicker({
       onChange(formatted);
       return;
     }
-    const digits = text.replace(/\D/g, "");
+    const digits = text.replace(/\\D/g, "");
     if (digits.length >= 8) {
       let candidate = "";
       if (isIso) {
@@ -548,7 +582,7 @@ export default function CustomDatePicker({
             hasError
               ? "border-rose-500/80 focus:border-rose-500"
               : "border-white/10 focus:border-primary"
-          } rounded-xl ${compact ? "pl-3 pr-9 py-2 h-[38px] text-xs" : "pl-3.5 pr-10 py-2.5 text-xs"} text-white outline-none transition-colors select-text`}
+          } rounded-xl ${compact ? "pl-3 pr-9 py-2 h-[38px] text-sm" : "pl-4 pr-11 py-3 text-sm"} text-white outline-none transition-colors select-text`}
         />
         <button
           type="button"
@@ -557,37 +591,39 @@ export default function CustomDatePicker({
             setIsOpen(!isOpen);
             inputRef.current?.focus();
           }}
-          className={`absolute ${compact ? "right-2 p-1" : "right-2.5 p-1"} rounded-lg text-white/50 hover:text-primary hover:bg-white/10 transition-colors cursor-pointer`}
+          className={`absolute ${compact ? "right-2.5 p-1" : "right-3 p-1.5"} rounded-lg text-white/50 hover:text-primary hover:bg-white/10 transition-colors cursor-pointer`}
           title="Ouvrir le calendrier"
         >
-          <CalendarIcon size={compact ? 13 : 15} />
+          <CalendarIcon size={compact ? 14 : 16} />
         </button>
       </div>
 
       {isOpen && (
         <div
           onMouseDown={e => e.preventDefault()}
-          className="absolute z-50 mt-1.5 w-full max-w-[300px] p-3 rounded-2xl bg-[#0c1322]/98 border border-white/15 backdrop-blur-2xl shadow-2xl shadow-black/80 left-0"
+          className="absolute z-50 mt-2 w-full max-w-[320px] p-4 rounded-2xl bg-[#0c1322]/95 border border-white/15 backdrop-blur-2xl shadow-2xl shadow-black/80"
         >
-          <div className="flex items-center justify-between gap-1 pb-2 mb-2 border-b border-white/10">
+          <div className="flex items-center justify-between gap-1 pb-3 mb-3 border-b border-white/10">
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={prevYear}
                 className="p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                title="Année précédente"
               >
-                <ChevronsLeft size={13} />
+                <ChevronsLeft size={14} />
               </button>
               <button
                 type="button"
                 onClick={prevMonth}
                 className="p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                title="Mois précédent"
               >
-                <ChevronLeft size={13} />
+                <ChevronLeft size={14} />
               </button>
             </div>
 
-            <div className="text-[11px] font-black uppercase tracking-wider text-white select-none">
+            <div className="text-xs font-black uppercase tracking-wider text-white select-none">
               {FR_MONTHS_CAP[viewMonth]} {viewYear}
             </div>
 
@@ -596,22 +632,24 @@ export default function CustomDatePicker({
                 type="button"
                 onClick={nextMonth}
                 className="p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                title="Mois suivant"
               >
-                <ChevronRight size={13} />
+                <ChevronRight size={14} />
               </button>
               <button
                 type="button"
                 onClick={nextYear}
                 className="p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                title="Année suivante"
               >
-                <ChevronsRight size={13} />
+                <ChevronsRight size={14} />
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 mb-1.5 text-center select-none">
+          <div className="grid grid-cols-7 gap-1 mb-2 text-center select-none">
             {WEEKDAYS.map(w => (
-              <span key={w} className="text-[9px] font-bold text-white/40 uppercase">
+              <span key={w} className="text-[10px] font-bold text-white/40 uppercase">
                 {w}
               </span>
             ))}
@@ -623,7 +661,7 @@ export default function CustomDatePicker({
               return (
                 <div
                   key={`prev-${i}`}
-                  className="h-7 flex items-center justify-center text-[10px] text-white/15"
+                  className="h-8 flex items-center justify-center text-xs text-white/15"
                 >
                   {dayNum}
                 </div>
@@ -640,7 +678,7 @@ export default function CustomDatePicker({
                   key={day}
                   type="button"
                   onClick={() => handleSelectDay(day)}
-                  className={`h-7 rounded-lg text-[11px] font-semibold flex items-center justify-center transition-all ${
+                  className={`h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-all ${
                     selected
                       ? "bg-primary text-black font-black shadow-md shadow-primary/30 scale-105"
                       : today
@@ -658,18 +696,18 @@ export default function CustomDatePicker({
             }).map((_, i) => (
               <div
                 key={`next-${i}`}
-                className="h-7 flex items-center justify-center text-[10px] text-white/15"
+                className="h-8 flex items-center justify-center text-xs text-white/15"
               >
                 {i + 1}
               </div>
             ))}
           </div>
 
-          <div className="flex items-center justify-between pt-2 mt-2 border-t border-white/10">
+          <div className="flex items-center justify-between pt-3 mt-3 border-t border-white/10">
             <button
               type="button"
               onClick={handleSelectToday}
-              className="text-[9px] font-black uppercase tracking-wider text-primary hover:underline"
+              className="text-[10px] font-black uppercase tracking-wider text-primary hover:underline"
             >
               Aujourd'hui
             </button>
@@ -679,7 +717,7 @@ export default function CustomDatePicker({
                 setIsOpen(false);
                 inputRef.current?.blur();
               }}
-              className="text-[9px] font-bold uppercase tracking-wider text-white/40 hover:text-white"
+              className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white"
             >
               Fermer
             </button>

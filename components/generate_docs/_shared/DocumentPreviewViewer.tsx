@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Crosshair, Download, Maximize2, Minus, Plus, RefreshCw, X } from "lucide-react";
 
-/* ===================================================================== */
-
 const MIN_SCALE = 0.2;
 const MAX_SCALE = 8;
 const ZOOM_STEP = 1.25;
@@ -15,8 +13,6 @@ type View = { scale: number; x: number; y: number };
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
-
-/* ===================================================================== */
 
 export default function DocumentPreviewViewer({
   url,
@@ -73,7 +69,7 @@ export default function DocumentPreviewViewer({
     const viewport = viewportRef.current;
     const { w, h } = naturalRef.current;
     if (!viewport || w <= 0 || h <= 0) return;
-    const pad = 16;
+    const pad = 24;
     const scale = Math.min((viewport.clientWidth - pad) / w, (viewport.clientHeight - pad) / h);
     const next = {
       scale,
@@ -226,70 +222,83 @@ export default function DocumentPreviewViewer({
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className={`fixed inset-0 z-[9999] flex flex-col bg-slate-950/98 backdrop-blur-md transition-opacity duration-260 ease-out select-none ${
+      className={`fixed inset-0 z-[9999] flex flex-col bg-slate-950/95 backdrop-blur-md transition-opacity duration-260 ease-out select-none ${
         entered && !closing ? "opacity-100" : "opacity-0"
       }`}
       onContextMenu={event => event.preventDefault()}
     >
       <div
-        className={`shrink-0 flex items-center justify-between gap-2 px-3 py-2.5 border-b border-white/10 bg-slate-950/90 transition-all duration-300 ease-out ${
+        className={`shrink-0 flex flex-wrap items-center justify-between gap-3 px-3 sm:px-5 py-3 border-b border-white/10 bg-slate-950/80 transition-all duration-300 ease-out ${
           entered && !closing ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"
         }`}
       >
-        <div className="min-w-0 pr-2">
-          <p className="text-xs font-black italic text-white truncate">{title}</p>
-          <p className="text-[10px] text-white/40 truncate">Aperçu filigrané</p>
+        <div className="min-w-0">
+          <p className="text-sm font-black italic text-white truncate">{title}</p>
+          <p className="text-[11px] text-white/40">Aperçu filigrané — zoom molette, glisser pour déplacer</p>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           {onAction ? (
             <button
               type="button"
               onClick={onAction}
               disabled={isActionLoading || actionDisabled}
-              className="h-8 px-3 rounded-xl bg-primary text-slate-950 font-black uppercase text-[10px] tracking-wider flex items-center gap-1.5 hover:bg-primary/90 disabled:opacity-50 transition-all shadow-md shadow-primary/20 cursor-pointer"
+              className="h-9 px-4 rounded-xl bg-primary text-slate-950 font-black uppercase text-xs tracking-wider flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 cursor-pointer"
             >
               {isActionLoading ? (
-                <RefreshCw size={12} className="animate-spin" />
+                <RefreshCw size={14} className="animate-spin" />
               ) : (
-                <Download size={12} />
+                <Download size={14} />
               )}
-              <span>{actionLabel || "PDF"}</span>
+              <span>{actionLabel || "Télécharger"}</span>
             </button>
           ) : null}
-
-          <div className="flex items-center rounded-lg bg-white/5 border border-white/10 p-0.5">
+          <div className="flex items-center gap-1 rounded-xl bg-white/5 border border-white/10 p-1">
             <button
               type="button"
               onClick={() => zoomBy(1 / ZOOM_STEP)}
-              className="w-7 h-7 rounded text-white/80 hover:bg-white/10 flex items-center justify-center cursor-pointer"
+              className="w-9 h-9 rounded-lg text-white/80 hover:bg-white/10 flex items-center justify-center cursor-pointer"
               aria-label="Dézoomer"
             >
-              <Minus size={13} />
+              <Minus size={16} />
             </button>
             <button
               type="button"
               onClick={fitToView}
-              className="px-1.5 h-7 rounded text-[10px] font-mono font-bold text-white/80 hover:bg-white/10 cursor-pointer"
+              className="min-w-[4.25rem] px-2 h-9 rounded-lg text-xs font-mono font-bold text-white/80 hover:bg-white/10 cursor-pointer"
+              aria-label="Ajuster à l'écran"
             >
               {percent}%
             </button>
             <button
               type="button"
               onClick={() => zoomBy(ZOOM_STEP)}
-              className="w-7 h-7 rounded text-white/80 hover:bg-white/10 flex items-center justify-center cursor-pointer"
+              className="w-9 h-9 rounded-lg text-white/80 hover:bg-white/10 flex items-center justify-center cursor-pointer"
               aria-label="Zoomer"
             >
-              <Plus size={13} />
+              <Plus size={16} />
             </button>
           </div>
-
+          <button
+            type="button"
+            onClick={fitToView}
+            className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+          >
+            <Maximize2 size={14} /> Ajuster
+          </button>
+          <button
+            type="button"
+            onClick={recenter}
+            className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+          >
+            <Crosshair size={14} /> Recentrer
+          </button>
           <button
             type="button"
             onClick={requestClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer ml-1"
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer"
             aria-label="Fermer"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
       </div>
@@ -304,7 +313,7 @@ export default function DocumentPreviewViewer({
         onDoubleClick={fitToView}
       >
         {!ready ? (
-          <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold uppercase tracking-widest text-white/40">
+          <div className="absolute inset-0 flex items-center justify-center text-xs font-bold uppercase tracking-widest text-white/40">
             Chargement de l'aperçu…
           </div>
         ) : null}

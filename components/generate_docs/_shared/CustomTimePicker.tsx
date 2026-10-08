@@ -55,8 +55,7 @@ export default function CustomTimePicker({
     const input = inputRef.current;
     if (!input) return;
 
-    if (e.key === "Enter" || e.key === "Escape") {
-      input.blur();
+    if (e.key === "Tab" || e.key === "Enter" || e.key === "Escape") {
       return;
     }
 
@@ -65,58 +64,59 @@ export default function CustomTimePicker({
       if (e.key === "ArrowLeft" && pos === 3) {
         e.preventDefault();
         input.setSelectionRange(1, 1);
-      } else if (e.key === "ArrowRight" && pos === 2) {
+      } else if (e.key === "ArrowRight" && pos === 1) {
         e.preventDefault();
-        input.setSelectionRange(4, 4);
+        input.setSelectionRange(3, 3);
       }
+      return;
+    }
+
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      const pos = input.selectionStart ?? 0;
+      const [curH, curM] = parseParts(formattedValue);
+      let numH = parseInt(curH || "0", 10);
+      let numM = parseInt(curM || "0", 10);
+
+      if (pos <= 2) {
+        numH = e.key === "ArrowUp" ? (numH + 1) % 24 : (numH - 1 + 24) % 24;
+      } else {
+        numM = e.key === "ArrowUp" ? (numM + 1) % 60 : (numM - 1 + 60) % 60;
+      }
+      const nextStr = `${String(numH).padStart(2, "0")}:${String(numM).padStart(2, "0")}`;
+      onChange(nextStr);
+      requestAnimationFrame(() => {
+        input.setSelectionRange(pos, pos);
+      });
       return;
     }
 
     if (e.key >= "0" && e.key <= "9") {
       e.preventDefault();
       let pos = input.selectionStart ?? 0;
-      if (pos === 2) pos = 3;
+      if (pos === 2) {
+        pos = 3;
+      }
       if (pos >= 5) return;
 
       const chars = formattedValue.split("");
-      let nextPos = pos + 1;
-
-      if (pos === 0) {
-        const num = parseInt(e.key, 10);
-        if (num > 2) {
-          chars[0] = "0";
-          chars[1] = e.key;
-          nextPos = 3;
-        } else {
-          chars[0] = e.key;
-          nextPos = 1;
-        }
-      } else if (pos === 1) {
-        const tens = parseInt(chars[0], 10);
-        let unit = parseInt(e.key, 10);
-        if (tens === 2 && unit > 3) unit = 3;
-        chars[1] = String(unit);
-        nextPos = 3;
-      } else if (pos === 3) {
-        const num = parseInt(e.key, 10);
-        if (num > 5) {
-          chars[3] = "0";
-          chars[4] = e.key;
-          nextPos = 5;
-        } else {
-          chars[3] = e.key;
-          nextPos = 4;
-        }
-      } else if (pos === 4) {
-        chars[4] = e.key;
-        nextPos = 5;
-      }
-
+      chars[pos] = e.key;
       chars[2] = ":";
-      const nextStr = chars.join("").slice(0, 5);
+
+      let h = parseInt(chars[0] + chars[1], 10) || 0;
+      if (h > 23) h = 23;
+      let m = parseInt(chars[3] + chars[4], 10) || 0;
+      if (m > 59) m = 59;
+
+      const validH = String(h).padStart(2, "0");
+      const validM = String(m).padStart(2, "0");
+      const nextStr = `${validH}:${validM}`;
       onChange(nextStr);
 
-      if (nextPos === 2) nextPos = 3;
+      let nextPos = pos + 1;
+      if (nextPos === 2) {
+        nextPos = 3;
+      }
       requestAnimationFrame(() => {
         input.setSelectionRange(nextPos, nextPos);
       });
@@ -129,12 +129,16 @@ export default function CustomTimePicker({
       if (pos <= 0) return;
 
       let targetPos = pos - 1;
-      if (targetPos === 2) targetPos = 1;
+      if (targetPos === 2) {
+        targetPos = 1;
+      }
+      if (targetPos < 0) return;
 
       const chars = formattedValue.split("");
       chars[targetPos] = "0";
       chars[2] = ":";
-      onChange(chars.join("").slice(0, 5));
+      const nextStr = chars.join("").slice(0, 5);
+      onChange(nextStr);
 
       requestAnimationFrame(() => {
         input.setSelectionRange(targetPos, targetPos);
@@ -145,13 +149,16 @@ export default function CustomTimePicker({
     if (e.key === "Delete") {
       e.preventDefault();
       let pos = input.selectionStart ?? 0;
-      if (pos === 2) pos = 3;
+      if (pos === 2) {
+        pos = 3;
+      }
       if (pos >= 5) return;
 
       const chars = formattedValue.split("");
       chars[pos] = "0";
       chars[2] = ":";
-      onChange(chars.join("").slice(0, 5));
+      const nextStr = chars.join("").slice(0, 5);
+      onChange(nextStr);
 
       requestAnimationFrame(() => {
         input.setSelectionRange(pos, pos);
@@ -166,37 +173,79 @@ export default function CustomTimePicker({
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    if (disabled) return;
     const text = e.clipboardData.getData("text");
     const [h, m] = parseParts(text);
-    if (h !== "" || m !== "") {
-      onChange(`${(h || "00").padStart(2, "0")}:${(m || "00").padStart(2, "0")}`);
+    if (h || m) {
+      const validH = h ? h.padStart(2, "0") : "00";
+      const validM = m ? m.padStart(2, "0") : "00";
+      onChange(`${validH}:${validM}`);
     }
   };
 
+  const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+    if (disabled) return;
+    e.preventDefault();
+    const input = inputRef.current;
+    if (!input) return;
+
+    const pos = input.selectionStart ?? 0;
+    const [curH, curM] = parseParts(formattedValue);
+    let numH = parseInt(curH || "0", 10);
+    let numM = parseInt(curM || "0", 10);
+
+    if (pos <= 2) {
+      numH = e.deltaY < 0 ? (numH + 1) % 24 : (numH - 1 + 24) % 24;
+    } else {
+      numM = e.deltaY < 0 ? (numM + 1) % 60 : (numM - 1 + 60) % 60;
+    }
+    const nextStr = `${String(numH).padStart(2, "0")}:${String(numM).padStart(2, "0")}`;
+    onChange(nextStr);
+    requestAnimationFrame(() => {
+      input.setSelectionRange(pos, pos);
+    });
+  };
+
+  const handleSetNow = () => {
+    if (disabled) return;
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, "0");
+    const m = String(now.getMinutes()).padStart(2, "0");
+    onChange(`${h}:${m}`);
+  };
+
   return (
-    <div className="relative w-full">
-      <div className="relative flex items-center">
-        <input
-          ref={inputRef}
-          type="text"
-          disabled={disabled}
-          value={formattedValue}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          onChange={() => {}}
-          className={`w-full bg-white/5 border font-mono ${
-            hasError
-              ? "border-rose-500/80 focus:border-rose-500"
-              : "border-white/10 focus:border-primary"
-          } rounded-xl ${compact ? "pl-3 pr-8 py-2 h-[38px] text-xs" : "pl-3.5 pr-9 py-2.5 text-xs"} text-white outline-none transition-colors select-text`}
-        />
-        <div
-          className={`absolute ${compact ? "right-2" : "right-2.5"} pointer-events-none text-white/40 flex items-center justify-center`}
-        >
-          <Clock size={compact ? 13 : 15} />
-        </div>
-      </div>
+    <div
+      className={`relative flex items-center justify-between w-full bg-white/5 border ${
+        hasError
+          ? "border-rose-500/80 focus-within:border-rose-500"
+          : "border-white/10 focus-within:border-primary"
+      } rounded-xl ${compact ? "px-3 h-[38px]" : "px-4 h-[46px]"} transition-colors`}
+    >
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        value={formattedValue}
+        onChange={() => {}}
+        onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
+        onWheel={handleWheel}
+        disabled={disabled}
+        className={`w-20 bg-transparent border-0 outline-none ring-0 p-0 text-white font-mono font-bold tracking-widest text-center focus:outline-none focus:ring-0 focus:border-0 caret-primary ${
+          compact ? "text-xs" : "text-sm"
+        }`}
+        aria-label="Heure (HH:MM)"
+      />
+
+      <button
+        type="button"
+        onClick={handleSetNow}
+        disabled={disabled}
+        title="Régler sur l'heure actuelle"
+        className={`${compact ? "p-1" : "p-1.5"} rounded-lg text-white/40 hover:text-primary hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
+      >
+        <Clock size={compact ? 13 : 16} />
+      </button>
     </div>
   );
 }

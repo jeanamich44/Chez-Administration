@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-
-/* ===================================================================== */
+import { toast } from "sonner";
 
 export type PreviewPolicy = {
   enabled: boolean;
@@ -22,8 +21,6 @@ export type GenerateDocsPublicConfig = {
   previewAllowed?: boolean;
   subcategories: Record<string, { enabled: boolean }>;
 };
-
-/* ===================================================================== */
 
 const FALLBACK_POLICY: PreviewPolicy = { enabled: true, seconds: 600, allowed: true, off: false };
 
@@ -81,7 +78,7 @@ export function formatPreviewTimer(seconds: number) {
 let _cachedConfig: GenerateDocsPublicConfig | null = null;
 let _cachedConfigPromise: Promise<GenerateDocsPublicConfig | null> | null = null;
 
-export async function fetchGenerateDocsConfig(initData?: string): Promise<GenerateDocsPublicConfig | null> {
+export async function fetchGenerateDocsConfig(): Promise<GenerateDocsPublicConfig | null> {
   if (_cachedConfig) return _cachedConfig;
   if (_cachedConfigPromise) return _cachedConfigPromise;
   if (typeof window !== "undefined") {
@@ -95,9 +92,7 @@ export async function fetchGenerateDocsConfig(initData?: string): Promise<Genera
   }
   _cachedConfigPromise = (async () => {
     try {
-      const headers: Record<string, string> = {};
-      if (initData) headers["x-telegram-init-data"] = initData;
-      const res = await fetch("/api/proxy/generate-docs/config", { headers });
+      const res = await fetch("/api/generate-docs/config");
       if (!res.ok) return null;
       const data = (await res.json()) as GenerateDocsPublicConfig;
       _cachedConfig = data;
@@ -116,8 +111,8 @@ export async function fetchGenerateDocsConfig(initData?: string): Promise<Genera
   return _cachedConfigPromise;
 }
 
-export async function fetchPreviewPolicy(initData?: string): Promise<PreviewPolicy> {
-  const data = await fetchGenerateDocsConfig(initData);
+export async function fetchPreviewPolicy(): Promise<PreviewPolicy> {
+  const data = await fetchGenerateDocsConfig();
   if (!data) return FALLBACK_POLICY;
   const seconds = Number(data.previewCooldownSeconds);
   const off = Boolean(data.previewOff);
@@ -131,9 +126,7 @@ export async function fetchPreviewPolicy(initData?: string): Promise<PreviewPoli
   };
 }
 
-/* ===================================================================== */
-
-export function usePreviewCooldown(category: PreviewCategory, initData?: string) {
+export function usePreviewCooldown(category: PreviewCategory) {
   const storageKey = previewCooldownStorageKey(category);
   const [cooldown, setCooldown] = useState(0);
   const [policy, setPolicy] = useState<PreviewPolicy>(FALLBACK_POLICY);
@@ -147,13 +140,13 @@ export function usePreviewCooldown(category: PreviewCategory, initData?: string)
 
   useEffect(() => {
     let cancelled = false;
-    fetchPreviewPolicy(initData).then(next => {
+    fetchPreviewPolicy().then(next => {
       if (!cancelled) setPolicy(next);
     });
     return () => {
       cancelled = true;
     };
-  }, [initData]);
+  }, []);
 
   useEffect(() => {
     if (!policy.enabled || policy.seconds <= 0) {
@@ -191,9 +184,9 @@ export function usePreviewCooldown(category: PreviewCategory, initData?: string)
     return () => clearInterval(timer);
   }, [cooldown, storageKey]);
 
-  const assertReady = useCallback((showError?: (msg: string) => void) => {
+  const assertReady = useCallback(() => {
     if (!policy.allowed) {
-      if (showError) showError("Les aperçus sont momentanément indisponibles.");
+      toast.error("Les aperçus sont éteints.");
       return false;
     }
     if (!policy.enabled || policy.seconds <= 0) return true;
@@ -204,9 +197,9 @@ export function usePreviewCooldown(category: PreviewCategory, initData?: string)
       return true;
     }
     setCooldown(remaining);
-    if (showError) {
-      showError(`Veuillez patienter ${formatPreviewTimer(remaining)} avant le prochain aperçu ${CATEGORY_LABEL[category]}.`);
-    }
+    toast.warning(
+      `Veuillez patienter ${formatPreviewTimer(remaining)} avant le prochain aperçu ${CATEGORY_LABEL[category]}.`
+    );
     return false;
   }, [category, policy.allowed, policy.enabled, policy.seconds, storageKey]);
 

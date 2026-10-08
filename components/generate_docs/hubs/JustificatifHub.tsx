@@ -1,51 +1,61 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Flame,
-  GraduationCap
-} from "lucide-react";
-import { useTelegram } from "@/components/TelegramContext";
+import React, { useState } from "react";
+import { ArrowRight, Flame, GraduationCap, ChevronLeft } from "lucide-react";
 
 /* ===================================================================== */
 
-export type JustificatifCategory = "domicile" | "formation";
+type JustificatifCategory = "domicile" | "formation";
 
 interface JustificatifOption {
   slug: string;
   name: string;
-  badge: string;
   description: string;
   logo: string;
-  logoClass?: string;
+  headerBg: string;
   category: JustificatifCategory;
 }
 
-const JUSTIFICATIFS: JustificatifOption[] = [
+const CATEGORIES = [
+  {
+    id: "domicile" as const,
+    title: "DOMICILE",
+    subtitle: "ÉNERGIE",
+    icon: Flame,
+    iconColor: "text-orange-400"
+  },
+  {
+    id: "formation" as const,
+    title: "FORMATION",
+    subtitle: "AUTO-ÉCOLE",
+    icon: GraduationCap,
+    iconColor: "text-sky-400"
+  }
+];
+
+const ISSUERS: JustificatifOption[] = [
   {
     slug: "attestation_direct_energie",
     name: "Direct Énergie",
-    badge: "DOMICILE",
-    description: "Attestation de titulaire de contrat Direct Énergie",
+    description: "• Titulaire de contrat Direct Énergie\n• Format PDF / Preview Gratuite\n• Identité, référence client et date",
     logo: "/logos/direct_energie.svg",
+    headerBg: "bg-white border-amber-500/30",
     category: "domicile"
   },
   {
     slug: "attestation_edf",
     name: "EDF",
-    badge: "DOMICILE",
-    description: "Attestation de titulaire de contrat EDF avec PDL",
+    description: "• Titulaire de contrat EDF\n• Format PDF / Preview Gratuite\n• Identité, PDL et cachet",
     logo: "/logos/edf.svg",
+    headerBg: "bg-white border-orange-500/30",
     category: "domicile"
   },
   {
     slug: "conduite_heures",
-    name: "Heures de Conduite",
-    badge: "AUTO-ÉCOLE",
-    description: "Relevé d'heures et livret de conduite automobile",
+    name: "Heures de conduite",
+    description: "• Liste des rendez-vous de leçon\n• Format PDF / Preview Gratuite\n• Élève, édition et créneaux",
     logo: "/logos/cfrvitry.png",
+    headerBg: "bg-white border-sky-500/30",
     category: "formation"
   }
 ];
@@ -53,112 +63,102 @@ const JUSTIFICATIFS: JustificatifOption[] = [
 /* ===================================================================== */
 
 interface JustificatifHubProps {
+  onSelectItem: (slug: string) => void;
   onBack: () => void;
-  onSelectDoc: (slug: string) => void;
 }
 
-export default function JustificatifHub({ onBack, onSelectDoc }: JustificatifHubProps) {
-  const { haptic } = useTelegram();
+export default function JustificatifHub({ onSelectItem, onBack }: JustificatifHubProps) {
   const [selectedCategory, setSelectedCategory] = useState<"all" | JustificatifCategory>("all");
 
-  const filteredDocs = useMemo(() => {
-    return JUSTIFICATIFS.filter(item => {
-      return selectedCategory === "all" || item.category === selectedCategory;
-    });
-  }, [selectedCategory]);
+  const renderCard = (item: JustificatifOption) => (
+    <div
+      key={item.slug}
+      onClick={() => onSelectItem(item.slug)}
+      className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col items-start relative overflow-hidden active:scale-[0.98] transition-all cursor-pointer mb-3"
+    >
+      <div className={`w-full h-24 border rounded-xl p-3 flex items-center justify-center relative overflow-hidden mb-4 ${item.headerBg}`}>
+        <img src={item.logo} alt={item.name} className="h-12 w-auto max-w-[90%] object-contain filter drop-shadow-md" />
+      </div>
+      <div className="relative z-10 w-full flex flex-col flex-grow">
+        <h3 className="text-base font-black italic mb-2 text-white tracking-tight">{item.name}</h3>
+        <div className="text-[11px] text-white/60 mb-4 font-medium whitespace-pre-line leading-relaxed">
+          {item.description}
+        </div>
+        <div className="mt-auto flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary">
+          Générer justificatif <ArrowRight size={12} />
+        </div>
+      </div>
+    </div>
+  );
+
+  const displayedCategories = CATEGORIES.filter(cat => selectedCategory === "all" || selectedCategory === cat.id);
 
   return (
-    <div className="space-y-3 pb-20 fade-in">
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
+    <main className="min-h-screen pt-4 pb-24 px-4 w-full max-w-md mx-auto">
+      <div className="mb-6">
+        <button 
           onClick={onBack}
-          className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-white/60 hover:text-white transition-colors bg-white/[0.04] border border-white/10 px-3 py-1.5 rounded-xl active:scale-95"
+          className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white/40 hover:text-primary transition-colors mb-4"
         >
-          <ArrowLeft size={13} />
-          <span>Catégories</span>
+          <ChevronLeft size={16} /> Docs
         </button>
-      </div>
-
-      <div className="px-1">
-        <h2 className="text-sm font-black italic text-white uppercase tracking-tight">
-          Justificatifs & Attestations
-        </h2>
-        <p className="text-[10px] text-white/40 font-medium leading-relaxed">
-          Sélectionnez l'attestation ou le justificatif officiel à générer
+        <h1 className="text-2xl font-black italic text-white mb-2 leading-tight">
+          GÉNÉRATEUR DE <br/><span className="text-primary">JUSTIFICATIFS</span>
+        </h1>
+        <p className="text-white/40 font-bold tracking-wider uppercase text-[10px]">
+          Sélectionnez le justificatif à générer
         </p>
       </div>
 
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-        {[
-          { id: "all", label: "Tous" },
-          { id: "domicile", label: "Domicile", icon: Flame },
-          { id: "formation", label: "Formation", icon: GraduationCap }
-        ].map(tab => {
-          const Icon = tab.icon;
-          const isSelected = selectedCategory === tab.id;
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        <button
+          type="button"
+          onClick={() => setSelectedCategory("all")}
+          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+            selectedCategory === "all"
+              ? "bg-primary text-black"
+              : "bg-white/5 text-white/60"
+          }`}
+        >
+          Tous
+        </button>
+        {CATEGORIES.map(cat => {
+          const Icon = cat.icon;
           return (
             <button
-              key={tab.id}
+              key={cat.id}
               type="button"
-              onClick={() => {
-                haptic("selection");
-                setSelectedCategory(tab.id as "all" | JustificatifCategory);
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider shrink-0 transition-colors flex items-center gap-1.5 ${
-                isSelected
-                  ? "bg-primary text-slate-950 shadow-md shadow-primary/20"
-                  : "bg-white/5 text-white/60 border border-white/5 hover:border-white/10"
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                selectedCategory === cat.id
+                  ? "bg-primary text-black"
+                  : "bg-white/5 text-white/60"
               }`}
             >
-              {Icon && <Icon size={12} />}
-              <span>{tab.label}</span>
+              <Icon size={12} className={selectedCategory === cat.id ? "text-black" : cat.iconColor} />
+              {cat.title}
             </button>
           );
         })}
       </div>
 
-      <div className="space-y-2.5">
-        {filteredDocs.map(item => (
-          <button
-            key={item.slug}
-            type="button"
-            onClick={() => {
-              haptic("selection");
-              onSelectDoc(item.slug);
-            }}
-            className="w-full bg-[#0f121d]/90 backdrop-blur-md p-3.5 rounded-2xl border border-white/[0.08] hover:border-rose-500/40 active:scale-[0.98] transition-all text-left flex items-center justify-between group shadow-sm cursor-pointer"
-          >
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-12 h-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 overflow-hidden border border-white/20">
-                <img
-                  src={item.logo}
-                  alt={item.name}
-                  className={`max-h-full max-w-full object-contain ${item.logoClass || ""}`}
-                />
-              </div>
-
-              <div className="min-w-0 flex-1 pr-2">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <h3 className="text-xs font-black text-white leading-tight truncate">
-                    {item.name}
-                  </h3>
-                  <span className="px-1.5 py-0.5 rounded-full border text-[7px] font-black tracking-wider uppercase shrink-0 bg-rose-500/10 text-rose-400 border-rose-500/20">
-                    {item.badge}
-                  </span>
-                </div>
-                <p className="text-[10px] text-white/40 font-medium line-clamp-1">
-                  {item.description}
-                </p>
-              </div>
+      {displayedCategories.map(cat => {
+        const items = ISSUERS.filter(i => i.category === cat.id).sort((a, b) => a.name.localeCompare(b.name, "fr"));
+        const Icon = cat.icon;
+        return (
+          <section key={cat.id} className="mb-8">
+            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/10">
+              <Icon className={`w-5 h-5 ${cat.iconColor}`} />
+              <h2 className="text-sm font-black italic text-white tracking-wide">
+                {cat.title}
+              </h2>
             </div>
-
-            <div className="w-7 h-7 rounded-lg bg-white/[0.03] border border-white/5 flex items-center justify-center text-rose-400 group-hover:bg-rose-500 group-hover:text-slate-950 transition-all shrink-0">
-              <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+            <div className="flex flex-col">
+              {items.map(renderCard)}
             </div>
-          </button>
-        ))}
-      </div>
-    </div>
+          </section>
+        );
+      })}
+    </main>
   );
 }

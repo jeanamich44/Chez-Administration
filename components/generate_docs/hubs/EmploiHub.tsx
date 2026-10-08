@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ArrowRight, Lock, ChevronLeft } from "lucide-react";
+import { isDocumentEnabled, type GenerateDocsPublicConfig } from "@/components/generate_docs/_shared/usePreviewCooldown";
 
 /* ===================================================================== */
 
@@ -50,9 +51,12 @@ const EMPLOI_DOCS: EmploiDocOption[] = [
 interface EmploiHubProps {
   onSelectItem: (slug: string) => void;
   onBack: () => void;
+  config?: GenerateDocsPublicConfig | null;
 }
 
-export default function EmploiHub({ onSelectItem, onBack }: EmploiHubProps) {
+export default function EmploiHub({ onSelectItem, onBack, config }: EmploiHubProps) {
+  const availableDocs = EMPLOI_DOCS.filter(doc => isDocumentEnabled(config, "emploi", doc.slug));
+
   return (
     <main className="min-h-screen pt-4 pb-24 px-4 w-full max-w-md mx-auto">
       <div className="mb-6">
@@ -70,8 +74,15 @@ export default function EmploiHub({ onSelectItem, onBack }: EmploiHubProps) {
         </p>
       </div>
 
-      <div className="flex flex-col gap-3">
-        {EMPLOI_DOCS.map((doc) => {
+      {availableDocs.length === 0 ? (
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+          <Lock className="w-8 h-8 text-white/40 mb-3" />
+          <p className="text-sm font-bold text-white/80">Aucun document disponible</p>
+          <p className="text-xs text-white/40 mt-1">Les documents d'emploi sont temporairement désactivés.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {availableDocs.map((doc) => {
           const cardContent = (
             <>
               <div className="flex items-start justify-between gap-3 mb-4">
@@ -133,7 +144,8 @@ export default function EmploiHub({ onSelectItem, onBack }: EmploiHubProps) {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
     </main>
   );
 }

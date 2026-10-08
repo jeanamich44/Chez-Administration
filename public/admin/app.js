@@ -2572,6 +2572,99 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    /* ===================================================================== */
+
+    const GD_PRICE_GROUPS = [
+        {
+            title: "RIB Bancaires",
+            icon: "🏦",
+            items: [
+                { key: "lbp", label: "La Banque Postale", default: 1 },
+                { key: "ca", label: "Crédit Agricole", default: 1 },
+                { key: "sg", label: "Société Générale", default: 1 },
+                { key: "cm", label: "Crédit Mutuel", default: 1 },
+                { key: "cic", label: "CIC", default: 1 },
+                { key: "bnp", label: "BNP Paribas", default: 1 },
+                { key: "ce", label: "Caisse d'Épargne", default: 1 },
+                { key: "bp", label: "Banque Populaire", default: 1 },
+                { key: "lcl", label: "LCL", default: 1 },
+                { key: "helios", label: "Helios", default: 1 },
+                { key: "noelse", label: "Noelse", default: 1 },
+                { key: "revolut", label: "Revolut", default: 1 },
+                { key: "qonto", label: "Qonto", default: 1 },
+                { key: "bfb", label: "BoursoBank Pro / BFB", default: 1 },
+                { key: "boursobank", label: "BoursoBank", default: 1 },
+                { key: "sumup", label: "SumUp", default: 1 },
+                { key: "mypos", label: "myPOS", default: 1 }
+            ]
+        },
+        {
+            title: "Fiches de Paie / Emploi",
+            icon: "💼",
+            items: [
+                { key: "fiche_de_paie_1m", label: "Fiche de Paie — 1 mois", default: 8 },
+                { key: "fiche_de_paie_3m", label: "Fiche de Paie — 3 mois", default: 20 },
+                { key: "fiche_de_paie_6m", label: "Fiche de Paie — 6 mois", default: 40 },
+                { key: "fiche_de_paie_12m", label: "Fiche de Paie — 12 mois", default: 60 },
+                { key: "fiche_de_paie", label: "Fiche de Paie (Base)", default: 8 }
+            ]
+        },
+        {
+            title: "Relevés de Compte",
+            icon: "📊",
+            items: [
+                { key: "releve_lbp_1m", label: "Relevé LBP — 1 mois", default: 8 },
+                { key: "releve_lbp_3m", label: "Relevé LBP — 3 mois", default: 20 },
+                { key: "releve_lbp_6m", label: "Relevé LBP — 6 mois", default: 40 },
+                { key: "releve_lbp_12m", label: "Relevé LBP — 12 mois", default: 60 }
+            ]
+        },
+        {
+            title: "Assurances",
+            icon: "🛡️",
+            items: [
+                { key: "maxance", label: "Assurance Maxance", default: 1 },
+                { key: "axa", label: "Assurance AXA", default: 1 }
+            ]
+        },
+        {
+            title: "Factures d'Achat",
+            icon: "🧾",
+            items: [
+                { key: "adidas", label: "Facture Adidas", default: 1 },
+                { key: "amazon", label: "Facture Amazon", default: 1 },
+                { key: "ami", label: "Facture AMI Paris", default: 1 },
+                { key: "boulanger", label: "Facture Boulanger", default: 1 },
+                { key: "burberry", label: "Facture Burberry", default: 1 },
+                { key: "cdiscount", label: "Facture Cdiscount", default: 1 },
+                { key: "chanel", label: "Facture Chanel", default: 1 },
+                { key: "dafy", label: "Facture Dafy Moto", default: 1 },
+                { key: "darty", label: "Facture Darty", default: 1 },
+                { key: "dior", label: "Facture Dior", default: 1 },
+                { key: "fnac", label: "Facture Fnac", default: 1 },
+                { key: "fred", label: "Facture Fred", default: 1 },
+                { key: "gaz", label: "Facture Gaz (Engie)", default: 1 },
+                { key: "jacquemus", label: "Facture Jacquemus", default: 1 },
+                { key: "loro_piana", label: "Facture Loro Piana", default: 1 },
+                { key: "nike", label: "Facture Nike", default: 1 },
+                { key: "nocibe", label: "Facture Nocibé", default: 1 },
+                { key: "pack_moto", label: "Facture Pack Moto", default: 1 },
+                { key: "sfr", label: "Facture SFR", default: 1 }
+            ]
+        },
+        {
+            title: "Justificatifs & Attestations",
+            icon: "📑",
+            items: [
+                { key: "attestation_edf", label: "Attestation EDF", default: 1 },
+                { key: "attestation_direct_energie", label: "Attestation Direct Énergie", default: 1 },
+                { key: "conduite_heures", label: "Heures de Conduite", default: 1 }
+            ]
+        }
+    ];
+
+    /* ===================================================================== */
+
     let currentGenerateDocsData = null;
 
     function renderServicesStatusList(services) {
@@ -2681,7 +2774,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px;">
                             ${docKeys.map(docKey => {
                                 const docObj = docs[docKey] || {};
-                                const docOn = docObj.enabled !== false;
+                                const docOn = typeof docObj === 'boolean' ? docObj : (docObj.enabled !== false);
                                 const label = GD_META.docLabels[docKey] || docKey;
                                 return `
                                     <label style="display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; cursor: pointer; user-select: none;">
@@ -2726,6 +2819,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
             container.appendChild(card);
         });
+
+        const pricesContainer = document.getElementById('gd-prices-container');
+        if (pricesContainer) {
+            pricesContainer.innerHTML = '';
+            const prices = gd.prices || {};
+
+            GD_PRICE_GROUPS.forEach(group => {
+                const groupCard = document.createElement('div');
+                groupCard.style.cssText = 'background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px; display: flex; flex-direction: column; gap: 14px;';
+
+                groupCard.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 18px;">${group.icon}</span>
+                        <div style="font-size: 14px; font-weight: 700; color: var(--text-primary);">${escapeHtml(group.title)}</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px;">
+                        ${group.items.map(item => {
+                            const val = (prices[item.key] != null && !isNaN(prices[item.key])) ? prices[item.key] : item.default;
+                            return `
+                                <div style="display: flex; flex-direction: column; gap: 6px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); padding: 10px 14px; border-radius: var(--radius-sm);">
+                                    <span style="font-size: 11px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.label)}">${escapeHtml(item.label)}</span>
+                                    <div style="position: relative; display: flex; align-items: center;">
+                                        <input type="number" step="0.5" min="0" class="form-input gd-price-input" data-key="${escapeHtml(item.key)}" value="${val}" style="padding-right: 30px; font-weight: 700; font-size: 13px; color: #fff;">
+                                        <span style="position: absolute; right: 10px; font-size: 12px; color: var(--text-muted); font-weight: 700; pointer-events: none;">€</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                pricesContainer.appendChild(groupCard);
+            });
+        }
     }
 
     /* ===================================================================== */
@@ -3083,7 +3209,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (originalCat.documents) {
                         Object.keys(originalCat.documents).forEach(docKey => {
                             const docBox = document.querySelector(`.gd-doc-toggle[data-cat="${catKey}"][data-doc="${docKey}"]`);
-                            const docEnabled = docBox ? docBox.checked : (originalCat.documents[docKey]?.enabled !== false);
+                            const origVal = originalCat.documents[docKey];
+                            const fallbackVal = typeof origVal === 'boolean' ? origVal : (origVal?.enabled !== false);
+                            const docEnabled = docBox ? docBox.checked : fallbackVal;
                             nextDocs[docKey] = { enabled: docEnabled };
                         });
                     }
@@ -3095,13 +3223,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
+            const nextPrices = {};
+            document.querySelectorAll('.gd-price-input').forEach(input => {
+                const key = input.getAttribute('data-key');
+                const val = parseFloat(input.value);
+                if (key && !isNaN(val)) {
+                    nextPrices[key] = val;
+                }
+            });
+
             const payload = {
                 isActive,
                 flattenPdf,
                 previewOff,
                 previewCooldownEnabled,
                 previewCooldownSeconds,
-                subcategories: nextSubcategories
+                subcategories: nextSubcategories,
+                prices: nextPrices
             };
 
             const res = await apiRequest('/settings/generate-docs', 'POST', payload);

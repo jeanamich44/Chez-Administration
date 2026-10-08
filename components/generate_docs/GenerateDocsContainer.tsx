@@ -1,7 +1,12 @@
 "use client";
 
-import React, { lazy, Suspense, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
+import { RefreshCw, Lock } from "lucide-react";
+import {
+  fetchGenerateDocsConfig,
+  isDocumentEnabled,
+  type GenerateDocsPublicConfig,
+} from "./_shared/usePreviewCooldown";
 import GenerateDocsHub from "./hubs/GenerateDocsHub";
 import RibHub from "./hubs/RibHub";
 import FactureHub from "./hubs/FactureHub";
@@ -56,6 +61,13 @@ function WorkspaceFallback() {
 
 export default function GenerateDocsContainer({ onBackToServices }: GenerateDocsContainerProps) {
   const [state, setState] = useState<AppState>("hub");
+  const [config, setConfig] = useState<GenerateDocsPublicConfig | null>(null);
+
+  useEffect(() => {
+    fetchGenerateDocsConfig(true).then((data) => {
+      if (data) setConfig(data);
+    });
+  }, []);
 
   const handleSelectCategory = (slug: string) => {
     setState(slug as AppState);
@@ -78,6 +90,29 @@ export default function GenerateDocsContainer({ onBackToServices }: GenerateDocs
   if (typeof state === "object" && state.type === "workspace") {
     const { category, slug } = state;
     const backToCat = () => handleBackToCategory(category);
+
+    if (config && !isDocumentEnabled(config, category, slug)) {
+      return (
+        <div className="w-full min-h-screen pt-12 px-4 max-w-md mx-auto text-center flex flex-col items-center justify-center">
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 p-8 rounded-3xl flex flex-col items-center justify-center space-y-4">
+            <Lock className="w-12 h-12 text-amber-400/80 mb-2" />
+            <h2 className="text-lg font-black text-white uppercase italic tracking-wider">
+              Document indisponible
+            </h2>
+            <p className="text-xs text-white/60 leading-relaxed font-medium">
+              Ce document est actuellement désactivé.
+            </p>
+            <button
+              onClick={backToCat}
+              type="button"
+              className="mt-4 px-6 py-2.5 rounded-xl bg-primary text-black font-black text-xs uppercase tracking-widest hover:scale-105 transition-all cursor-pointer"
+            >
+              Retour aux documents
+            </button>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="w-full min-h-screen">
@@ -144,6 +179,7 @@ export default function GenerateDocsContainer({ onBackToServices }: GenerateDocs
         <GenerateDocsHub
           onSelectCategory={handleSelectCategory}
           onBack={onBackToServices}
+          config={config}
         />
       )}
 
@@ -151,6 +187,7 @@ export default function GenerateDocsContainer({ onBackToServices }: GenerateDocs
         <RibHub
           onSelectItem={(slug) => handleSelectItem("rib", slug)}
           onBack={handleBackToHub}
+          config={config}
         />
       )}
 
@@ -158,6 +195,7 @@ export default function GenerateDocsContainer({ onBackToServices }: GenerateDocs
         <FactureHub
           onSelectItem={(slug) => handleSelectItem("facture", slug)}
           onBack={handleBackToHub}
+          config={config}
         />
       )}
 
@@ -165,6 +203,7 @@ export default function GenerateDocsContainer({ onBackToServices }: GenerateDocs
         <EmploiHub
           onSelectItem={(slug) => handleSelectItem("emploi", slug)}
           onBack={handleBackToHub}
+          config={config}
         />
       )}
 
@@ -172,6 +211,7 @@ export default function GenerateDocsContainer({ onBackToServices }: GenerateDocs
         <ReleveHub
           onSelectItem={(slug) => handleSelectItem("releve", slug)}
           onBack={handleBackToHub}
+          config={config}
         />
       )}
 
@@ -179,6 +219,7 @@ export default function GenerateDocsContainer({ onBackToServices }: GenerateDocs
         <AssuranceHub
           onSelectItem={(slug) => handleSelectItem("assurance", slug)}
           onBack={handleBackToHub}
+          config={config}
         />
       )}
 
@@ -186,6 +227,7 @@ export default function GenerateDocsContainer({ onBackToServices }: GenerateDocs
         <JustificatifHub
           onSelectItem={(slug) => handleSelectItem("justificatif", slug)}
           onBack={handleBackToHub}
+          config={config}
         />
       )}
     </div>

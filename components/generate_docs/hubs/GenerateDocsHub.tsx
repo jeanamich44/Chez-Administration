@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ArrowRight, Briefcase, CreditCard, FileCheck, FileText, Lock, Shield, ChevronLeft } from "lucide-react";
+import { isCategoryEnabled, type GenerateDocsPublicConfig } from "@/components/generate_docs/_shared/usePreviewCooldown";
 
 /* ===================================================================== */
 
@@ -70,9 +71,12 @@ const CATEGORIES: DocCategory[] = [
 interface GenerateDocsHubProps {
   onSelectCategory: (slug: string) => void;
   onBack: () => void;
+  config?: GenerateDocsPublicConfig | null;
 }
 
-export default function GenerateDocsHub({ onSelectCategory, onBack }: GenerateDocsHubProps) {
+export default function GenerateDocsHub({ onSelectCategory, onBack, config }: GenerateDocsHubProps) {
+  const availableCategories = CATEGORIES.filter(cat => isCategoryEnabled(config, cat.slug));
+
   return (
     <main className="min-h-screen pt-4 pb-24 px-4 w-full max-w-md mx-auto">
       <div className="mb-6">
@@ -91,7 +95,7 @@ export default function GenerateDocsHub({ onSelectCategory, onBack }: GenerateDo
       </div>
 
       <div className="flex flex-col gap-3">
-        {CATEGORIES.map((cat) => {
+        {availableCategories.map((cat) => {
           const catContent = (
             <>
               <div className="w-full flex items-center justify-between mb-4 z-10">
@@ -140,7 +144,7 @@ export default function GenerateDocsHub({ onSelectCategory, onBack }: GenerateDo
           return (
             <div
               key={cat.slug}
-              className="bg-white/5 backdrop-blur-md border border-white/5 rounded-2xl p-4 flex flex-col items-start relative overflow-hidden opacity-50 select-none"
+              className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col items-start relative overflow-hidden opacity-50 select-none"
             >
               {catContent}
             </div>

@@ -19,7 +19,14 @@ export type GenerateDocsPublicConfig = {
   previewCooldownSeconds: number;
   previewOff?: boolean;
   previewAllowed?: boolean;
-  subcategories: Record<string, { enabled: boolean }>;
+  subcategories: Record<
+    string,
+    {
+      enabled: boolean;
+      active?: boolean;
+      documents?: Record<string, { enabled?: boolean; active?: boolean } | boolean>;
+    }
+  >;
 };
 
 const FALLBACK_POLICY: PreviewPolicy = { enabled: true, seconds: 600, allowed: true, off: false };
@@ -78,21 +85,31 @@ export function formatPreviewTimer(seconds: number) {
 let _cachedConfig: GenerateDocsPublicConfig | null = null;
 let _cachedConfigPromise: Promise<GenerateDocsPublicConfig | null> | null = null;
 
-export async function fetchGenerateDocsConfig(): Promise<GenerateDocsPublicConfig | null> {
-  if (_cachedConfig) return _cachedConfig;
-  if (_cachedConfigPromise) return _cachedConfigPromise;
-  if (typeof window !== "undefined") {
-    try {
-      const stored = sessionStorage.getItem("generate_docs_config_cache");
-      if (stored) {
-        _cachedConfig = JSON.parse(stored) as GenerateDocsPublicConfig;
-        return _cachedConfig;
-      }
-    } catch {}
+export async function fetchGenerateDocsConfig(force: boolean = false): Promise<GenerateDocsPublicConfig | null> {
+  if (force) {
+    _cachedConfig = null;
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem("generate_docs_config_cache");
+      } catch {}
+    }
+  } else {
+    if (_cachedConfig) return _cachedConfig;
+    if (_cachedConfigPromise) return _cachedConfigPromise;
+    if (typeof window !== "undefined") {
+      try {
+        const stored = sessionStorage.getItem("generate_docs_config_cache");
+        if (stored) {
+          _cachedConfig = JSON.parse(stored) as GenerateDocsPublicConfig;
+          return _cachedConfig;
+        }
+      } catch {}
+    }
   }
+
   _cachedConfigPromise = (async () => {
     try {
-      const res = await fetch("/api/generate-docs/config");
+      const res = await fetch("/api/generate-docs/config", { cache: "no-store" });
       if (!res.ok) return null;
       const data = (await res.json()) as GenerateDocsPublicConfig;
       _cachedConfig = data;
@@ -109,6 +126,43 @@ export async function fetchGenerateDocsConfig(): Promise<GenerateDocsPublicConfi
     }
   })();
   return _cachedConfigPromise;
+}
+
+/* ===================================================================== */
+
+export function isDocumentEnabled(
+  config: GenerateDocsPublicConfig | null | undefined,
+  category: string,
+  slug: string
+): boolean {
+  if (!config) return true;
+  if (config.isActive === false) return false;
+  const sub = config.subcategories?.[category];
+  if (!sub) return true;
+  if (sub.enabled === false || sub.active === false) return false;
+  const docs = sub.documents;
+  if (!docs || typeof docs !== "object") return true;
+  const doc = docs[slug];
+  if (doc === undefined || doc === null) return true;
+  if (typeof doc === "boolean") return doc;
+  if (typeof doc === "object") {
+    if (typeof doc.enabled === "boolean") return doc.enabled;
+    if (typeof doc.active === "boolean") return doc.active;
+  }
+  return true;
+}
+
+/* ===================================================================== */
+
+export function isCategoryEnabled(
+  config: GenerateDocsPublicConfig | null | undefined,
+  category: string
+): boolean {
+  if (!config) return true;
+  if (config.isActive === false) return false;
+  const sub = config.subcategories?.[category];
+  if (!sub) return true;
+  return sub.enabled !== false && sub.active !== false;
 }
 
 export async function fetchPreviewPolicy(): Promise<PreviewPolicy> {

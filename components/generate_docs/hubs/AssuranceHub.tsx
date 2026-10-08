@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { ArrowRight, Shield, ChevronLeft } from "lucide-react";
+import { ArrowRight, Shield, ChevronLeft, Lock } from "lucide-react";
+import { isDocumentEnabled, type GenerateDocsPublicConfig } from "@/components/generate_docs/_shared/usePreviewCooldown";
 
 /* ===================================================================== */
 
@@ -41,9 +42,12 @@ const INSURANCES: InsuranceOption[] = [
 interface AssuranceHubProps {
   onSelectItem: (slug: string) => void;
   onBack: () => void;
+  config?: GenerateDocsPublicConfig | null;
 }
 
-export default function AssuranceHub({ onSelectItem, onBack }: AssuranceHubProps) {
+export default function AssuranceHub({ onSelectItem, onBack, config }: AssuranceHubProps) {
+  const availableInsurances = INSURANCES.filter((item) => isDocumentEnabled(config, "assurance", item.slug));
+
   return (
     <main className="min-h-screen pt-4 pb-24 px-4 w-full max-w-md mx-auto">
       <div className="mb-6">
@@ -61,44 +65,52 @@ export default function AssuranceHub({ onSelectItem, onBack }: AssuranceHubProps
         </p>
       </div>
 
-      <section>
-        <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/10">
-          <Shield className="w-5 h-5 text-primary" />
-          <h2 className="text-sm font-black italic text-white tracking-wide">
-            COMPAGNIES D'ASSURANCE
-          </h2>
+      {availableInsurances.length === 0 ? (
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+          <Lock className="w-8 h-8 text-white/40 mb-3" />
+          <p className="text-sm font-bold text-white/80">Aucune assurance disponible</p>
+          <p className="text-xs text-white/40 mt-1">Les attestations d'assurance sont temporairement désactivées.</p>
         </div>
-        <div className="flex flex-col gap-3">
-          {[...INSURANCES].sort((a, b) => a.name.localeCompare(b.name, "fr")).map((item) => (
-            <div
-              key={item.slug}
-              onClick={() => onSelectItem(item.slug)}
-              className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col items-start relative overflow-hidden active:scale-[0.98] transition-all cursor-pointer"
-            >
-              <div className={`w-full h-24 border rounded-xl p-3 flex items-center justify-center relative overflow-hidden mb-4 ${item.headerBg}`}>
-                <img
-                  src={item.logo}
-                  alt={item.name}
-                  className={`h-12 w-auto max-w-[90%] object-contain filter drop-shadow-md ${item.logoClass || ""}`}
-                />
-              </div>
-
-              <div className="relative z-10 w-full flex flex-col flex-grow">
-                <h3 className="text-base font-black italic mb-2 text-white tracking-tight flex items-center gap-2">
-                  {item.name}
-                </h3>
-                <div className="text-[11px] text-white/60 mb-4 font-medium whitespace-pre-line leading-relaxed">
-                  {item.description}
+      ) : (
+        <section>
+          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/10">
+            <Shield className="w-5 h-5 text-primary" />
+            <h2 className="text-sm font-black italic text-white tracking-wide">
+              COMPAGNIES D'ASSURANCE
+            </h2>
+          </div>
+          <div className="flex flex-col gap-3">
+            {[...availableInsurances].sort((a, b) => a.name.localeCompare(b.name, "fr")).map((item) => (
+              <div
+                key={item.slug}
+                onClick={() => onSelectItem(item.slug)}
+                className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col items-start relative overflow-hidden active:scale-[0.98] transition-all cursor-pointer"
+              >
+                <div className={`w-full h-24 border rounded-xl p-3 flex items-center justify-center relative overflow-hidden mb-4 ${item.headerBg}`}>
+                  <img
+                    src={item.logo}
+                    alt={item.name}
+                    className={`h-12 w-auto max-w-[90%] object-contain filter drop-shadow-md ${item.logoClass || ""}`}
+                  />
                 </div>
 
-                <div className="mt-auto flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary">
-                  Générer l'Attestation <ArrowRight size={12} />
+                <div className="relative z-10 w-full flex flex-col flex-grow">
+                  <h3 className="text-base font-black italic mb-2 text-white tracking-tight flex items-center gap-2">
+                    {item.name}
+                  </h3>
+                  <div className="text-[11px] text-white/60 mb-4 font-medium whitespace-pre-line leading-relaxed">
+                    {item.description}
+                  </div>
+
+                  <div className="mt-auto flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary">
+                    Générer l'Attestation <ArrowRight size={12} />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

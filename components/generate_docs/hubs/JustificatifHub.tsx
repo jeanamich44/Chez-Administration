@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { ArrowRight, Flame, GraduationCap, ChevronLeft } from "lucide-react";
+import { ArrowRight, Flame, GraduationCap, ChevronLeft, Lock } from "lucide-react";
+import { isDocumentEnabled, type GenerateDocsPublicConfig } from "@/components/generate_docs/_shared/usePreviewCooldown";
 
 /* ===================================================================== */
 
@@ -65,10 +66,13 @@ const ISSUERS: JustificatifOption[] = [
 interface JustificatifHubProps {
   onSelectItem: (slug: string) => void;
   onBack: () => void;
+  config?: GenerateDocsPublicConfig | null;
 }
 
-export default function JustificatifHub({ onSelectItem, onBack }: JustificatifHubProps) {
+export default function JustificatifHub({ onSelectItem, onBack, config }: JustificatifHubProps) {
   const [selectedCategory, setSelectedCategory] = useState<"all" | JustificatifCategory>("all");
+
+  const availableIssuers = ISSUERS.filter(item => isDocumentEnabled(config, "justificatif", item.slug));
 
   const renderCard = (item: JustificatifOption) => (
     <div
@@ -91,7 +95,9 @@ export default function JustificatifHub({ onSelectItem, onBack }: JustificatifHu
     </div>
   );
 
-  const displayedCategories = CATEGORIES.filter(cat => selectedCategory === "all" || selectedCategory === cat.id);
+  const displayedCategories = CATEGORIES
+    .filter(cat => selectedCategory === "all" || selectedCategory === cat.id)
+    .filter(cat => availableIssuers.some(i => i.category === cat.id));
 
   return (
     <main className="min-h-screen pt-4 pb-24 px-4 w-full max-w-md mx-auto">
@@ -110,55 +116,65 @@ export default function JustificatifHub({ onSelectItem, onBack }: JustificatifHu
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        <button
-          type="button"
-          onClick={() => setSelectedCategory("all")}
-          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-            selectedCategory === "all"
-              ? "bg-primary text-black"
-              : "bg-white/5 text-white/60"
-          }`}
-        >
-          Tous
-        </button>
-        {CATEGORIES.map(cat => {
+      {availableIssuers.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          <button
+            type="button"
+            onClick={() => setSelectedCategory("all")}
+            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+              selectedCategory === "all"
+                ? "bg-primary text-black"
+                : "bg-white/5 text-white/60"
+            }`}
+          >
+            Tous
+          </button>
+          {CATEGORIES.filter(cat => availableIssuers.some(i => i.category === cat.id)).map(cat => {
+            const Icon = cat.icon;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  selectedCategory === cat.id
+                    ? "bg-primary text-black"
+                    : "bg-white/5 text-white/60"
+                }`}
+              >
+                <Icon size={12} className={selectedCategory === cat.id ? "text-black" : cat.iconColor} />
+                {cat.title}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {availableIssuers.length === 0 ? (
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+          <Lock className="w-8 h-8 text-white/40 mb-3" />
+          <p className="text-sm font-bold text-white/80">Aucun justificatif disponible</p>
+          <p className="text-xs text-white/40 mt-1">Les documents de cette catégorie sont temporairement désactivés.</p>
+        </div>
+      ) : (
+        displayedCategories.map(cat => {
+          const items = availableIssuers.filter(i => i.category === cat.id).sort((a, b) => a.name.localeCompare(b.name, "fr"));
           const Icon = cat.icon;
           return (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                selectedCategory === cat.id
-                  ? "bg-primary text-black"
-                  : "bg-white/5 text-white/60"
-              }`}
-            >
-              <Icon size={12} className={selectedCategory === cat.id ? "text-black" : cat.iconColor} />
-              {cat.title}
-            </button>
+            <section key={cat.id} className="mb-8">
+              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/10">
+                <Icon className={`w-5 h-5 ${cat.iconColor}`} />
+                <h2 className="text-sm font-black italic text-white tracking-wide">
+                  {cat.title}
+                </h2>
+              </div>
+              <div className="flex flex-col">
+                {items.map(renderCard)}
+              </div>
+            </section>
           );
-        })}
-      </div>
-
-      {displayedCategories.map(cat => {
-        const items = ISSUERS.filter(i => i.category === cat.id).sort((a, b) => a.name.localeCompare(b.name, "fr"));
-        const Icon = cat.icon;
-        return (
-          <section key={cat.id} className="mb-8">
-            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/10">
-              <Icon className={`w-5 h-5 ${cat.iconColor}`} />
-              <h2 className="text-sm font-black italic text-white tracking-wide">
-                {cat.title}
-              </h2>
-            </div>
-            <div className="flex flex-col">
-              {items.map(renderCard)}
-            </div>
-          </section>
-        );
-      })}
+        })
+      )}
     </main>
   );
 }

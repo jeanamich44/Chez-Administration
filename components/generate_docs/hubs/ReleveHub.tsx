@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ArrowRight, Lock, Landmark, Zap, ChevronLeft } from "lucide-react";
+import { isDocumentEnabled, type GenerateDocsPublicConfig } from "@/components/generate_docs/_shared/usePreviewCooldown";
 
 /* ===================================================================== */
 
@@ -211,11 +212,13 @@ const BANKS: BankOption[] = [
 interface ReleveHubProps {
   onSelectItem: (slug: string) => void;
   onBack: () => void;
+  config?: GenerateDocsPublicConfig | null;
 }
 
-export default function ReleveHub({ onSelectItem, onBack }: ReleveHubProps) {
-  const physicalBanks = BANKS.filter((b) => b.category === "physique");
-  const neobanks = BANKS.filter((b) => b.category === "neobanque");
+export default function ReleveHub({ onSelectItem, onBack, config }: ReleveHubProps) {
+  const availableBanks = BANKS.filter((b) => isDocumentEnabled(config, "releve", b.slug));
+  const physicalBanks = availableBanks.filter((b) => b.category === "physique");
+  const neobanks = availableBanks.filter((b) => b.category === "neobanque");
 
   const renderBankCard = (bank: BankOption) => {
     const bankContent = (
@@ -265,7 +268,7 @@ export default function ReleveHub({ onSelectItem, onBack }: ReleveHubProps) {
     return (
       <div
         key={bank.slug}
-        className="bg-white/5 backdrop-blur-md border border-white/5 rounded-2xl p-4 flex flex-col items-start relative overflow-hidden opacity-50 select-none"
+        className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col items-start relative overflow-hidden opacity-50 select-none"
       >
         {bankContent}
       </div>
@@ -289,29 +292,43 @@ export default function ReleveHub({ onSelectItem, onBack }: ReleveHubProps) {
         </p>
       </div>
 
-      <section className="mb-8">
-        <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/10">
-          <Landmark className="w-5 h-5 text-primary" />
-          <h2 className="text-sm font-black italic text-white tracking-wide">
-            BANQUES PHYSIQUES
-          </h2>
+      {availableBanks.length === 0 ? (
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+          <Lock className="w-8 h-8 text-white/40 mb-3" />
+          <p className="text-sm font-bold text-white/80">Aucun relevé disponible</p>
+          <p className="text-xs text-white/40 mt-1">Les relevés bancaires sont temporairement désactivés.</p>
         </div>
-        <div className="flex flex-col gap-3">
-          {physicalBanks.map(renderBankCard)}
-        </div>
-      </section>
+      ) : (
+        <>
+          {physicalBanks.length > 0 && (
+            <section className="mb-8">
+              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/10">
+                <Landmark className="w-5 h-5 text-primary" />
+                <h2 className="text-sm font-black italic text-white tracking-wide">
+                  BANQUES PHYSIQUES
+                </h2>
+              </div>
+              <div className="flex flex-col gap-3">
+                {physicalBanks.map(renderBankCard)}
+              </div>
+            </section>
+          )}
 
-      <section>
-        <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/10">
-          <Zap className="w-5 h-5 text-indigo-400" />
-          <h2 className="text-sm font-black italic text-white tracking-wide">
-            NÉOBANQUES
-          </h2>
-        </div>
-        <div className="flex flex-col gap-3">
-          {neobanks.map(renderBankCard)}
-        </div>
-      </section>
+          {neobanks.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/10">
+                <Zap className="w-5 h-5 text-indigo-400" />
+                <h2 className="text-sm font-black italic text-white tracking-wide">
+                  NÉOBANQUES
+                </h2>
+              </div>
+              <div className="flex flex-col gap-3">
+                {neobanks.map(renderBankCard)}
+              </div>
+            </section>
+          )}
+        </>
+      )}
     </main>
   );
 }

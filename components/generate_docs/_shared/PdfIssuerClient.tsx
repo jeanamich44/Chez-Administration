@@ -3744,7 +3744,7 @@ export default function PdfIssuerClient({
           </div>
         )}
 
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-black/95 backdrop-blur z-50 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/10 sm:relative sm:bg-transparent sm:border-0 sm:p-0 pb-safe-area">
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-4">
           <div className="flex gap-3">
             <button
               type="button"
@@ -3787,12 +3787,12 @@ export default function PdfIssuerClient({
             </button>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <button
               type="button"
               onClick={handlePreview}
               disabled={isPreviewLoading || isBlocked}
-              className="px-6 py-3 rounded-xl bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700 disabled:opacity-50 transition-all flex items-center gap-2"
+              className="px-6 py-3.5 rounded-2xl bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700 disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
             >
               {isPreviewLoading ? <RefreshCw className="animate-spin" size={16} /> : <Eye size={16} />}
               {!allowed
@@ -3804,7 +3804,7 @@ export default function PdfIssuerClient({
             <button
               type="submit"
               disabled={isGenerating}
-              className="px-8 py-3 rounded-xl bg-primary text-slate-950 font-black text-xs uppercase tracking-widest hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+              className="px-8 py-3.5 rounded-2xl bg-primary text-slate-950 font-black text-xs uppercase tracking-widest hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 flex items-center gap-2 cursor-pointer"
             >
               {isGenerating ? <RefreshCw className="animate-spin" size={16} /> : <Download size={16} />}
               {generateLabel} ({price.toFixed(2)} €)

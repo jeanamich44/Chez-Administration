@@ -28,6 +28,7 @@ sumupOpening
 } from "@/components/generate_docs/_shared/exampleDates";
 import { getCachedFormSchema,setCachedFormSchema } from "@/components/generate_docs/_shared/formSchemaCache";
 import { fetchGenerateDocsConfig,usePreviewCooldown } from "@/components/generate_docs/_shared/usePreviewCooldown";
+import { getAuthHeaders } from "@/components/generate_docs/_shared/telegramAuth";
 import RibPreviewViewer from "./RibPreviewViewer";
 import type { AutoIbanPart,EditorSchema,FieldKind,NormalField,RibBankConfig,RibMode } from "./types";
 
@@ -959,7 +960,7 @@ export default function RibWorkspace({
   const downloadBlob = async (path: string, filename: string) => {
     const res = await fetch(`/api/generate-docs/rib/${config.slug}/${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(buildPayload())
     });
     if (!res.ok) {
@@ -987,7 +988,7 @@ export default function RibWorkspace({
     try {
       const res = await fetch(`/api/generate-docs/rib/${config.slug}/preview`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(buildPayload())
       });
       if (!res.ok) {

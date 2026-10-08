@@ -32,6 +32,7 @@ import { useEffect,useRef,useState } from "react";
 import { toast } from "sonner";
 import { isValidCalendarDate } from "@/components/generate_docs/_shared/CustomDatePicker";
 import { usePreviewCooldown } from "@/components/generate_docs/_shared/usePreviewCooldown";
+import { getAuthHeaders } from "@/components/generate_docs/_shared/telegramAuth";
 
 interface DurationOption {
   months: number;
@@ -789,7 +790,7 @@ export default function LbpReleveClient({ onBack }: { onBack: () => void }) {
     try {
       const res = await fetch("/api/generate-docs/releve/lbp/preview", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(formData)
       });
       if (!res.ok) {
@@ -827,7 +828,7 @@ export default function LbpReleveClient({ onBack }: { onBack: () => void }) {
     try {
       const res = await fetch("/api/generate-docs/releve/lbp/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(formData)
       });
       if (!res.ok) {

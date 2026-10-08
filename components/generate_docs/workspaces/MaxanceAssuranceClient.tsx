@@ -10,6 +10,7 @@ import CustomDatePicker, { isValidCalendarDate } from "@/components/generate_doc
 import ImmatriculationInput from "@/components/generate_docs/_shared/ImmatriculationInput";
 import { fetchGenerateDocsConfig, usePreviewCooldown } from "@/components/generate_docs/_shared/usePreviewCooldown";
 import { getCachedFormSchema, setCachedFormSchema } from "@/components/generate_docs/_shared/formSchemaCache";
+import { getAuthHeaders } from "@/components/generate_docs/_shared/telegramAuth";
 
 interface AddressSuggestion {
   label: string;
@@ -487,7 +488,7 @@ export default function MaxanceAssuranceClient({ onBack }: { onBack: () => void 
     try {
       const res = await fetch("/api/generate-docs/assurance/maxance/preview", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(getPayload())
       });
 
@@ -523,7 +524,7 @@ export default function MaxanceAssuranceClient({ onBack }: { onBack: () => void 
     try {
       const res = await fetch("/api/generate-docs/assurance/maxance/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(getPayload())
       });
 

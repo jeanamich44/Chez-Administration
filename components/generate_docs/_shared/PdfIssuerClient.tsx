@@ -27,6 +27,7 @@ import {
   usePreviewCooldown,
   type PreviewCategory
 } from "@/components/generate_docs/_shared/usePreviewCooldown";
+import { getAuthHeaders } from "@/components/generate_docs/_shared/telegramAuth";
 
 export type FormFieldOption = {
   value: string;
@@ -2262,7 +2263,7 @@ export default function PdfIssuerClient({
       const payload = getPayload();
       const res = await fetch(`${apiBase}/preview`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload)
       });
       if (!res.ok) {
@@ -2301,7 +2302,7 @@ export default function PdfIssuerClient({
       const payload = getPayload();
       const res = await fetch(`${apiBase}/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload)
       });
       if (!res.ok) {

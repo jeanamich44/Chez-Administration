@@ -1,0 +1,210 @@
+import type { RibBankConfig } from "./types";
+
+/* ===================================================================== */
+
+export const RIB_BANK_CONFIGS: Record<string, RibBankConfig> = {
+  lbp: {
+    slug: "lbp",
+    title: "GÉNÉRATEUR RIB LA BANQUE POSTALE",
+    subtitle: "Document PDF La Banque Postale officiel",
+    logo: "/logos/lbp.svg",
+    logoAlt: "La Banque Postale",
+    logoClass: "h-8 w-auto object-contain pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-blue-900/40 to-slate-950/80 border-blue-500/30",
+    pdfName: "RIB_LBP",
+    previewName: "Apercu_RIB_LBP",
+    composeIban: true
+  },
+  ca: {
+    slug: "ca",
+    title: "GÉNÉRATEUR RIB CRÉDIT AGRICOLE",
+    subtitle: "Document PDF Crédit Agricole officiel",
+    logo: "/logos/ca.svg",
+    logoAlt: "Crédit Agricole",
+    logoClass: "h-8 w-auto object-contain pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-emerald-900/40 to-slate-950/80 border-emerald-500/30",
+    pdfName: "RIB_CA",
+    previewName: "Apercu_RIB_CA",
+    composeIban: true
+  },
+  sg: {
+    slug: "sg",
+    title: "GÉNÉRATEUR RIB SOCIÉTÉ GÉNÉRALE",
+    subtitle: "Document PDF Société Générale officiel",
+    logo: "/logos/sg.svg",
+    logoAlt: "Société Générale",
+    logoClass: "h-8 w-auto object-contain pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-red-900/40 to-slate-950/80 border-red-500/30",
+    pdfName: "RIB_SG",
+    previewName: "Apercu_RIB_SG",
+    composeIban: true
+  },
+  cm: {
+    slug: "cm",
+    title: "GÉNÉRATEUR RIB CRÉDIT MUTUEL",
+    subtitle: "Document PDF Crédit Mutuel officiel",
+    logo: "/logos/cm.svg",
+    logoAlt: "Crédit Mutuel",
+    logoClass: "h-8 w-auto object-contain pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-rose-900/40 to-slate-950/80 border-rose-500/30",
+    pdfName: "RIB_CM",
+    previewName: "Apercu_RIB_CM",
+    composeIban: true
+  },
+  cic: {
+    slug: "cic",
+    title: "GÉNÉRATEUR RIB CIC",
+    subtitle: "Document PDF CIC officiel",
+    logo: "/logos/cic.svg",
+    logoAlt: "CIC",
+    logoClass: "h-8 w-auto object-contain pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-cyan-900/40 to-slate-950/80 border-cyan-500/30",
+    pdfName: "RIB_CIC",
+    previewName: "Apercu_RIB_CIC",
+    composeIban: true
+  },
+  bnp: {
+    slug: "bnp",
+    title: "GÉNÉRATEUR RIB BNP PARIBAS",
+    subtitle: "Document PDF BNP Paribas officiel",
+    logo: "/logos/bnp.svg",
+    logoAlt: "BNP Paribas",
+    logoClass: "h-11 sm:h-12 w-auto object-contain pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-emerald-900/40 to-slate-950/80 border-emerald-500/30",
+    pdfName: "RIB_BNP",
+    previewName: "Apercu_RIB_BNP",
+    composeIban: true
+  },
+  ce: {
+    slug: "ce",
+    title: "GÉNÉRATEUR RIB CAISSE D'ÉPARGNE",
+    subtitle: "Document PDF Caisse d'Épargne officiel",
+    logo: "/logos/caisse_depargne.svg",
+    logoAlt: "Caisse d'Épargne",
+    logoClass: "h-11 sm:h-12 w-auto object-contain pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-red-950/40 to-slate-950/80 border-red-500/30",
+    pdfName: "RIB_CE",
+    previewName: "Apercu_RIB_CE",
+    composeIban: true
+  },
+  bp: {
+    slug: "bp",
+    title: "GÉNÉRATEUR RIB BANQUE POPULAIRE",
+    subtitle: "Document PDF Banque Populaire officiel",
+    logo: "/logos/banque_populaire.svg",
+    logoAlt: "Banque Populaire",
+    logoClass: "h-8 w-auto object-contain pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-cyan-950/40 to-slate-950/80 border-cyan-500/30",
+    pdfName: "RIB_BP",
+    previewName: "Apercu_RIB_BP",
+    composeIban: true
+  },
+  lcl: {
+    slug: "lcl",
+    title: "GÉNÉRATEUR RIB LCL",
+    subtitle: "Document PDF LCL officiel",
+    logo: "/logos/lcl.svg",
+    logoAlt: "LCL",
+    logoClass: "h-8 w-auto object-contain pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-blue-950/40 to-slate-950/80 border-blue-500/30",
+    pdfName: "RIB_LCL",
+    previewName: "Apercu_RIB_LCL",
+    composeIban: true
+  },
+  helios: {
+    slug: "helios",
+    title: "GÉNÉRATEUR RIB HELIOS",
+    subtitle: "Document PDF Helios officiel",
+    logo: "/logos/helios.svg",
+    logoAlt: "Helios",
+    logoClass: "h-14 sm:h-16 w-auto object-contain pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-cyan-900/40 to-slate-950/80 border-cyan-500/30",
+    pdfName: "RIB_HELIOS",
+    previewName: "Apercu_RIB_Helios",
+    composeIban: true
+  },
+  noelse: {
+    slug: "noelse",
+    title: "GÉNÉRATEUR RIB NOELSE",
+    subtitle: "Document PDF Noelse officiel",
+    logo: "/logos/noelse.svg",
+    logoAlt: "Noelse",
+    logoClass: "h-14 sm:h-16 w-auto brightness-0 invert pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-indigo-950/40 to-slate-950/80 border-indigo-500/30",
+    pdfName: "RIB_NOELSE",
+    previewName: "Apercu_RIB_Noelse",
+    composeIban: true
+  },
+  revolut: {
+    slug: "revolut",
+    title: "GÉNÉRATEUR RIB REVOLUT",
+    subtitle: "Document PDF Revolut officiel",
+    logo: "/logos/revolut.svg",
+    logoAlt: "Revolut",
+    logoClass: "h-8 w-auto brightness-0 invert pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-purple-900/40 to-slate-950/80 border-purple-500/30",
+    pdfName: "RIB_REVOLUT",
+    previewName: "Apercu_RIB_REVOLUT",
+    composeIban: true
+  },
+  qonto: {
+    slug: "qonto",
+    title: "GÉNÉRATEUR RIB QONTO",
+    subtitle: "Document PDF Qonto officiel",
+    logo: "/logos/qonto.svg",
+    logoAlt: "Qonto",
+    logoClass: "h-8 w-auto brightness-0 invert pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-violet-900/40 to-slate-950/80 border-violet-500/30",
+    pdfName: "RIB_QONTO",
+    previewName: "Apercu_RIB_QONTO",
+    composeIban: true
+  },
+  bfb: {
+    slug: "bfb",
+    title: "GÉNÉRATEUR RIB BFORBANK",
+    subtitle: "Document PDF BforBank officiel",
+    logo: "/logos/bfb.svg",
+    logoAlt: "BforBank",
+    logoClass: "h-8 w-auto brightness-0 invert pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-blue-800/30 to-slate-950/80 border-blue-400/30",
+    pdfName: "RIB_BFB",
+    previewName: "Apercu_RIB_BFB",
+    composeIban: true
+  },
+  boursobank: {
+    slug: "boursobank",
+    title: "GÉNÉRATEUR RIB BOURSOBANK",
+    subtitle: "Document PDF BoursoBank officiel",
+    logo: "/logos/boursobank.svg",
+    logoAlt: "BoursoBank",
+    logoClass: "h-14 sm:h-16 w-auto object-contain pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-pink-950/40 to-slate-950/80 border-pink-500/30",
+    pdfName: "RIB_BOURSOBANK",
+    previewName: "Apercu_RIB_BOURSOBANK",
+    composeIban: true
+  },
+  sumup: {
+    slug: "sumup",
+    title: "GÉNÉRATEUR ACCOUNT DETAILS SUMUP",
+    subtitle: "Document PDF SumUp officiel",
+    logo: "/logos/sumup.svg",
+    logoAlt: "SumUp",
+    logoClass: "h-9 sm:h-10 w-auto brightness-0 invert pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-slate-900/60 to-cyan-950/40 border-cyan-500/30",
+    pdfName: "Account_Details_SumUp",
+    previewName: "Apercu_Account_Details_SumUp",
+    composeIban: false
+  },
+  mypos: {
+    slug: "mypos",
+    title: "GÉNÉRATEUR CERTIFICAT IBAN MYPOS",
+    subtitle: "Document PDF myPOS officiel",
+    logo: "/logos/mypos.svg",
+    logoAlt: "myPOS",
+    logoClass: "h-14 sm:h-16 w-auto object-contain pointer-events-none select-none",
+    headerBg: "bg-gradient-to-br from-blue-950/40 to-slate-950/80 border-blue-500/30",
+    pdfName: "Certificat_IBAN_myPOS",
+    previewName: "Apercu_Certificat_IBAN_myPOS",
+    composeIban: false
+  }
+};

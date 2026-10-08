@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { isValidCalendarDate } from "@/components/generate_docs/_shared/CustomDatePicker";
 import MultiPagePreviewViewer from "@/components/generate_docs/_shared/MultiPagePreviewViewer";
+import { getAuthHeaders } from "@/components/generate_docs/_shared/telegramAuth";
 import { usePreviewCooldown } from "@/components/generate_docs/_shared/usePreviewCooldown";
 
 // ----------------------------------------------------------------------
@@ -514,7 +515,7 @@ export default function FicheDePaieClient({ onBack }: { onBack: () => void }) {
     try {
       const res = await fetch("/api/generate-docs/emploi/fiche_de_paie/preview", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(formData)
       });
       if (!res.ok) {
@@ -546,7 +547,7 @@ export default function FicheDePaieClient({ onBack }: { onBack: () => void }) {
     try {
       const res = await fetch("/api/generate-docs/emploi/fiche_de_paie/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(formData)
       });
       if (!res.ok) {

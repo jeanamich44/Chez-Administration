@@ -1252,9 +1252,15 @@
             </div>
 
             <div id="tab-settings" class="tab-content" style="display: none;">
-                <div class="card-panel">
-                    <div class="card-panel-header">
+                <div class="settings-collapse-toolbar">
+                    <button type="button" id="btn-collapse-all-settings">Tout replier</button>
+                    <button type="button" id="btn-expand-all-settings">Tout déplier</button>
+                </div>
+
+                <div class="card-panel collapsible">
+                    <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h2 class="card-panel-title">Configuration Générale & Bot Telegram</h2>
+                        <button type="button" class="collapse-toggle-btn" aria-label="Basculer"><span class="collapse-arrow">▼</span></button>
                     </div>
                     <form id="settings-general-form" style="display: flex; flex-direction: column; gap: 16px;">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
@@ -1306,9 +1312,10 @@
                     </form>
                 </div>
 
-                <div class="card-panel">
-                    <div class="card-panel-header">
+                <div class="card-panel collapsible">
+                    <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h2 class="card-panel-title">Sécurité Système & Clés API</h2>
+                        <button type="button" class="collapse-toggle-btn" aria-label="Basculer"><span class="collapse-arrow">▼</span></button>
                     </div>
                     <form id="settings-security-form" style="display: flex; flex-direction: column; gap: 16px;">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
@@ -1325,30 +1332,31 @@
                                 <label class="form-label">Durée Session JWT (minutes)</label>
                                 <input type="number" id="setting-security-jwt-exp" class="form-input" min="1" step="1" placeholder="1440" autocomplete="off">
                             </div>
-
                         </div>
                         <button type="submit" class="btn-primary" style="max-width: 300px;">Enregistrer la Sécurité Système</button>
                     </form>
                 </div>
 
-                <div class="card-panel">
+                <div class="card-panel collapsible">
                     <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                         <div>
                             <h2 class="card-panel-title">Disponibilité des Services Plateforme</h2>
                             <p style="font-size: 12px; color: var(--text-muted); margin: 4px 0 0 0;">Activation ou désactivation globale des services pour les clients (en base de données).</p>
                         </div>
+                        <button type="button" class="collapse-toggle-btn" aria-label="Basculer"><span class="collapse-arrow">▼</span></button>
                     </div>
                     <div id="services-status-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 12px;">
                         <div style="color: var(--text-muted); font-size: 13px;">Chargement des services...</div>
                     </div>
                 </div>
 
-                <div class="card-panel">
-                    <div class="card-panel-header">
+                <div class="card-panel collapsible">
+                    <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                         <div>
                             <h2 class="card-panel-title">Gestion des Documents & Accès (Generate Docs)</h2>
                             <p style="font-size: 12px; color: var(--text-muted); margin: 4px 0 0 0;">Activation et disponibilité des sous-catégories et des modèles de documents individuels.</p>
                         </div>
+                        <button type="button" class="collapse-toggle-btn" aria-label="Basculer"><span class="collapse-arrow">▼</span></button>
                     </div>
                     <form id="settings-generate-docs-form" style="display: flex; flex-direction: column; gap: 20px;">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
@@ -1386,19 +1394,31 @@
                             </div>
                         </div>
 
-                        <div style="margin-top: 4px;">
-                            <h3 style="font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                                <span>📁</span> Sous-Catégories & Modèles de Documents
-                            </h3>
-                            <div id="gd-subcategories-container" style="display: flex; flex-direction: column; gap: 16px;">
-                                <div style="color: var(--text-muted); font-size: 13px;">Chargement des catégories et modèles...</div>
+                        <div class="collapsible-subcard" style="margin-top: 4px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+                            <div class="subcard-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="font-size: 15px; font-weight: 600; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 8px;">
+                                    <span>📁</span> Sous-Catégories & Modèles de Documents
+                                </h3>
+                                <button type="button" class="collapse-toggle-btn" aria-label="Basculer"><span class="collapse-arrow">▼</span></button>
                             </div>
-                        <div style="margin-top: 10px;">
-                            <h3 style="font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                                <span>💰</span> Grille des Prix par Document
-                            </h3>
-                            <div id="gd-prices-container" style="display: flex; flex-direction: column; gap: 16px;">
-                                <div style="color: var(--text-muted); font-size: 13px;">Chargement de la grille des prix...</div>
+                            <div class="subcard-body" style="margin-top: 12px;">
+                                <div id="gd-subcategories-container" style="display: flex; flex-direction: column; gap: 16px;">
+                                    <div style="color: var(--text-muted); font-size: 13px;">Chargement des catégories et modèles...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="collapsible-subcard" style="margin-top: 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+                            <div class="subcard-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 0; display: flex; align-items: center; gap: 8px;">
+                                    <span>💰</span> Grille des Prix par Document
+                                </h3>
+                                <button type="button" class="collapse-toggle-btn" aria-label="Basculer"><span class="collapse-arrow">▼</span></button>
+                            </div>
+                            <div class="subcard-body" style="margin-top: 12px;">
+                                <div id="gd-prices-container" style="display: flex; flex-direction: column; gap: 16px;">
+                                    <div style="color: var(--text-muted); font-size: 13px;">Chargement de la grille des prix...</div>
+                                </div>
                             </div>
                         </div>
 
@@ -1406,9 +1426,10 @@
                     </form>
                 </div>
 
-                <div class="card-panel">
-                    <div class="card-panel-header">
+                <div class="card-panel collapsible">
+                    <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h2 class="card-panel-title">Règles & Limites des Rechargements</h2>
+                        <button type="button" class="collapse-toggle-btn" aria-label="Basculer"><span class="collapse-arrow">▼</span></button>
                     </div>
                     <form id="settings-limits-form" style="display: flex; flex-direction: column; gap: 16px;">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
@@ -1436,9 +1457,10 @@
                     </form>
                 </div>
 
-                <div class="card-panel">
-                    <div class="card-panel-header">
+                <div class="card-panel collapsible">
+                    <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h2 class="card-panel-title">Comptes SumUp (CB)</h2>
+                        <button type="button" class="collapse-toggle-btn" aria-label="Basculer"><span class="collapse-arrow">▼</span></button>
                     </div>
                     <form id="settings-sumup-form" style="display: flex; flex-direction: column; gap: 16px;">
                         <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Les deux banques doivent être complètes en base. Si une clé manque au démarrage, le bot crash. Coche celle utilisée pour les paiements CB.</p>
@@ -1507,9 +1529,10 @@
                     </form>
                 </div>
 
-                <div class="card-panel">
-                    <div class="card-panel-header">
+                <div class="card-panel collapsible">
+                    <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h2 class="card-panel-title">OxaPay (Crypto)</h2>
+                        <button type="button" class="collapse-toggle-btn" aria-label="Basculer"><span class="collapse-arrow">▼</span></button>
                     </div>
                     <form id="settings-oxapay-form" style="display: flex; flex-direction: column; gap: 16px;">
                         <div class="form-group">
@@ -1521,9 +1544,10 @@
                     </form>
                 </div>
 
-                <div class="card-panel">
-                    <div class="card-panel-header">
+                <div class="card-panel collapsible">
+                    <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h2 class="card-panel-title">Tarifs IPTV & Configuration API</h2>
+                        <button type="button" class="collapse-toggle-btn" aria-label="Basculer"><span class="collapse-arrow">▼</span></button>
                     </div>
                     <form id="settings-iptv-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
                         <div class="form-group" style="grid-column: 1 / -1;">
@@ -1592,9 +1616,10 @@
                     </form>
                 </div>
 
-                <div class="card-panel">
-                    <div class="card-panel-header">
+                <div class="card-panel collapsible">
+                    <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h2 class="card-panel-title">Mot de Passe Admin Panel</h2>
+                        <button type="button" class="collapse-toggle-btn" aria-label="Basculer"><span class="collapse-arrow">▼</span></button>
                     </div>
                     <form id="settings-password-form" style="display: flex; flex-direction: column; gap: 16px;">
                         <div class="form-group">

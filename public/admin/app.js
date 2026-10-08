@@ -208,7 +208,10 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (tab === 'payments') loadPaymentsData();
             else if (tab === 'transactions') loadTransactionsData();
             else if (tab === 'amendes') loadAmendesData();
-            else if (tab === 'settings') loadSettingsData();
+            else if (tab === 'settings') {
+                loadSettingsData();
+                initSettingsCollapsibles();
+            }
             else if (tab === 'database') loadDatabaseStudio();
         });
     });
@@ -2855,6 +2858,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* ===================================================================== */
 
+    function initSettingsCollapsibles() {
+        const settingsTab = document.getElementById('tab-settings');
+        if (!settingsTab) return;
+
+        settingsTab.querySelectorAll('.card-panel.collapsible .card-panel-header').forEach(header => {
+            if (header.dataset.collapseInit) return;
+            header.dataset.collapseInit = 'true';
+            header.addEventListener('click', (e) => {
+                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'A')) return;
+                const panel = header.closest('.card-panel');
+                if (panel) {
+                    panel.classList.toggle('collapsed');
+                }
+            });
+        });
+
+        settingsTab.querySelectorAll('.collapsible-subcard .subcard-header').forEach(header => {
+            if (header.dataset.collapseInit) return;
+            header.dataset.collapseInit = 'true';
+            header.addEventListener('click', (e) => {
+                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'A')) return;
+                const subcard = header.closest('.collapsible-subcard');
+                if (subcard) {
+                    subcard.classList.toggle('collapsed');
+                }
+            });
+        });
+
+        const btnCollapseAll = document.getElementById('btn-collapse-all-settings');
+        if (btnCollapseAll && !btnCollapseAll.dataset.collapseInit) {
+            btnCollapseAll.dataset.collapseInit = 'true';
+            btnCollapseAll.addEventListener('click', () => {
+                settingsTab.querySelectorAll('.card-panel.collapsible').forEach(p => p.classList.add('collapsed'));
+                settingsTab.querySelectorAll('.collapsible-subcard').forEach(s => s.classList.add('collapsed'));
+            });
+        }
+
+        const btnExpandAll = document.getElementById('btn-expand-all-settings');
+        if (btnExpandAll && !btnExpandAll.dataset.collapseInit) {
+            btnExpandAll.dataset.collapseInit = 'true';
+            btnExpandAll.addEventListener('click', () => {
+                settingsTab.querySelectorAll('.card-panel.collapsible').forEach(p => p.classList.remove('collapsed'));
+                settingsTab.querySelectorAll('.collapsible-subcard').forEach(s => s.classList.remove('collapsed'));
+            });
+        }
+    }
+
+    /* ===================================================================== */
+
     async function loadSettingsData() {
         const data = await apiRequest('/settings');
         if (!data) return;
@@ -2915,9 +2967,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderServicesStatusList(data.services || {});
         renderGenerateDocsSettings(data.generateDocs || {});
+        initSettingsCollapsibles();
     }
 
-    // [ PAYMENTS PAGINATION LOGIC ] ==========================================
+    /* ===================================================================== */
+
     let rawPaymentsData = [];
     let paymentsCurrentPage = 1;
     let paymentsPerPage = '10';

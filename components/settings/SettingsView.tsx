@@ -1,6 +1,7 @@
 "use client";
 
-import { MessageSquare, Bell, Copy, Shield } from "lucide-react";
+import { useState } from "react";
+import { MessageSquare, Bell, Copy, Shield, ChevronDown } from "lucide-react";
 import { useTelegram } from "@/components/TelegramContext";
 import { useToast } from "@/components/NotificationToast";
 
@@ -13,6 +14,8 @@ interface SettingsViewProps {
 export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
   const { user, haptic, isAdmin, adminSlug, supportTelegram, supportTelegram2, channelTelegram } = useTelegram();
   const toast = useToast();
+  const [adminOpen, setAdminOpen] = useState(true);
+  const [communityOpen, setCommunityOpen] = useState(true);
 
   const fullName = user
     ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username || ""
@@ -105,98 +108,140 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
 
       {isAdmin && (
         <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-4 border border-primary/20 space-y-2">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-primary/80 mb-2">
-            Espace Super-Admin
-          </h3>
-          <button
-            type="button"
+          <div
             onClick={() => {
-              haptic("impact");
-              if (onOpenAdmin) {
-                onOpenAdmin();
-              } else {
-                handleOpenWebPanel();
-              }
+              haptic("selection");
+              setAdminOpen(!adminOpen);
             }}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all text-left gap-2.5 cursor-pointer"
+            className="flex items-center justify-between cursor-pointer select-none"
           >
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 text-primary flex items-center justify-center shrink-0">
-                <Shield size={15} />
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-primary/80">
+              Espace Super-Admin
+            </h3>
+            <button
+              type="button"
+              className="p-1 rounded-md text-primary/60 hover:text-primary transition-colors cursor-pointer"
+              aria-label={adminOpen ? "Replier" : "Déplier"}
+            >
+              <ChevronDown
+                size={14}
+                className={`transition-transform duration-200 ${adminOpen ? "rotate-0" : "-rotate-90"}`}
+              />
+            </button>
+          </div>
+          {adminOpen && (
+            <button
+              type="button"
+              onClick={() => {
+                haptic("impact");
+                if (onOpenAdmin) {
+                  onOpenAdmin();
+                } else {
+                  handleOpenWebPanel();
+                }
+              }}
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all text-left gap-2.5 cursor-pointer mt-2"
+            >
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 text-primary flex items-center justify-center shrink-0">
+                  <Shield size={15} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-black text-white truncate">Panel d'Administration</p>
+                  <p className="text-[10px] text-white/50 truncate">Gestion du bot & services</p>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-black text-white truncate">Panel d'Administration</p>
-                <p className="text-[10px] text-white/50 truncate">Gestion du bot & services</p>
-              </div>
-            </div>
-            <span className="text-[9px] bg-primary text-slate-950 font-black px-2 py-1 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
-              <span>OUVRIR</span>
-            </span>
-          </button>
+              <span className="text-[9px] bg-primary text-slate-950 font-black px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
+                <span>OUVRIR</span>
+              </span>
+            </button>
+          )}
         </div>
       )}
 
       {(supportUrl || supportUrl2 || channelUrl) && (
         <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-4 border border-white/[0.06] space-y-2">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-2">
-            Assistance & Communauté
-          </h3>
-
-          {supportUrl && (
+          <div
+            onClick={() => {
+              haptic("selection");
+              setCommunityOpen(!communityOpen);
+            }}
+            className="flex items-center justify-between cursor-pointer select-none"
+          >
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-white/50">
+              Assistance & Communauté
+            </h3>
             <button
               type="button"
-              onClick={() => handleOpenTelegramLink(supportUrl)}
-              className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
+              className="p-1 rounded-md text-white/40 hover:text-white transition-colors cursor-pointer"
+              aria-label={communityOpen ? "Replier" : "Déplier"}
             >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
-                  <MessageSquare size={16} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-white">Support Technique</p>
-                  <p className="text-[10px] text-white/40">Équipe admin 7j/7</p>
-                </div>
-              </div>
-              <span className="text-[10px] text-primary font-bold">{supportHandle}</span>
+              <ChevronDown
+                size={14}
+                className={`transition-transform duration-200 ${communityOpen ? "rotate-0" : "-rotate-90"}`}
+              />
             </button>
-          )}
+          </div>
 
-          {supportUrl2 && (
-            <button
-              type="button"
-              onClick={() => handleOpenTelegramLink(supportUrl2)}
-              className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
-                  <MessageSquare size={16} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-white">Support Technique</p>
-                  <p className="text-[10px] text-white/40">Équipe admin 7j/7</p>
-                </div>
-              </div>
-              <span className="text-[10px] text-primary font-bold">{supportHandle2}</span>
-            </button>
-          )}
+          {communityOpen && (
+            <div className="space-y-2 pt-1">
+              {supportUrl && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenTelegramLink(supportUrl)}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
+                      <MessageSquare size={16} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">Support Technique</p>
+                      <p className="text-[10px] text-white/40">Équipe admin 7j/7</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-primary font-bold">{supportHandle}</span>
+                </button>
+              )}
 
-          {channelUrl && (
-            <button
-              type="button"
-              onClick={() => handleOpenTelegramLink(channelUrl)}
-              className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
-                  <Bell size={16} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-white">Canal d'annonces</p>
-                  <p className="text-[10px] text-white/40">Mises à jour et nouveautés</p>
-                </div>
-              </div>
-              <span className="text-[10px] text-amber-400 font-bold">Rejoindre</span>
-            </button>
+              {supportUrl2 && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenTelegramLink(supportUrl2)}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
+                      <MessageSquare size={16} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">Support Technique</p>
+                      <p className="text-[10px] text-white/40">Équipe admin 7j/7</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-primary font-bold">{supportHandle2}</span>
+                </button>
+              )}
+
+              {channelUrl && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenTelegramLink(channelUrl)}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                      <Bell size={16} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">Canal d'annonces</p>
+                      <p className="text-[10px] text-white/40">Mises à jour et nouveautés</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-amber-400 font-bold">Rejoindre</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}

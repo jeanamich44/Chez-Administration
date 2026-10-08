@@ -378,6 +378,98 @@ body {
     margin-bottom: 20px;
 }
 
+.card-panel.collapsible .card-panel-header {
+    cursor: pointer;
+    user-select: none;
+    transition: margin-bottom 0.2s ease;
+}
+
+.card-panel.collapsible.collapsed {
+    padding-bottom: 20px;
+}
+
+.card-panel.collapsible.collapsed .card-panel-header {
+    margin-bottom: 0;
+}
+
+.card-panel.collapsible.collapsed > form,
+.card-panel.collapsible.collapsed > div:not(.card-panel-header),
+.card-panel.collapsible.collapsed > #services-status-list {
+    display: none !important;
+}
+
+.collapse-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.collapse-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+.collapse-arrow {
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+
+.card-panel.collapsible.collapsed .collapse-arrow {
+    transform: rotate(-90deg);
+}
+
+.settings-collapse-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.settings-collapse-toolbar button {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.settings-collapse-toolbar button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+}
+
+.collapsible-subcard {
+    transition: all 0.2s ease;
+}
+
+.collapsible-subcard .subcard-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.collapsible-subcard.collapsed .subcard-body {
+    display: none !important;
+}
+
+.collapsible-subcard.collapsed .collapse-arrow {
+    transform: rotate(-90deg);
+}
+
 .card-panel-title {
     font-size: 18px;
     font-weight: 600;

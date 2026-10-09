@@ -117,22 +117,9 @@ export default function IptvWorkspace({ onBack, onGoRecharge }: IptvWorkspacePro
     setTimeout(() => setCopiedField(""), 2000);
   };
 
-  const getServerUrl = (sub: IptvSubscription): string => {
-    if (sub.host && typeof sub.host === "string" && sub.host.trim()) {
-      const h = sub.host.trim();
-      return h.endsWith("/") ? h : `${h}/`;
-    }
-    if (sub.url) {
-      try {
-        const parsed = new URL(sub.url);
-        return `${parsed.protocol}//${parsed.host}/`;
-      } catch {
-        if (sub.url.startsWith("http")) {
-          return sub.url.endsWith("/") ? sub.url : `${sub.url}/`;
-        }
-      }
-    }
-    const base = (config.host || "http://cf.business-cloud-neo.com").trim();
+  const getServerUrl = (sub?: IptvSubscription): string => {
+    const rawHost = config.host || sub?.host || "http://cf.business-cloud-neo.com";
+    const base = rawHost.trim();
     return base.endsWith("/") ? base : `${base}/`;
   };
 

@@ -6,6 +6,7 @@ import { ArrowLeft, Download, RefreshCw, Sparkles, Eye, User, Shield, Car, Layou
 
 import { toast } from "sonner";
 import DocumentPreviewViewer from "@/components/generate_docs/_shared/DocumentPreviewViewer";
+import DocumentActionButtons from "@/components/generate_docs/_shared/DocumentActionButtons";
 import CustomDatePicker, { isValidCalendarDate } from "@/components/generate_docs/_shared/CustomDatePicker";
 import ImmatriculationInput from "@/components/generate_docs/_shared/ImmatriculationInput";
 import { fetchGenerateDocsConfig, usePreviewCooldown } from "@/components/generate_docs/_shared/usePreviewCooldown";
@@ -890,49 +891,21 @@ export default function MaxanceAssuranceClient({ onBack }: { onBack: () => void 
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={handleFillExample}
-              className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <Sparkles size={14} className="text-primary" /> Remplir avec un exemple
-            </button>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-wider text-white/40 hover:text-rose-400 transition-colors cursor-pointer"
-            >
-              Réinitialiser
-            </button>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={handlePreview}
-              disabled={isPreviewLoading || isBlocked}
-              className="px-6 py-3 rounded-xl bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700 disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              {isPreviewLoading ? <RefreshCw className="animate-spin" size={16} /> : <Eye size={16} />}
-              {!allowed
-                ? "Aperçus éteints"
-                : cooldown > 0
-                  ? `Aperçu Preview Gratuit (${formatTimer(cooldown)})`
-                  : "Aperçu Preview Gratuit"}
-            </button>
-
-            <button
-              type="submit"
-              disabled={isGenerating}
-              className="px-8 py-3 rounded-xl bg-primary text-slate-950 font-black text-xs uppercase tracking-widest hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 flex items-center gap-2 cursor-pointer"
-            >
-              {isGenerating ? <RefreshCw className="animate-spin" size={16} /> : <Download size={16} />}
-              Générer le Mémo ({assurancePrice.toFixed(2)} €)
-            </button>
-          </div>
-        </div>
+        <DocumentActionButtons
+          onFillExample={handleFillExample}
+          onReset={handleReset}
+          onPreview={handlePreview}
+          isPreviewLoading={isPreviewLoading}
+          isGenerating={isGenerating}
+          isPreviewBlocked={isBlocked}
+          previewAllowed={allowed}
+          previewCooldown={cooldown}
+          formatCooldownTimer={formatTimer}
+          previewLabel="Aperçu Preview Gratuit"
+          generateLabel="Générer le Mémo"
+          price={assurancePrice}
+          submitType="submit"
+        />
       </form>
 
       {previewUrl ? (

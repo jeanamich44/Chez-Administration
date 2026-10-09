@@ -29,6 +29,7 @@ sumupOpening
 import { getCachedFormSchema,setCachedFormSchema } from "@/components/generate_docs/_shared/formSchemaCache";
 import { fetchGenerateDocsConfig,usePreviewCooldown } from "@/components/generate_docs/_shared/usePreviewCooldown";
 import { getAuthHeaders } from "@/components/generate_docs/_shared/telegramAuth";
+import DocumentActionButtons from "@/components/generate_docs/_shared/DocumentActionButtons";
 import RibPreviewViewer from "./RibPreviewViewer";
 import type { AutoIbanPart,EditorSchema,FieldKind,NormalField,RibBankConfig,RibMode } from "./types";
 
@@ -1672,66 +1673,39 @@ export default function RibWorkspace({
             )}
           </div>
         ) : null}
-
-        <div className="flex flex-col sm:flex-row flex-wrap items-center justify-between gap-4 w-full">
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={() => {
-                const defaults = dynamicDoc?.defaults || config.defaults || {};
-                setFormData(defaults);
-                if (schema) {
-                  setCustomTexts(chromeOnly(schema));
-                  setCustomVisible(schema.visible || {});
-                }
-                setIsCustomCivilite(false);
-                setCustomCivilite("");
-                setErrors({});
-                toast.success("Formulaire prérempli");
-              }}
-              className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 transition-colors flex items-center gap-2"
-            >
-              <Sparkles size={14} className="text-amber-400" /> Exemple
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const defaults = dynamicDoc?.defaults || config.defaults || {};
-                setFormData(emptyFrom(defaults));
-                setIsCustomCivilite(false);
-                setCustomCivilite("");
-                setErrors({});
-                toast.info("Formulaire réinitialisé");
-              }}
-              className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 transition-colors flex items-center gap-2"
-            >
-              <RefreshCw size={14} /> Effacer
-            </button>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={handlePreview}
-              disabled={isPreviewLoading || isBlocked}
-              className="w-full sm:w-auto justify-center px-6 py-3 rounded-xl bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700 disabled:opacity-50 transition-all flex items-center gap-2"
-            >
-              {isPreviewLoading ? <RefreshCw className="animate-spin" size={16} /> : <Eye size={16} />}
-              {!allowed
-                ? "Aperçus éteints"
-                : cooldown > 0
-                  ? `Aperçu Preview Gratuit (${formatTimer(cooldown)})`
-                  : "Aperçu Preview Gratuit"}
-            </button>
-            <button
-              type="submit"
-              disabled={isGenerating}
-              className="w-full sm:w-auto justify-center px-8 py-3 rounded-xl bg-primary text-slate-950 font-black text-xs uppercase tracking-widest hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
-            >
-              {isGenerating ? <RefreshCw className="animate-spin" size={16} /> : <Download size={16} />}
-              Générer le RIB ({ribPrice.toFixed(2)} €)
-            </button>
-          </div>
-        </div>
+        <DocumentActionButtons
+          onFillExample={() => {
+            const defaults = dynamicDoc?.defaults || config.defaults || {};
+            setFormData(defaults);
+            if (schema) {
+              setCustomTexts(chromeOnly(schema));
+              setCustomVisible(schema.visible || {});
+            }
+            setIsCustomCivilite(false);
+            setCustomCivilite("");
+            setErrors({});
+            toast.success("Formulaire prérempli");
+          }}
+          onReset={() => {
+            const defaults = dynamicDoc?.defaults || config.defaults || {};
+            setFormData(emptyFrom(defaults));
+            setIsCustomCivilite(false);
+            setCustomCivilite("");
+            setErrors({});
+            toast.info("Formulaire réinitialisé");
+          }}
+          onPreview={handlePreview}
+          isPreviewLoading={isPreviewLoading}
+          isGenerating={isGenerating}
+          isPreviewBlocked={isBlocked}
+          previewAllowed={allowed}
+          previewCooldown={cooldown}
+          formatCooldownTimer={formatTimer}
+          previewLabel="Aperçu Preview Gratuit"
+          generateLabel="Générer le RIB"
+          price={ribPrice}
+          submitType="submit"
+        />
       </form>
       {previewUrl ? (
         <RibPreviewViewer

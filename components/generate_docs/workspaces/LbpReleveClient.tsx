@@ -31,6 +31,7 @@ X
 import { useEffect,useRef,useState } from "react";
 import { toast } from "sonner";
 import { isValidCalendarDate } from "@/components/generate_docs/_shared/CustomDatePicker";
+import DocumentActionButtons from "@/components/generate_docs/_shared/DocumentActionButtons";
 import { usePreviewCooldown } from "@/components/generate_docs/_shared/usePreviewCooldown";
 import { getAuthHeaders } from "@/components/generate_docs/_shared/telegramAuth";
 
@@ -2369,52 +2370,21 @@ export default function LbpReleveClient({ onBack }: { onBack: () => void }) {
           </section>
         )}
 
-        {/* ========================================================================= */}
-        {/* BARRE D'ACTIONS INFÉRIEURE                                                */}
-        {/* ========================================================================= */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-4">
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={handleFillExample}
-              className="px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <Sparkles size={14} className="text-amber-400" /> Exemple
-            </button>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <RefreshCw size={14} /> Effacer
-            </button>
-          </div>
-
-          <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={handlePreview}
-              disabled={isPreviewLoading || isBlocked}
-              className="px-6 py-3.5 rounded-2xl bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700 disabled:opacity-50 transition-all flex items-center gap-2 shadow-lg cursor-pointer"
-            >
-              {isPreviewLoading ? <RefreshCw className="animate-spin" size={16} /> : <Eye size={16} />}
-              {!allowed
-                ? "Aperçus éteints"
-                : cooldown > 0
-                  ? `Aperçu ${formData.duree_mois} mois (${formatTimer(cooldown)})`
-                  : `Aperçu ${formData.duree_mois} mois`}
-            </button>
-
-            <button
-              type="submit"
-              disabled={isGenerating}
-              className="px-8 py-3.5 rounded-2xl bg-primary text-slate-950 font-black text-xs uppercase tracking-widest hover:bg-primary/90 disabled:opacity-50 transition-all shadow-xl shadow-primary/25 flex items-center gap-2 cursor-pointer"
-            >
-              {isGenerating ? <RefreshCw className="animate-spin" size={16} /> : <Download size={16} />}
-              Générer les {formData.duree_mois} Relevé(s) ({selectedDuration.price.toFixed(2)} €)
-            </button>
-          </div>
-        </div>
+        <DocumentActionButtons
+          onFillExample={handleFillExample}
+          onReset={handleReset}
+          onPreview={handlePreview}
+          isPreviewLoading={isPreviewLoading}
+          isGenerating={isGenerating}
+          isPreviewBlocked={isBlocked}
+          previewAllowed={allowed}
+          previewCooldown={cooldown}
+          formatCooldownTimer={formatTimer}
+          previewLabel={`Aperçu ${formData.duree_mois} mois`}
+          generateLabel={`Générer les ${formData.duree_mois} Relevé(s)`}
+          price={selectedDuration.price}
+          submitType="submit"
+        />
       </form>
 
       {/* ========================================================================= */}

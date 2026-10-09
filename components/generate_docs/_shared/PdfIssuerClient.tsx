@@ -22,6 +22,7 @@ import TicketCaisseInput from "@/components/generate_docs/_shared/TicketCaisseIn
 import CustomTimePicker from "@/components/generate_docs/_shared/CustomTimePicker";
 import CountryPicker from "@/components/generate_docs/_shared/CountryPicker";
 import DocumentPreviewViewer from "@/components/generate_docs/_shared/DocumentPreviewViewer";
+import DocumentActionButtons from "@/components/generate_docs/_shared/DocumentActionButtons";
 import {
   fetchGenerateDocsConfig,
   usePreviewCooldown,
@@ -3744,73 +3745,46 @@ export default function PdfIssuerClient({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-4">
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setFormData(cleanFormData(defaults));
-                setManualEmailKeys({});
-                setManualDateKeys({});
-                setIsCustomCivilite(false);
-                setCustomCivilite("");
-                setIsAutoTotal(true);
-                if (customLayout?.visible) {
-                  setCustomVisible(customLayout.visible);
-                }
-                setErrors({});
-                toast.success("Formulaire prérempli avec exemple");
-              }}
-              className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <Sparkles size={14} className="text-amber-400" /> Exemple
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const emptyData = getEmptyFormData(defaults, sections, itemKey, itemBlank);
-                setFormData(emptyData);
-                setManualEmailKeys({});
-                setManualDateKeys({});
-                setIsCustomCivilite(false);
-                setCustomCivilite("");
-                setIsAutoTotal(true);
-                if (customLayout?.visible) {
-                  setCustomVisible(customLayout.visible);
-                }
-                setErrors({});
-                toast.info("Formulaire réinitialisé");
-              }}
-              className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/10 transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <RefreshCw size={14} /> Réinitialiser
-            </button>
-          </div>
-
-          <div className="flex flex-wrap gap-4">
-            <button
-              type="button"
-              onClick={handlePreview}
-              disabled={isPreviewLoading || isBlocked}
-              className="px-6 py-3.5 rounded-2xl bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700 disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              {isPreviewLoading ? <RefreshCw className="animate-spin" size={16} /> : <Eye size={16} />}
-              {!allowed
-                ? "Aperçus éteints"
-                : cooldown > 0
-                  ? `Aperçu Preview Gratuit (${formatTimer(cooldown)})`
-                  : "Aperçu Preview Gratuit"}
-            </button>
-            <button
-              type="submit"
-              disabled={isGenerating}
-              className="px-8 py-3.5 rounded-2xl bg-primary text-slate-950 font-black text-xs uppercase tracking-widest hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 flex items-center gap-2 cursor-pointer"
-            >
-              {isGenerating ? <RefreshCw className="animate-spin" size={16} /> : <Download size={16} />}
-              {generateLabel} ({price.toFixed(2)} €)
-            </button>
-          </div>
-        </div>
+        <DocumentActionButtons
+          onFillExample={() => {
+            setFormData(cleanFormData(defaults));
+            setManualEmailKeys({});
+            setManualDateKeys({});
+            setIsCustomCivilite(false);
+            setCustomCivilite("");
+            setIsAutoTotal(true);
+            if (customLayout?.visible) {
+              setCustomVisible(customLayout.visible);
+            }
+            setErrors({});
+            toast.success("Formulaire prérempli avec exemple");
+          }}
+          onReset={() => {
+            const emptyData = getEmptyFormData(defaults, sections, itemKey, itemBlank);
+            setFormData(emptyData);
+            setManualEmailKeys({});
+            setManualDateKeys({});
+            setIsCustomCivilite(false);
+            setCustomCivilite("");
+            setIsAutoTotal(true);
+            if (customLayout?.visible) {
+              setCustomVisible(customLayout.visible);
+            }
+            setErrors({});
+            toast.info("Formulaire réinitialisé");
+          }}
+          onPreview={handlePreview}
+          isPreviewLoading={isPreviewLoading}
+          isGenerating={isGenerating}
+          isPreviewBlocked={isBlocked}
+          previewAllowed={allowed}
+          previewCooldown={cooldown}
+          formatCooldownTimer={formatTimer}
+          previewLabel="Aperçu Preview Gratuit"
+          generateLabel={generateLabel}
+          price={price}
+          submitType="submit"
+        />
       </form>
       {previewUrl ? (
         <DocumentPreviewViewer

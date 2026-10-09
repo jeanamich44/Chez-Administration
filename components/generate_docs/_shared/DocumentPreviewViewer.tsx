@@ -42,6 +42,20 @@ export default function DocumentPreviewViewer({
   const [mounted, setMounted] = useState(false);
   const [entered, setEntered] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [actionTimer, setActionTimer] = useState(0);
+
+  useEffect(() => {
+    if (!isActionLoading) {
+      setActionTimer(0);
+      return;
+    }
+    setActionTimer(0);
+    const start = Date.now();
+    const iv = setInterval(() => {
+      setActionTimer(Math.floor((Date.now() - start) / 1000));
+    }, 250);
+    return () => clearInterval(iv);
+  }, [isActionLoading]);
 
   useEffect(() => {
     setMounted(true);
@@ -293,11 +307,19 @@ export default function DocumentPreviewViewer({
               className="h-9 px-4 rounded-xl bg-primary text-slate-950 font-black uppercase text-xs tracking-wider flex items-center justify-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-all shadow-md shadow-primary/20 cursor-pointer w-full sm:w-auto order-3 sm:order-2 shrink-0"
             >
               {isActionLoading ? (
-                <RefreshCw size={13} className="animate-spin" />
+                <>
+                  <RefreshCw size={13} className="animate-spin text-slate-950 shrink-0" />
+                  <span className="truncate">Génération en cours</span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-950/20 text-slate-950 font-black shrink-0">
+                    {Math.floor(actionTimer / 60) < 10 ? "0" : ""}{Math.floor(actionTimer / 60)}:{actionTimer % 60 < 10 ? "0" : ""}{actionTimer % 60}
+                  </span>
+                </>
               ) : (
-                <Download size={13} />
+                <>
+                  <Download size={13} className="shrink-0" />
+                  <span className="truncate">{actionLabel || "Télécharger"}</span>
+                </>
               )}
-              <span className="truncate">{actionLabel || "Télécharger"}</span>
             </button>
           ) : null}
         </div>

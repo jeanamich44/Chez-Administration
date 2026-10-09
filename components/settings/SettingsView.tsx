@@ -1,17 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { MessageSquare, Bell, Copy, Shield, ChevronDown } from "lucide-react";
+import { MessageSquare, Bell, Copy, Shield, ChevronDown, ExternalLink } from "lucide-react";
 import { useTelegram } from "@/components/TelegramContext";
 import { useToast } from "@/components/NotificationToast";
 
 /* ===================================================================== */
 
-interface SettingsViewProps {
-  onOpenAdmin?: () => void;
-}
-
-export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
+export default function SettingsView() {
   const { user, haptic, isAdmin, adminSlug, supportTelegram, supportTelegram2, channelTelegram } = useTelegram();
   const toast = useToast();
   const [adminOpen, setAdminOpen] = useState(true);
@@ -132,14 +128,7 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
           {adminOpen && (
             <button
               type="button"
-              onClick={() => {
-                haptic("impact");
-                if (onOpenAdmin) {
-                  onOpenAdmin();
-                } else {
-                  handleOpenWebPanel();
-                }
-              }}
+              onClick={handleOpenWebPanel}
               className="w-full flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all text-left gap-2.5 cursor-pointer mt-2"
             >
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -147,12 +136,13 @@ export default function SettingsView({ onOpenAdmin }: SettingsViewProps) {
                   <Shield size={15} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-black text-white truncate">Panel d'Administration</p>
-                  <p className="text-[10px] text-white/50 truncate">Gestion du bot & services</p>
+                  <p className="text-xs font-black text-white truncate">Panel d'Administration Web</p>
+                  <p className="text-[10px] text-white/50 truncate">Ouvrir dans le navigateur externe</p>
                 </div>
               </div>
-              <span className="text-[9px] bg-primary text-slate-950 font-black px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
-                <span>OUVRIR</span>
+              <span className="text-[9px] bg-primary text-slate-950 font-black px-2 py-1 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
+                <span>NAVIGATEUR</span>
+                <ExternalLink size={9} />
               </span>
             </button>
           )}

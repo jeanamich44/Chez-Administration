@@ -782,13 +782,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearInterval(metricsLiveInterval);
                 metricsLiveInterval = null;
             }
-        }, 2000);
+        }, 5000);
     }
 
     function updateCounter(elementId, value) {
         const el = document.getElementById(elementId);
         if (!el) return;
-        const newVal = String(value || 0);
+        const newVal = String(value ?? 0);
         if (el.innerText !== newVal) {
             el.innerText = newVal;
             el.classList.add('counter-pulse');
@@ -796,131 +796,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // [ ADVANCED METRICS CHARTS SYSTEM ] =====================================
-    let chartGlobalVolume = null;
-    const individualCharts = {};
+    /* ===================================================================== */
 
-    const metricsHistory = {
-        labels: [],
-        totalTraffic: [],
-        tgRec: [],
-        tgSent: [],
-        cmdExec: [],
-        sumupRec: [],
-        sumupSent: [],
-        oxapayRec: [],
-        oxapaySent: [],
-        adminLogins: [],
-        errorsCount: [],
-        docPreviews: [],
-        docGenerations: []
-    };
-    const MAX_HISTORY_POINTS = 15;
-
-    function initMetricsViewMode() {
-        const btnCards = document.getElementById('btn-mode-cards');
-        const btnCharts = document.getElementById('btn-mode-charts');
-        const cardsView = document.getElementById('metrics-cards-view');
-        const chartsView = document.getElementById('metrics-charts-view');
-
-        if (!btnCards || !btnCharts || !cardsView || !chartsView) return;
-
-        function setViewMode(mode) {
-            localStorage.setItem('metrics_view_mode', mode);
-            if (mode === 'cards') {
-                cardsView.style.display = 'block';
-                chartsView.style.display = 'none';
-                btnCards.style.background = 'var(--accent-primary)';
-                btnCards.style.color = '#ffffff';
-                btnCharts.style.background = 'transparent';
-                btnCharts.style.color = 'var(--text-secondary)';
-            } else {
-                cardsView.style.display = 'none';
-                chartsView.style.display = 'grid';
-                btnCharts.style.background = 'var(--accent-primary)';
-                btnCharts.style.color = '#ffffff';
-                btnCards.style.background = 'transparent';
-                btnCards.style.color = 'var(--text-secondary)';
-            }
-        }
-
-        btnCards.addEventListener('click', () => setViewMode('cards'));
-        btnCharts.addEventListener('click', () => setViewMode('charts'));
-
-        const savedMode = localStorage.getItem('metrics_view_mode') || 'charts';
-        setViewMode(savedMode);
-    }
-
-    let selectedTimeframe = 'live';
-
-    function createSparklineChart(canvasId, mainColor, fillHex) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return null;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return null;
-
-        const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, fillHex);
-        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.02)');
-
-        return new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: metricsHistory.labels,
-                datasets: [{
-                    label: 'Volume',
-                    data: [],
-                    borderColor: mainColor,
-                    borderWidth: 2.5,
-                    backgroundColor: gradient,
-                    fill: true,
-                    tension: 0.35,
-                    pointRadius: 2,
-                    pointHoverRadius: 5,
-                    pointBackgroundColor: mainColor,
-                    pointHoverBackgroundColor: '#ffffff'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { 
-                        mode: 'index', 
-                        intersect: false,
-                        padding: 10,
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        titleColor: '#ffffff',
-                        bodyColor: mainColor,
-                        borderColor: 'rgba(255,255,255,0.1)',
-                        borderWidth: 1
-                    }
-                },
-                scales: {
-                    x: {
-                        display: true,
-                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
-                        ticks: { 
-                            font: { size: 9 }, 
-                            color: '#94a3b8', 
-                            maxRotation: 0,
-                            maxTicksLimit: 5,
-                            autoSkip: true 
-                        }
-                    },
-                    y: {
-                        display: true,
-                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
-                        beginAtZero: true,
-                        suggestedMax: 5,
-                        ticks: { font: { size: 9 }, color: '#94a3b8', precision: 0 }
-                    }
-                }
-            }
-        });
-    }
+    let chartActivityTimeline = null;
+    let chartTrafficDonut = null;
+    let chartDocsConversion = null;
+    let lastStatsResponse = null;
+    let selectedTimeframe = 'today';
 
     function initMetricsCharts() {
         if (typeof Chart === 'undefined') return;
@@ -928,57 +810,166 @@ document.addEventListener('DOMContentLoaded', () => {
         Chart.defaults.color = '#94a3b8';
         Chart.defaults.font.family = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
-        const ctxGlobal = document.getElementById('chart-global-volume')?.getContext('2d');
-        if (ctxGlobal && !chartGlobalVolume) {
-            const gradGlobal = ctxGlobal.createLinearGradient(0, 0, 0, 240);
-            gradGlobal.addColorStop(0, 'rgba(99, 102, 241, 0.4)');
-            gradGlobal.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+        const ctxTimeline = document.getElementById('chart-activity-timeline')?.getContext('2d');
+        if (ctxTimeline && !chartActivityTimeline) {
+            const gradTimeline = ctxTimeline.createLinearGradient(0, 0, 0, 260);
+            gradTimeline.addColorStop(0, 'rgba(99, 102, 241, 0.45)');
+            gradTimeline.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
 
-            chartGlobalVolume = new Chart(ctxGlobal, {
+            chartActivityTimeline = new Chart(ctxTimeline, {
                 type: 'line',
                 data: {
-                    labels: metricsHistory.labels,
+                    labels: [],
+                    datasets: [{
+                        label: "Flux d'Activité",
+                        data: [],
+                        borderColor: '#6366f1',
+                        backgroundColor: gradTimeline,
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#818cf8',
+                        pointHoverBackgroundColor: '#ffffff',
+                        pointRadius: 3,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 250 },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#cbd5e1',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            padding: 10
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                            ticks: { color: '#94a3b8', font: { size: 10 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                            beginAtZero: true,
+                            ticks: { precision: 0, color: '#94a3b8', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        const ctxDonut = document.getElementById('chart-traffic-donut')?.getContext('2d');
+        if (ctxDonut && !chartTrafficDonut) {
+            chartTrafficDonut = new Chart(ctxDonut, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Telegram', 'Generate Docs', 'Paiements', 'Système'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#0088cc', '#38bdf8', '#10b981', '#6366f1'],
+                        borderColor: 'rgba(15, 23, 42, 0.8)',
+                        borderWidth: 2,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '68%',
+                    animation: { duration: 250 },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#cbd5e1',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            padding: 10,
+                            callbacks: {
+                                label: function(ctx) {
+                                    const val = ctx.raw || 0;
+                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0) || 1;
+                                    const pct = ((val / total) * 100).toFixed(1);
+                                    return ` ${ctx.label} : ${val} (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        const ctxConversion = document.getElementById('chart-docs-conversion')?.getContext('2d');
+        if (ctxConversion && !chartDocsConversion) {
+            chartDocsConversion = new Chart(ctxConversion, {
+                type: 'bar',
+                data: {
+                    labels: [],
                     datasets: [
-                        { 
-                            label: 'Volume Réseau Global', 
-                            data: metricsHistory.totalTraffic, 
-                            borderColor: '#6366f1', 
-                            backgroundColor: gradGlobal, 
-                            fill: true, 
-                            tension: 0.1, 
-                            borderWidth: 3,
-                            pointBackgroundColor: '#818cf8',
-                            pointRadius: 3
+                        {
+                            label: 'Aperçus générés',
+                            data: [],
+                            backgroundColor: 'rgba(56, 189, 248, 0.85)',
+                            hoverBackgroundColor: '#38bdf8',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Commandes finalisées',
+                            data: [],
+                            backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                            hoverBackgroundColor: '#10b981',
+                            borderRadius: 4
                         }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    animation: false,
+                    animation: { duration: 250 },
                     plugins: {
-                        legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
-                        tooltip: { mode: 'index', intersect: false }
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#cbd5e1',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            padding: 10,
+                            callbacks: {
+                                afterBody: function(tooltipItems) {
+                                    const previews = tooltipItems[0]?.raw || 0;
+                                    const gens = tooltipItems[1]?.raw || 0;
+                                    const conv = previews > 0 ? ((gens / previews) * 100).toFixed(1) : '0.0';
+                                    return `Taux de conversion : ${conv}%`;
+                                }
+                            }
+                        }
                     },
                     scales: {
-                        x: { grid: { color: 'rgba(255,255,255,0.05)' } },
-                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                            ticks: { color: '#94a3b8', font: { size: 11 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                            beginAtZero: true,
+                            ticks: { precision: 0, color: '#94a3b8', font: { size: 10 } }
+                        }
                     }
                 }
             });
         }
-
-        if (!individualCharts.tgRec) individualCharts.tgRec = createSparklineChart('chart-tg-rec', '#06b6d4', 'rgba(6, 182, 212, 0.35)');
-        if (!individualCharts.tgSent) individualCharts.tgSent = createSparklineChart('chart-tg-sent', '#a855f7', 'rgba(168, 85, 247, 0.35)');
-        if (!individualCharts.cmdExec) individualCharts.cmdExec = createSparklineChart('chart-commands-exec', '#10b981', 'rgba(16, 185, 129, 0.35)');
-        if (!individualCharts.sumupRec) individualCharts.sumupRec = createSparklineChart('chart-sumup-rec', '#3b82f6', 'rgba(59, 130, 246, 0.35)');
-        if (!individualCharts.sumupSent) individualCharts.sumupSent = createSparklineChart('chart-sumup-sent', '#38bdf8', 'rgba(56, 189, 248, 0.35)');
-        if (!individualCharts.oxapayRec) individualCharts.oxapayRec = createSparklineChart('chart-oxapay-rec', '#f59e0b', 'rgba(245, 158, 11, 0.35)');
-        if (!individualCharts.oxapaySent) individualCharts.oxapaySent = createSparklineChart('chart-oxapay-sent', '#f97316', 'rgba(249, 115, 22, 0.35)');
-        if (!individualCharts.adminLogins) individualCharts.adminLogins = createSparklineChart('chart-admin-logins', '#8b5cf6', 'rgba(139, 92, 246, 0.35)');
-        if (!individualCharts.errorsCount) individualCharts.errorsCount = createSparklineChart('chart-errors-count', '#ef4444', 'rgba(239, 68, 68, 0.35)');
-        if (!individualCharts.docPreviews) individualCharts.docPreviews = createSparklineChart('chart-doc-previews', '#38bdf8', 'rgba(56, 189, 248, 0.35)');
-        if (!individualCharts.docGenerations) individualCharts.docGenerations = createSparklineChart('chart-doc-generations', '#10b981', 'rgba(16, 185, 129, 0.35)');
 
         const segmentedBar = document.getElementById('timeframe-segmented-bar');
         if (segmentedBar && !segmentedBar.dataset.initialized) {
@@ -997,140 +988,100 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     selectedTimeframe = btn.dataset.value;
                     if (lastStatsResponse) {
-                        renderMainVolumeChart(lastStatsResponse);
+                        renderTimelineChart(lastStatsResponse);
                     }
                 });
             });
         }
+
+        const refreshBtn = document.getElementById('refresh-metrics-btn');
+        if (refreshBtn && !refreshBtn.dataset.initialized) {
+            refreshBtn.dataset.initialized = 'true';
+            refreshBtn.addEventListener('click', async () => {
+                refreshBtn.style.transform = 'rotate(180deg)';
+                refreshBtn.style.transition = 'transform 0.4s ease';
+                await loadMetricsData();
+                setTimeout(() => {
+                    refreshBtn.style.transform = 'none';
+                }, 400);
+            });
+        }
     }
 
-    let lastStatsResponse = null;
-
-    function renderMainVolumeChart(stats) {
-        if (!chartGlobalVolume) return;
+    function renderTimelineChart(stats) {
+        if (!chartActivityTimeline) return;
         const subTitle = document.getElementById('main-chart-subtitle');
-        const badge = document.getElementById('main-chart-badge');
-
         const graphData = stats?.graph;
 
-        if (selectedTimeframe === 'today' && graphData?.today) {
-            chartGlobalVolume.data.labels = graphData.today.map(item => item.label);
-            chartGlobalVolume.data.datasets[0].data = graphData.today.map(item => item.volume);
-            chartGlobalVolume.data.datasets[0].label = "Volume Réseau Aujourd'hui (Par créneau 2h)";
-            if (subTitle) subTitle.textContent = "Distribution de l'activité du système aujourd'hui par tranches de 2 heures";
-            if (badge) badge.textContent = "Aujourd'hui";
-        } else if (selectedTimeframe === 'days7' && graphData?.days7) {
-            chartGlobalVolume.data.labels = graphData.days7.map(item => item.label);
-            chartGlobalVolume.data.datasets[0].data = graphData.days7.map(item => item.volume);
-            chartGlobalVolume.data.datasets[0].label = "Volume Réseau (7 Derniers Jours)";
-            if (subTitle) subTitle.textContent = "Activité consolidée de la plateforme sur les 7 derniers jours";
-            if (badge) badge.textContent = "7 Jours";
+        if (selectedTimeframe === 'days7' && graphData?.days7) {
+            chartActivityTimeline.data.labels = graphData.days7.map(item => item.label);
+            chartActivityTimeline.data.datasets[0].data = graphData.days7.map(item => item.volume);
+            chartActivityTimeline.data.datasets[0].label = 'Volume Réseau (7 Derniers Jours)';
+            if (subTitle) subTitle.textContent = 'Activité consolidée de la plateforme sur les 7 derniers jours';
         } else if (selectedTimeframe === 'days30' && graphData?.days30) {
-            chartGlobalVolume.data.labels = graphData.days30.map(item => item.label);
-            chartGlobalVolume.data.datasets[0].data = graphData.days30.map(item => item.volume);
-            chartGlobalVolume.data.datasets[0].label = "Volume Réseau (30 Derniers Jours)";
-            if (subTitle) subTitle.textContent = "Activité consolidée de la plateforme sur les 30 derniers jours";
-            if (badge) badge.textContent = "30 Jours";
-        } else {
-            chartGlobalVolume.data.labels = [...metricsHistory.labels];
-            chartGlobalVolume.data.datasets[0].data = [...metricsHistory.totalTraffic];
-            chartGlobalVolume.data.datasets[0].label = 'Volume Réseau Global (En Direct)';
-            if (subTitle) subTitle.textContent = "Évolution globale du trafic et des requêtes réseau en temps réel";
-            if (badge) badge.textContent = "Live";
+            chartActivityTimeline.data.labels = graphData.days30.map(item => item.label);
+            chartActivityTimeline.data.datasets[0].data = graphData.days30.map(item => item.volume);
+            chartActivityTimeline.data.datasets[0].label = 'Volume Réseau (30 Derniers Jours)';
+            if (subTitle) subTitle.textContent = 'Activité consolidée de la plateforme sur les 30 derniers jours';
+        } else if (graphData?.today) {
+            chartActivityTimeline.data.labels = graphData.today.map(item => item.label);
+            chartActivityTimeline.data.datasets[0].data = graphData.today.map(item => item.volume);
+            chartActivityTimeline.data.datasets[0].label = "Volume Réseau Aujourd'hui (Créneaux de 2h)";
+            if (subTitle) subTitle.textContent = "Distribution de l'activité du système aujourd'hui par tranches de 2 heures";
         }
-
-        chartGlobalVolume.update('none');
+        chartActivityTimeline.update('none');
     }
 
-    function updateChartsWithMetrics(m, totalTraffic, stats) {
-        initMetricsCharts();
-        initMetricsViewMode();
-        lastStatsResponse = stats;
+    function renderDonutChart(stats) {
+        if (!chartTrafficDonut) return;
+        const dist = stats?.distribution || {};
+        const tgVal = dist.telegram || 0;
+        const gdVal = dist.generateDocs || 0;
+        const payVal = dist.payments || 0;
+        const sysVal = dist.system || 0;
 
-        const nowTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        
-        if (metricsHistory.labels.length === 0) {
-            const now = new Date();
-            for (let i = 9; i >= 0; i--) {
-                const pastTime = new Date(now.getTime() - i * 2000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                metricsHistory.labels.push(pastTime);
-                metricsHistory.totalTraffic.push(totalTraffic || 0);
-                metricsHistory.tgRec.push(m.telegramReceived || 0);
-                metricsHistory.tgSent.push(m.telegramSent || 0);
-                metricsHistory.cmdExec.push(m.commandsExecuted || 0);
-                metricsHistory.sumupRec.push(m.sumupReceived || 0);
-                metricsHistory.sumupSent.push(m.sumupSent || 0);
-                metricsHistory.oxapayRec.push(m.oxapayReceived || 0);
-                metricsHistory.oxapaySent.push(m.oxapaySent || 0);
-                metricsHistory.adminLogins.push(m.adminLogins || 0);
-                metricsHistory.errorsCount.push(m.errorsCount || 0);
-                metricsHistory.docPreviews.push(m.documentPreviews || 0);
-                metricsHistory.docGenerations.push(m.documentGenerations || 0);
-            }
-        } else {
-            if (metricsHistory.labels.length >= 10) {
-                metricsHistory.labels.shift();
-                metricsHistory.totalTraffic.shift();
-                metricsHistory.tgRec.shift();
-                metricsHistory.tgSent.shift();
-                metricsHistory.cmdExec.shift();
-                metricsHistory.sumupRec.shift();
-                metricsHistory.sumupSent.shift();
-                metricsHistory.oxapayRec.shift();
-                metricsHistory.oxapaySent.shift();
-                metricsHistory.adminLogins.shift();
-                metricsHistory.errorsCount.shift();
-                metricsHistory.docPreviews.shift();
-                metricsHistory.docGenerations.shift();
-            }
-            metricsHistory.labels.push(nowTime);
-            metricsHistory.totalTraffic.push(totalTraffic || 0);
-            metricsHistory.tgRec.push(m.telegramReceived || 0);
-            metricsHistory.tgSent.push(m.telegramSent || 0);
-            metricsHistory.cmdExec.push(m.commandsExecuted || 0);
-            metricsHistory.sumupRec.push(m.sumupReceived || 0);
-            metricsHistory.sumupSent.push(m.sumupSent || 0);
-            metricsHistory.oxapayRec.push(m.oxapayReceived || 0);
-            metricsHistory.oxapaySent.push(m.oxapaySent || 0);
-            metricsHistory.adminLogins.push(m.adminLogins || 0);
-            metricsHistory.errorsCount.push(m.errorsCount || 0);
-            metricsHistory.docPreviews.push(m.documentPreviews || 0);
-            metricsHistory.docGenerations.push(m.documentGenerations || 0);
+        chartTrafficDonut.data.datasets[0].data = [tgVal, gdVal, payVal, sysVal];
+        chartTrafficDonut.update('none');
+
+        const legendContainer = document.getElementById('donut-legend-container');
+        if (legendContainer) {
+            const total = tgVal + gdVal + payVal + sysVal || 1;
+            const items = [
+                { label: 'Telegram', val: tgVal, color: '#0088cc' },
+                { label: 'Generate Docs', val: gdVal, color: '#38bdf8' },
+                { label: 'Paiements', val: payVal, color: '#10b981' },
+                { label: 'Système', val: sysVal, color: '#6366f1' }
+            ];
+            legendContainer.innerHTML = items.map(item => {
+                const pct = ((item.val / total) * 100).toFixed(1);
+                return `
+                    <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; padding: 4px 8px; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                        <span style="display: flex; align-items: center; gap: 6px; color: var(--text-secondary);">
+                            <span style="width: 8px; height: 8px; border-radius: 2px; background: ${item.color};"></span>
+                            ${item.label}
+                        </span>
+                        <span style="font-weight: 700; color: var(--text-primary);">${item.val} <span style="font-size: 10px; color: var(--text-secondary); font-weight: 500;">(${pct}%)</span></span>
+                    </div>
+                `;
+            }).join('');
         }
+    }
 
-        renderMainVolumeChart(stats);
+    function renderDocsConversionChart(stats) {
+        if (!chartDocsConversion) return;
+        const cats = stats?.generateDocs?.categories || {};
+        const catKeys = Object.keys(cats);
 
-        updateCounter('chart-val-tg-rec', m.telegramReceived);
-        updateCounter('chart-val-tg-sent', m.telegramSent);
-        updateCounter('chart-val-commands-exec', m.commandsExecuted);
-        updateCounter('chart-val-sumup-rec', m.sumupReceived);
-        updateCounter('chart-val-sumup-sent', m.sumupSent);
-        updateCounter('chart-val-oxapay-rec', m.oxapayReceived);
-        updateCounter('chart-val-oxapay-sent', m.oxapaySent);
-        updateCounter('chart-val-admin-logins', m.adminLogins);
-        updateCounter('chart-val-errors-count', m.errorsCount);
-        updateCounter('chart-val-doc-previews', m.documentPreviews);
-        updateCounter('chart-val-doc-generations', m.documentGenerations);
-
-        const updateSpark = (chartObj, dataArr) => {
-            if (chartObj) {
-                chartObj.data.labels = metricsHistory.labels;
-                chartObj.data.datasets[0].data = dataArr;
-                chartObj.update('none');
-            }
-        };
-
-        updateSpark(individualCharts.tgRec, metricsHistory.tgRec);
-        updateSpark(individualCharts.tgSent, metricsHistory.tgSent);
-        updateSpark(individualCharts.cmdExec, metricsHistory.cmdExec);
-        updateSpark(individualCharts.sumupRec, metricsHistory.sumupRec);
-        updateSpark(individualCharts.sumupSent, metricsHistory.sumupSent);
-        updateSpark(individualCharts.oxapayRec, metricsHistory.oxapayRec);
-        updateSpark(individualCharts.oxapaySent, metricsHistory.oxapaySent);
-        updateSpark(individualCharts.adminLogins, metricsHistory.adminLogins);
-        updateSpark(individualCharts.errorsCount, metricsHistory.errorsCount);
-        updateSpark(individualCharts.docPreviews, metricsHistory.docPreviews);
-        updateSpark(individualCharts.docGenerations, metricsHistory.docGenerations);
+        if (catKeys.length === 0) {
+            chartDocsConversion.data.labels = ['RIB', 'Factures', 'Emploi', 'Relevés', 'Assurances', 'Justificatifs'];
+            chartDocsConversion.data.datasets[0].data = [0, 0, 0, 0, 0, 0];
+            chartDocsConversion.data.datasets[1].data = [0, 0, 0, 0, 0, 0];
+        } else {
+            chartDocsConversion.data.labels = catKeys.map(k => cats[k].label || k.toUpperCase());
+            chartDocsConversion.data.datasets[0].data = catKeys.map(k => cats[k].previews || 0);
+            chartDocsConversion.data.datasets[1].data = catKeys.map(k => cats[k].generations || 0);
+        }
+        chartDocsConversion.update('none');
     }
 
     function renderGenerateDocsBreakdown(gdData) {
@@ -1201,42 +1152,65 @@ document.addEventListener('DOMContentLoaded', () => {
         const stats = await apiRequest('/stats');
         if (!stats || !stats.metrics) return;
 
+        lastStatsResponse = stats;
         const m = stats.metrics;
-        updateCounter('metric-tg-rec', m.telegramReceived);
-        updateCounter('metric-tg-sent', m.telegramSent);
-        updateCounter('metric-sumup-rec', m.sumupReceived);
-        updateCounter('metric-sumup-sent', m.sumupSent);
-        updateCounter('metric-oxapay-rec', m.oxapayReceived);
-        updateCounter('metric-oxapay-sent', m.oxapaySent);
-        updateCounter('metric-commands-exec', m.commandsExecuted);
-        updateCounter('metric-errors-count', m.errorsCount);
-        updateCounter('metric-admin-logins', m.adminLogins);
+        const gd = stats.generateDocs || {};
 
-        updateCounter('metric-doc-previews', m.documentPreviews || 0);
-        updateCounter('metric-doc-generations', m.documentGenerations || 0);
-        const convEl = document.getElementById('metric-doc-conversion');
-        if (convEl) convEl.innerText = `${(m.documentConversionRate || 0).toFixed(1)} %`;
+        initMetricsCharts();
+
+        updateCounter('metric-total-traffic', stats.totalTraffic || 0);
+
+        const kpiDocsEl = document.getElementById('metric-kpi-docs');
+        if (kpiDocsEl) {
+            kpiDocsEl.innerText = `${gd.totalPreviews || 0} / ${gd.totalGenerations || 0}`;
+        }
+        const kpiConvEl = document.getElementById('metric-kpi-conv');
+        if (kpiConvEl) {
+            kpiConvEl.innerText = `Conv. ${(gd.conversionRate || 0).toFixed(1)}% • ${(m.documentRevenue || 0).toFixed(2)} €`;
+        }
+
+        const kpiPayEl = document.getElementById('metric-kpi-payments');
+        if (kpiPayEl) {
+            kpiPayEl.innerText = `${m.sumupReceived || 0} / ${m.oxapayReceived || 0}`;
+        }
+        const kpiPayrateEl = document.getElementById('metric-kpi-payrate');
+        if (kpiPayrateEl) {
+            kpiPayrateEl.innerText = `${(stats.totalCa || 0).toFixed(2)} € CA Global`;
+        }
+
+        updateCounter('metric-kpi-commands', m.commandsExecuted || 0);
+        const kpiHealthEl = document.getElementById('metric-kpi-health');
+        if (kpiHealthEl) {
+            if ((m.errorsCount || 0) > 0) {
+                kpiHealthEl.innerText = `${m.errorsCount} Anomalies`;
+                kpiHealthEl.style.color = '#ef4444';
+            } else {
+                kpiHealthEl.innerText = '100% Opérationnel';
+                kpiHealthEl.style.color = '#10b981';
+            }
+        }
+
+        updateCounter('metric-tg-rec', m.telegramReceived || 0);
+        updateCounter('metric-tg-sent', m.telegramSent || 0);
+        updateCounter('metric-tg-users', stats.totalUsers || stats.users_count || 0);
+
+        updateCounter('metric-sumup-rec', m.sumupReceived || 0);
+        updateCounter('metric-sumup-sent', m.sumupSent || 0);
+        updateCounter('metric-oxapay-rec', m.oxapayReceived || 0);
+
+        updateCounter('metric-doc-previews', gd.totalPreviews || m.documentPreviews || 0);
+        updateCounter('metric-doc-generations', gd.totalGenerations || m.documentGenerations || 0);
         const revEl = document.getElementById('metric-doc-revenue');
         if (revEl) revEl.innerText = `${(m.documentRevenue || 0).toFixed(2)} €`;
 
-        renderGenerateDocsBreakdown(stats.generateDocs);
+        updateCounter('metric-commands-exec', m.commandsExecuted || 0);
+        updateCounter('metric-admin-logins', m.adminLogins || 0);
+        updateCounter('metric-errors-count', m.errorsCount || 0);
 
-        const totalTraffic = stats.totalTraffic || (
-            (m.telegramReceived || 0) +
-            (m.telegramSent || 0) +
-            (m.commandsExecuted || 0) +
-            (m.sumupReceived || 0) +
-            (m.sumupSent || 0) +
-            (m.oxapayReceived || 0) +
-            (m.oxapaySent || 0) +
-            (m.documentPreviews || 0) +
-            (m.documentGenerations || 0) +
-            (m.adminLogins || 0) +
-            (m.errorsCount || 0)
-        );
-        updateCounter('metric-total-traffic', totalTraffic);
-
-        updateChartsWithMetrics(m, totalTraffic, stats);
+        renderTimelineChart(stats);
+        renderDonutChart(stats);
+        renderDocsConversionChart(stats);
+        renderGenerateDocsBreakdown(gd);
     }
 
     const resetMetricsBtn = document.getElementById('reset-metrics-btn');
@@ -1250,15 +1224,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const res = await apiRequest('/metrics/reset', 'POST');
                     if (res && res.success) {
                         showToast('Compteurs réinitialisés à 0', 'success');
-                        metricsHistory.labels.length = 0;
-                        metricsHistory.tgRec.length = 0;
-                        metricsHistory.tgSent.length = 0;
-                        metricsHistory.cmdExec.length = 0;
-                        metricsHistory.sumupRec.length = 0;
-                        metricsHistory.oxapaySent.length = 0;
-                        metricsHistory.errorsCount.length = 0;
-                        metricsHistory.docPreviews.length = 0;
-                        metricsHistory.docGenerations.length = 0;
                         await loadMetricsData();
                     } else {
                         showToast('Erreur lors de la réinitialisation', 'error');

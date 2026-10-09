@@ -65,8 +65,18 @@ body {
 
 /* ===================================================================== */
 
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+
 input, select, textarea {
   font-size: 13px;
+}
+
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
 
 input[type="text"], input[type="email"], input[type="password"],

@@ -922,7 +922,7 @@ export default function LbpReleveClient({ onBack }: { onBack: () => void }) {
         {/* ========================================================================= */}
         {/* ÉTAPE 1 : CHOIX DE LA DURÉE & PÉRIODE                                     */}
         {/* ========================================================================= */}
-        <section className="glass p-6 md:p-8 rounded-3xl border border-white/10 space-y-6">
+        <section className="glass p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-white/10 space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Calendar className="w-5 h-5 text-primary" />
@@ -935,7 +935,7 @@ export default function LbpReleveClient({ onBack }: { onBack: () => void }) {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-3">
             {durationOptions.map(d => {
               const isSelected = formData.duree_mois === d.months;
               return (
@@ -943,25 +943,23 @@ export default function LbpReleveClient({ onBack }: { onBack: () => void }) {
                   key={d.months}
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, duree_mois: d.months }))}
-                  className={`relative p-5 rounded-2xl border text-left transition-all duration-300 flex flex-col justify-between h-32 cursor-pointer ${
+                  className={`relative py-2.5 px-1 sm:py-3.5 sm:px-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
                     isSelected
-                      ? "bg-primary/10 border-primary shadow-lg shadow-primary/15"
-                      : "bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/8"
+                      ? "bg-primary/15 border-primary shadow-md shadow-primary/20 ring-1 ring-primary/40"
+                      : "bg-white/[0.03] border-white/10 hover:border-white/20 hover:bg-white/[0.06]"
                   }`}
                 >
                   {d.badge && (
-                    <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-primary/20 text-primary border border-primary/30">
+                    <span className="absolute -top-2 right-1 sm:right-2 px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider bg-primary text-slate-950 shadow">
                       {d.badge}
                     </span>
                   )}
-                  <div>
-                    <div className="text-lg font-black italic text-white">{d.label}</div>
-                    <div className="text-[11px] text-white/50 font-medium leading-tight mt-0.5">{d.sublabel}</div>
-                  </div>
-                  <div className="flex items-baseline justify-between mt-auto pt-2 border-t border-white/5">
-                    <span className="text-xl font-black italic text-primary">{d.price.toFixed(2)} €</span>
-                    {isSelected && <CheckCircle2 size={16} className="text-primary" />}
-                  </div>
+                  <span className="text-xs sm:text-sm font-black text-white uppercase tracking-tight">
+                    {d.label}
+                  </span>
+                  <span className="text-[11px] sm:text-xs font-black text-primary mt-0.5">
+                    {d.price.toFixed(2)} €
+                  </span>
                 </button>
               );
             })}

@@ -34,6 +34,7 @@ interface TelegramContextType {
   supportTelegram: string | null;
   supportTelegram2: string | null;
   channelTelegram: string | null;
+  channelBackupTelegram: string | null;
   marqueeText: string | null;
   marqueeStyle: string;
   services: Record<string, boolean>;
@@ -65,6 +66,7 @@ const TelegramContext = createContext<TelegramContextType>({
   supportTelegram: null,
   supportTelegram2: null,
   channelTelegram: null,
+  channelBackupTelegram: null,
   marqueeText: null,
   marqueeStyle: "standard",
   services: {},
@@ -99,6 +101,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const [supportTelegram, setSupportTelegram] = useState<string | null>(null);
   const [supportTelegram2, setSupportTelegram2] = useState<string | null>("@NtRheyyTech");
   const [channelTelegram, setChannelTelegram] = useState<string | null>(null);
+  const [channelBackupTelegram, setChannelBackupTelegram] = useState<string | null>(null);
   const [marqueeText, setMarqueeText] = useState<string | null>(null);
   const [marqueeStyle, setMarqueeStyle] = useState<string>("standard");
   const [services, setServices] = useState<Record<string, boolean>>({});
@@ -135,6 +138,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
           setSupportTelegram2(data.support_telegram2 || null);
         }
         setChannelTelegram(data.channel_telegram || null);
+        setChannelBackupTelegram(data.channel_backup_telegram || null);
         if (data.marquee_text !== undefined) {
           setMarqueeText(data.marquee_text || null);
         }
@@ -287,6 +291,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         supportTelegram,
         supportTelegram2,
         channelTelegram,
+        channelBackupTelegram,
         marqueeText,
         marqueeStyle,
         services,

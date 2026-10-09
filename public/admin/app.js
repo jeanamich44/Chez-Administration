@@ -2993,6 +2993,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setVal('setting-general-support-tg', data.supportTelegram);
         setVal('setting-general-support-tg-2', data.supportTelegram2);
         setVal('setting-general-channel-tg', data.channelTelegram);
+        setVal('setting-general-channel-backup-tg', data.channelBackupTelegram);
         setVal('setting-general-marquee-text', data.marqueeText);
         setVal('setting-general-marquee-style', data.marqueeStyle || 'standard');
 
@@ -3257,6 +3258,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 supportTelegram: val('setting-general-support-tg'),
                 supportTelegram2: val('setting-general-support-tg-2'),
                 channelTelegram: val('setting-general-channel-tg'),
+                channelBackupTelegram: val('setting-general-channel-backup-tg'),
                 marqueeText: val('setting-general-marquee-text'),
                 marqueeStyle: document.getElementById('setting-general-marquee-style')?.value || 'standard'
             };

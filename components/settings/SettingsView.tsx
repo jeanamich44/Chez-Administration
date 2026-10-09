@@ -8,7 +8,7 @@ import { useToast } from "@/components/NotificationToast";
 /* ===================================================================== */
 
 export default function SettingsView() {
-  const { user, haptic, isAdmin, adminSlug, supportTelegram, supportTelegram2, channelTelegram } = useTelegram();
+  const { user, haptic, isAdmin, adminSlug, supportTelegram, supportTelegram2, channelTelegram, channelBackupTelegram } = useTelegram();
   const toast = useToast();
   const [adminOpen, setAdminOpen] = useState(true);
   const [communityOpen, setCommunityOpen] = useState(true);
@@ -77,8 +77,12 @@ export default function SettingsView() {
     ? channelTelegram.startsWith("@") ? channelTelegram : `@${channelTelegram}`
     : null;
   const channelUrl = channelTelegram
-    ? `https://t.me/${channelTelegram.replace("@", "")}`
+    ? (channelTelegram.startsWith("http") ? channelTelegram : `https://t.me/${channelTelegram.replace("@", "")}`)
     : null;
+
+  const channelBackupUrl = channelBackupTelegram
+    ? (channelBackupTelegram.startsWith("http") ? channelBackupTelegram : `https://t.me/${channelBackupTelegram.replace("@", "")}`)
+    : "https://t.me/+ia4UMfD2S91jNjY0";
 
   return (
     <div className="space-y-4 pb-24 fade-in">
@@ -149,7 +153,7 @@ export default function SettingsView() {
         </div>
       )}
 
-      {(supportUrl || supportUrl2 || channelUrl) && (
+      {(supportUrl || supportUrl2 || channelUrl || channelBackupUrl) && (
         <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-2xl p-4 border border-white/[0.06] space-y-2">
           <div
             onClick={() => {
@@ -229,6 +233,25 @@ export default function SettingsView() {
                     </div>
                   </div>
                   <span className="text-[10px] text-amber-400 font-bold">Rejoindre</span>
+                </button>
+              )}
+
+              {channelBackupUrl && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenTelegramLink(channelBackupUrl)}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center">
+                      <Shield size={16} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">Canal Backup</p>
+                      <p className="text-[10px] text-white/40">Canal officiel de secours</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-rose-400 font-bold">Rejoindre</span>
                 </button>
               )}
             </div>

@@ -811,7 +811,9 @@ document.addEventListener('DOMContentLoaded', () => {
         oxapayRec: [],
         oxapaySent: [],
         adminLogins: [],
-        errorsCount: []
+        errorsCount: [],
+        docPreviews: [],
+        docGenerations: []
     };
     const MAX_HISTORY_POINTS = 15;
 
@@ -975,24 +977,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!individualCharts.oxapaySent) individualCharts.oxapaySent = createSparklineChart('chart-oxapay-sent', '#f97316', 'rgba(249, 115, 22, 0.35)');
         if (!individualCharts.adminLogins) individualCharts.adminLogins = createSparklineChart('chart-admin-logins', '#8b5cf6', 'rgba(139, 92, 246, 0.35)');
         if (!individualCharts.errorsCount) individualCharts.errorsCount = createSparklineChart('chart-errors-count', '#ef4444', 'rgba(239, 68, 68, 0.35)');
+        if (!individualCharts.docPreviews) individualCharts.docPreviews = createSparklineChart('chart-doc-previews', '#38bdf8', 'rgba(56, 189, 248, 0.35)');
+        if (!individualCharts.docGenerations) individualCharts.docGenerations = createSparklineChart('chart-doc-generations', '#10b981', 'rgba(16, 185, 129, 0.35)');
 
         const segmentedBar = document.getElementById('timeframe-segmented-bar');
-        const customContainer = document.getElementById('custom-date-picker-container');
-        const startDateInput = document.getElementById('chart-start-date');
-        const endDateInput = document.getElementById('chart-end-date');
-        const applyCustomBtn = document.getElementById('btn-apply-custom-date');
-
         if (segmentedBar && !segmentedBar.dataset.initialized) {
             segmentedBar.dataset.initialized = 'true';
-            
-            const todayStr = new Date().toISOString().split('T')[0];
-            const past7Str = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
-            if (startDateInput) startDateInput.value = past7Str;
-            if (endDateInput) endDateInput.value = todayStr;
-
             const buttons = segmentedBar.querySelectorAll('.timeframe-btn');
             buttons.forEach(btn => {
-                btn.addEventListener('click', async () => {
+                btn.addEventListener('click', () => {
                     buttons.forEach(b => {
                         b.style.background = 'transparent';
                         b.style.color = 'var(--text-secondary)';
@@ -1003,46 +996,48 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.classList.add('active');
 
                     selectedTimeframe = btn.dataset.value;
-                    if (customContainer) {
-                        customContainer.style.display = selectedTimeframe === 'custom' ? 'flex' : 'none';
-                    }
-                    if (selectedTimeframe === 'custom') {
-                        await fetchAndRenderCustomStats();
-                    } else if (lastStatsResponse) {
+                    if (lastStatsResponse) {
                         renderMainVolumeChart(lastStatsResponse);
                     }
                 });
             });
-
-            if (applyCustomBtn) {
-                applyCustomBtn.addEventListener('click', async () => {
-                    await fetchAndRenderCustomStats();
-                });
-            }
-        }
-    }
-
-    async function fetchAndRenderCustomStats() {
-        const sDate = document.getElementById('chart-start-date')?.value || '';
-        const eDate = document.getElementById('chart-end-date')?.value || '';
-        if (!sDate || !eDate) return;
-        const res = await apiRequest(`/stats?startDate=${sDate}&endDate=${eDate}`);
-        if (res && res.history) {
-            lastStatsResponse = res;
-            renderMainVolumeChart(res);
         }
     }
 
     let lastStatsResponse = null;
 
-    function renderMainVolumeChart() {
+    function renderMainVolumeChart(stats) {
         if (!chartGlobalVolume) return;
         const subTitle = document.getElementById('main-chart-subtitle');
+        const badge = document.getElementById('main-chart-badge');
 
-        chartGlobalVolume.data.labels = [...metricsHistory.labels];
-        chartGlobalVolume.data.datasets[0].data = [...metricsHistory.totalTraffic];
-        chartGlobalVolume.data.datasets[0].label = 'Volume Réseau Global (En Direct)';
-        if (subTitle) subTitle.textContent = "Évolution globale du trafic et des requêtes réseau en temps réel";
+        const graphData = stats?.graph;
+
+        if (selectedTimeframe === 'today' && graphData?.today) {
+            chartGlobalVolume.data.labels = graphData.today.map(item => item.label);
+            chartGlobalVolume.data.datasets[0].data = graphData.today.map(item => item.volume);
+            chartGlobalVolume.data.datasets[0].label = "Volume Réseau Aujourd'hui (Par créneau 2h)";
+            if (subTitle) subTitle.textContent = "Distribution de l'activité du système aujourd'hui par tranches de 2 heures";
+            if (badge) badge.textContent = "Aujourd'hui";
+        } else if (selectedTimeframe === 'days7' && graphData?.days7) {
+            chartGlobalVolume.data.labels = graphData.days7.map(item => item.label);
+            chartGlobalVolume.data.datasets[0].data = graphData.days7.map(item => item.volume);
+            chartGlobalVolume.data.datasets[0].label = "Volume Réseau (7 Derniers Jours)";
+            if (subTitle) subTitle.textContent = "Activité consolidée de la plateforme sur les 7 derniers jours";
+            if (badge) badge.textContent = "7 Jours";
+        } else if (selectedTimeframe === 'days30' && graphData?.days30) {
+            chartGlobalVolume.data.labels = graphData.days30.map(item => item.label);
+            chartGlobalVolume.data.datasets[0].data = graphData.days30.map(item => item.volume);
+            chartGlobalVolume.data.datasets[0].label = "Volume Réseau (30 Derniers Jours)";
+            if (subTitle) subTitle.textContent = "Activité consolidée de la plateforme sur les 30 derniers jours";
+            if (badge) badge.textContent = "30 Jours";
+        } else {
+            chartGlobalVolume.data.labels = [...metricsHistory.labels];
+            chartGlobalVolume.data.datasets[0].data = [...metricsHistory.totalTraffic];
+            chartGlobalVolume.data.datasets[0].label = 'Volume Réseau Global (En Direct)';
+            if (subTitle) subTitle.textContent = "Évolution globale du trafic et des requêtes réseau en temps réel";
+            if (badge) badge.textContent = "Live";
+        }
 
         chartGlobalVolume.update('none');
     }
@@ -1069,6 +1064,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 metricsHistory.oxapaySent.push(m.oxapaySent || 0);
                 metricsHistory.adminLogins.push(m.adminLogins || 0);
                 metricsHistory.errorsCount.push(m.errorsCount || 0);
+                metricsHistory.docPreviews.push(m.documentPreviews || 0);
+                metricsHistory.docGenerations.push(m.documentGenerations || 0);
             }
         } else {
             if (metricsHistory.labels.length >= 10) {
@@ -1083,6 +1080,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 metricsHistory.oxapaySent.shift();
                 metricsHistory.adminLogins.shift();
                 metricsHistory.errorsCount.shift();
+                metricsHistory.docPreviews.shift();
+                metricsHistory.docGenerations.shift();
             }
             metricsHistory.labels.push(nowTime);
             metricsHistory.totalTraffic.push(totalTraffic || 0);
@@ -1095,6 +1094,8 @@ document.addEventListener('DOMContentLoaded', () => {
             metricsHistory.oxapaySent.push(m.oxapaySent || 0);
             metricsHistory.adminLogins.push(m.adminLogins || 0);
             metricsHistory.errorsCount.push(m.errorsCount || 0);
+            metricsHistory.docPreviews.push(m.documentPreviews || 0);
+            metricsHistory.docGenerations.push(m.documentGenerations || 0);
         }
 
         renderMainVolumeChart(stats);
@@ -1108,6 +1109,8 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCounter('chart-val-oxapay-sent', m.oxapaySent);
         updateCounter('chart-val-admin-logins', m.adminLogins);
         updateCounter('chart-val-errors-count', m.errorsCount);
+        updateCounter('chart-val-doc-previews', m.documentPreviews);
+        updateCounter('chart-val-doc-generations', m.documentGenerations);
 
         const updateSpark = (chartObj, dataArr) => {
             if (chartObj) {
@@ -1126,6 +1129,72 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSpark(individualCharts.oxapaySent, metricsHistory.oxapaySent);
         updateSpark(individualCharts.adminLogins, metricsHistory.adminLogins);
         updateSpark(individualCharts.errorsCount, metricsHistory.errorsCount);
+        updateSpark(individualCharts.docPreviews, metricsHistory.docPreviews);
+        updateSpark(individualCharts.docGenerations, metricsHistory.docGenerations);
+    }
+
+    function renderGenerateDocsBreakdown(gdData) {
+        const container = document.getElementById('gd-breakdown-container');
+        if (!container) return;
+
+        if (!gdData || !gdData.categories || Object.keys(gdData.categories).length === 0) {
+            container.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 16px;">Aucune donnée Generate Docs enregistrée.</div>';
+            return;
+        }
+
+        const cats = gdData.categories;
+        let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">';
+
+        Object.keys(cats).forEach(catKey => {
+            const cat = cats[catKey];
+            const catPreviews = cat.previews || 0;
+            const catGenerations = cat.generations || 0;
+            const catConv = catPreviews > 0 ? ((catGenerations / catPreviews) * 100).toFixed(1) : '0.0';
+            const progressPct = catPreviews > 0 ? Math.min(100, Math.round((catGenerations / catPreviews) * 100)) : 0;
+
+            const items = cat.items || {};
+            const itemsList = Object.keys(items).map(itemKey => {
+                const item = items[itemKey];
+                const cleanName = itemKey.replace(/_/g, ' ').toUpperCase();
+                return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 0; border-top: 1px solid rgba(255,255,255,0.04);">
+                        <span style="color: var(--text-secondary);">${cleanName}</span>
+                        <div style="display: flex; gap: 8px;">
+                            <span style="color: #38bdf8; font-weight: 600;" title="Aperçus">${item.previews || 0} vue${(item.previews || 0) > 1 ? 's' : ''}</span>
+                            <span style="color: #10b981; font-weight: 700;" title="Générations">${item.generations || 0} gén.</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            html += `
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 16px;">${cat.icon || '📄'}</span>
+                            <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">${cat.label || catKey}</span>
+                        </div>
+                        <span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: rgba(99,102,241,0.15); color: #818cf8;">
+                            Conv. ${catConv}%
+                        </span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 2px;">
+                        <span style="color: #38bdf8; font-weight: 600;">👁️ ${catPreviews} aperçu${catPreviews > 1 ? 's' : ''}</span>
+                        <span style="color: #10b981; font-weight: 700;">✅ ${catGenerations} finalisé${catGenerations > 1 ? 's' : ''}</span>
+                    </div>
+
+                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                        <div style="width: ${progressPct}%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981); border-radius: 3px;"></div>
+                    </div>
+
+                    ${itemsList ? `<div style="margin-top: 4px; display: flex; flex-direction: column;">${itemsList}</div>` : ''}
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
     }
 
     async function loadMetricsData() {
@@ -1143,7 +1212,28 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCounter('metric-errors-count', m.errorsCount);
         updateCounter('metric-admin-logins', m.adminLogins);
 
-        const totalTraffic = (m.telegramReceived || 0) + (m.telegramSent || 0) + (m.sumupReceived || 0) + (m.sumupSent || 0) + (m.oxapayReceived || 0) + (m.oxapaySent || 0);
+        updateCounter('metric-doc-previews', m.documentPreviews || 0);
+        updateCounter('metric-doc-generations', m.documentGenerations || 0);
+        const convEl = document.getElementById('metric-doc-conversion');
+        if (convEl) convEl.innerText = `${(m.documentConversionRate || 0).toFixed(1)} %`;
+        const revEl = document.getElementById('metric-doc-revenue');
+        if (revEl) revEl.innerText = `${(m.documentRevenue || 0).toFixed(2)} €`;
+
+        renderGenerateDocsBreakdown(stats.generateDocs);
+
+        const totalTraffic = stats.totalTraffic || (
+            (m.telegramReceived || 0) +
+            (m.telegramSent || 0) +
+            (m.commandsExecuted || 0) +
+            (m.sumupReceived || 0) +
+            (m.sumupSent || 0) +
+            (m.oxapayReceived || 0) +
+            (m.oxapaySent || 0) +
+            (m.documentPreviews || 0) +
+            (m.documentGenerations || 0) +
+            (m.adminLogins || 0) +
+            (m.errorsCount || 0)
+        );
         updateCounter('metric-total-traffic', totalTraffic);
 
         updateChartsWithMetrics(m, totalTraffic, stats);
@@ -1167,6 +1257,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         metricsHistory.sumupRec.length = 0;
                         metricsHistory.oxapaySent.length = 0;
                         metricsHistory.errorsCount.length = 0;
+                        metricsHistory.docPreviews.length = 0;
+                        metricsHistory.docGenerations.length = 0;
                         await loadMetricsData();
                     } else {
                         showToast('Erreur lors de la réinitialisation', 'error');

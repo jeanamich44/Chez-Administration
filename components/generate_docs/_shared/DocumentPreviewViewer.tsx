@@ -35,7 +35,10 @@ export default function DocumentPreviewViewer({
   const viewportRef = useRef<HTMLDivElement>(null);
   const naturalRef = useRef({ w: 0, h: 0 });
   const viewRef = useRef<View>({ scale: 1, x: 0, y: 0 });
-  const dragRef = useRef<{ pointerId: number; x: number; y: number; origin: View } | null>(null);
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const dragRef = useRef<{ x: number; y: number; origin: View } | null>(null);
+  const pinchRef = useRef<{ dist0: number; originScale: number; worldX: number; worldY: number } | null>(null);
+  const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
   const closeTimerRef = useRef<number | null>(null);
   const [view, setView] = useState<View>({ scale: 1, x: 0, y: 0 });
   const [ready, setReady] = useState(false);
@@ -192,38 +195,129 @@ export default function DocumentPreviewViewer({
   }, [fitToView, requestClose, zoomBy]);
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
     const viewport = viewportRef.current;
     if (!viewport) return;
-    viewport.setPointerCapture(e.pointerId);
-    dragRef.current = {
-      pointerId: e.pointerId,
-      x: e.clientX,
-      y: e.clientY,
-      origin: viewRef.current
-    };
+    try {
+      viewport.setPointerCapture(e.pointerId);
+    } catch {}
+
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointersRef.current.size === 1) {
+      dragRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        origin: { ...viewRef.current }
+      };
+      pinchRef.current = null;
+    } else if (pointersRef.current.size === 2) {
+      dragRef.current = null;
+      const pts = Array.from(pointersRef.current.values());
+      const dist0 = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      const midX = (pts[0].x + pts[1].x) / 2;
+      const midY = (pts[0].y + pts[1].y) / 2;
+      const rect = viewport.getBoundingClientRect();
+      const vx = midX - rect.left;
+      const vy = midY - rect.top;
+      const current = viewRef.current;
+      pinchRef.current = {
+        dist0: Math.max(dist0, 1),
+        originScale: current.scale,
+        worldX: (vx - current.x) / current.scale,
+        worldY: (vy - current.y) / current.scale
+      };
+    }
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const drag = dragRef.current;
-    if (!drag || drag.pointerId !== e.pointerId) return;
-    const dx = e.clientX - drag.x;
-    const dy = e.clientY - drag.y;
-    setViewBoth({
-      scale: drag.origin.scale,
-      x: drag.origin.x + dx,
-      y: drag.origin.y + dy
-    });
+    if (!pointersRef.current.has(e.pointerId)) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointersRef.current.size === 1 && dragRef.current) {
+      const drag = dragRef.current;
+      const dx = e.clientX - drag.x;
+      const dy = e.clientY - drag.y;
+      setViewBoth({
+        scale: drag.origin.scale,
+        x: drag.origin.x + dx,
+        y: drag.origin.y + dy
+      });
+    } else if (pointersRef.current.size >= 2) {
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+      const pts = Array.from(pointersRef.current.values());
+      const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      const midX = (pts[0].x + pts[1].x) / 2;
+      const midY = (pts[0].y + pts[1].y) / 2;
+      const rect = viewport.getBoundingClientRect();
+      const vx = midX - rect.left;
+      const vy = midY - rect.top;
+
+      if (!pinchRef.current) {
+        const current = viewRef.current;
+        pinchRef.current = {
+          dist0: Math.max(dist, 1),
+          originScale: current.scale,
+          worldX: (vx - current.x) / current.scale,
+          worldY: (vy - current.y) / current.scale
+        };
+      } else {
+        const { dist0, originScale, worldX, worldY } = pinchRef.current;
+        const scaleFactor = dist / dist0;
+        const nextScale = clamp(originScale * scaleFactor, MIN_SCALE, MAX_SCALE);
+        setViewBoth({
+          scale: nextScale,
+          x: vx - worldX * nextScale,
+          y: vy - worldY * nextScale
+        });
+      }
+    }
   };
 
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    const drag = dragRef.current;
-    if (!drag || drag.pointerId !== e.pointerId) return;
     const viewport = viewportRef.current;
     if (viewport && viewport.hasPointerCapture(e.pointerId)) {
-      viewport.releasePointerCapture(e.pointerId);
+      try {
+        viewport.releasePointerCapture(e.pointerId);
+      } catch {}
     }
-    dragRef.current = null;
+
+    const wasSingleTouch = e.pointerType === "touch" && pointersRef.current.size === 1;
+    const startPt = pointersRef.current.get(e.pointerId);
+
+    pointersRef.current.delete(e.pointerId);
+
+    if (pointersRef.current.size === 1) {
+      const remaining = Array.from(pointersRef.current.values())[0];
+      dragRef.current = {
+        x: remaining.x,
+        y: remaining.y,
+        origin: { ...viewRef.current }
+      };
+      pinchRef.current = null;
+    } else if (pointersRef.current.size === 0) {
+      dragRef.current = null;
+      pinchRef.current = null;
+
+      if (wasSingleTouch && startPt) {
+        const moveDist = Math.hypot(e.clientX - startPt.x, e.clientY - startPt.y);
+        if (moveDist < 10) {
+          const now = Date.now();
+          const lastTap = lastTapRef.current;
+          if (lastTap && now - lastTap.time < 300 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) {
+            lastTapRef.current = null;
+            if (viewRef.current.scale > 1.2) {
+              fitToView();
+            } else {
+              zoomAt(e.clientX, e.clientY, 2.2);
+            }
+          } else {
+            lastTapRef.current = { time: now, x: e.clientX, y: e.clientY };
+          }
+        }
+      }
+    }
   };
 
   const percent = Math.round(view.scale * 100);

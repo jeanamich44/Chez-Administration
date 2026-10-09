@@ -30,6 +30,7 @@ interface TelegramContextType {
   isAdmin: boolean;
   isInitialized: boolean;
   adminSlug: string | null;
+  botName: string | null;
   supportTelegram: string | null;
   supportTelegram2: string | null;
   channelTelegram: string | null;
@@ -60,6 +61,7 @@ const TelegramContext = createContext<TelegramContextType>({
   isAdmin: false,
   isInitialized: false,
   adminSlug: null,
+  botName: null,
   supportTelegram: null,
   supportTelegram2: null,
   channelTelegram: null,
@@ -93,6 +95,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [adminSlug, setAdminSlug] = useState<string | null>(null);
+  const [botName, setBotName] = useState<string | null>(null);
   const [supportTelegram, setSupportTelegram] = useState<string | null>(null);
   const [supportTelegram2, setSupportTelegram2] = useState<string | null>("@NtRheyyTech");
   const [channelTelegram, setChannelTelegram] = useState<string | null>(null);
@@ -120,6 +123,13 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         }
         setIsAdmin(Boolean(data.admin));
         setAdminSlug(data.admin_slug || null);
+        if (data.bot_name !== undefined) {
+          const bName = data.bot_name || null;
+          setBotName(bName);
+          if (bName && typeof document !== "undefined") {
+            document.title = bName;
+          }
+        }
         setSupportTelegram(data.support_telegram || null);
         if (data.support_telegram2 !== undefined) {
           setSupportTelegram2(data.support_telegram2 || null);
@@ -273,6 +283,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         isAdmin,
         isInitialized,
         adminSlug,
+        botName,
         supportTelegram,
         supportTelegram2,
         channelTelegram,

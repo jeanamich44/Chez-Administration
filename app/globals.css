@@ -80,9 +80,16 @@ input, select, textarea {
 }
 
 input[type="text"], input[type="email"], input[type="password"],
-input[type="number"], input[type="tel"], input[type="url"],
+input[type="number"], input[type="tel"], input[type="url"] {
+  height: 44px;
+}
+
 select {
-  height: 40px;
+  height: 44px !important;
+  min-height: 44px !important;
+  line-height: normal !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 /* ===================================================================== */

@@ -104,6 +104,7 @@ function LoadingSpinner() {
 function AppRouter() {
   const {
     user,
+    botName,
     navigation,
     navigateTo,
     goBack,
@@ -189,7 +190,7 @@ function AppRouter() {
             </div>
             <div className="min-w-0">
               <h1 className="text-xs sm:text-sm font-black italic tracking-tight text-white flex items-center gap-1.5 truncate">
-                CHEZ <span className="text-primary">RHEYY</span>
+                {botName ? botName.toUpperCase() : "CHEZ RHEYY"}
               </h1>
             </div>
           </div>

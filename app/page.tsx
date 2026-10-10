@@ -187,7 +187,7 @@ function AppRouter() {
           <div className="min-w-0 flex-1">
             <h1 className="text-xs sm:text-sm font-black italic tracking-tight text-white truncate">
               <span className="inline-block pr-2">
-                {botName ? botName.toUpperCase() : "CHEZ RHEYY"}
+                {botName || "Chez Rheyy"}
               </span>
             </h1>
           </div>

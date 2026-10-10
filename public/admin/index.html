@@ -542,34 +542,34 @@
                         <div class="stat-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; font-size: 20px;">🚀</div>
                         <div style="flex: 1;">
                             <div class="stat-val" id="metric-total-traffic" style="font-size: 26px; color: #ffffff;">0</div>
-                            <div class="stat-lbl" style="font-size: 13px; font-weight: 600;">Volume Réseau Global</div>
-                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Toutes requêtes confondues</div>
+                            <div class="stat-lbl" style="font-size: 13px; font-weight: 600;">Activité Réseau & Système</div>
+                            <div id="metric-total-traffic-sub" style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Total des requêtes enregistrées</div>
                         </div>
                     </div>
 
                     <div class="stat-card" style="padding: 18px; border-left: 4px solid #38bdf8;">
                         <div class="stat-icon" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 20px;">📑</div>
                         <div style="flex: 1;">
-                            <div class="stat-val" id="metric-kpi-docs" style="font-size: 26px; color: #38bdf8;">0 / 0</div>
-                            <div class="stat-lbl" style="font-size: 13px; font-weight: 600;">Generate Docs (Vues / Gén.)</div>
-                            <div id="metric-kpi-conv" style="font-size: 11px; color: #a855f7; font-weight: 700; margin-top: 4px;">Conv. 0% • 0.00 €</div>
+                            <div class="stat-val" id="metric-kpi-docs" style="font-size: 22px; color: #38bdf8;">0 vues / 0 générés</div>
+                            <div class="stat-lbl" style="font-size: 13px; font-weight: 600;">Module Generate Docs</div>
+                            <div id="metric-kpi-conv" style="font-size: 11px; color: #a855f7; font-weight: 700; margin-top: 4px;">Conv. 0% • 0.00 € CA</div>
                         </div>
                     </div>
 
                     <div class="stat-card" style="padding: 18px; border-left: 4px solid #10b981;">
                         <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 20px;">💳</div>
                         <div style="flex: 1;">
-                            <div class="stat-val" id="metric-kpi-payments" style="font-size: 26px; color: #10b981;">0 / 0</div>
-                            <div class="stat-lbl" style="font-size: 13px; font-weight: 600;">Passerelles de Paiement</div>
-                            <div id="metric-kpi-payrate" style="font-size: 11px; color: #10b981; font-weight: 700; margin-top: 4px;">SumUp & Crypto</div>
+                            <div class="stat-val" id="metric-kpi-ca" style="font-size: 26px; color: #10b981;">0.00 €</div>
+                            <div class="stat-lbl" style="font-size: 13px; font-weight: 600;">Chiffre d'Affaires Encaissé</div>
+                            <div id="metric-kpi-payments" style="font-size: 11px; color: var(--text-secondary); font-weight: 700; margin-top: 4px;">0 SumUp CB • 0 Crypto</div>
                         </div>
                     </div>
 
                     <div class="stat-card" style="padding: 18px; border-left: 4px solid #f59e0b;">
                         <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-size: 20px;">⚙️</div>
                         <div style="flex: 1;">
-                            <div class="stat-val" id="metric-kpi-commands" style="font-size: 26px; color: #ffffff;">0</div>
-                            <div class="stat-lbl" style="font-size: 13px; font-weight: 600;">Processus & Fiabilité</div>
+                            <div class="stat-val" id="metric-kpi-commands" style="font-size: 26px; color: #ffffff;">0 actions</div>
+                            <div class="stat-lbl" style="font-size: 13px; font-weight: 600;">Santé & Tâches Système</div>
                             <div id="metric-kpi-health" style="font-size: 11px; color: #10b981; font-weight: 700; margin-top: 4px;">100% Opérationnel</div>
                         </div>
                     </div>
@@ -582,11 +582,12 @@
                                 <h3 class="card-panel-title" style="margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px;">
                                     <span>📈</span> Flux Chronologique d'Activité Réel
                                 </h3>
-                                <p id="main-chart-subtitle" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 0;">Volume d'événements enregistrés en base par créneau</p>
+                                <p id="main-chart-subtitle" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 0;">Activité en direct heure par heure sur les 24 dernières heures glissantes (Fuseau Paris)</p>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                                 <div id="timeframe-segmented-bar" style="display: flex; background: rgba(255,255,255,0.06); padding: 3px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                                    <button type="button" class="action-btn timeframe-btn active" data-value="today" style="padding: 4px 10px; font-size: 11px; border-radius: 5px; font-weight: 600; background: var(--accent-primary); color: #fff;">Aujourd'hui</button>
+                                    <button type="button" class="action-btn timeframe-btn active" data-value="hours24" style="padding: 4px 10px; font-size: 11px; border-radius: 5px; font-weight: 600; background: var(--accent-primary); color: #fff;">24 Heures (En Direct)</button>
+                                    <button type="button" class="action-btn timeframe-btn" data-value="today" style="padding: 4px 10px; font-size: 11px; border-radius: 5px; font-weight: 600; background: transparent; color: var(--text-secondary);">Aujourd'hui</button>
                                     <button type="button" class="action-btn timeframe-btn" data-value="days7" style="padding: 4px 10px; font-size: 11px; border-radius: 5px; font-weight: 600; background: transparent; color: var(--text-secondary);">7 Jours</button>
                                     <button type="button" class="action-btn timeframe-btn" data-value="days30" style="padding: 4px 10px; font-size: 11px; border-radius: 5px; font-weight: 600; background: transparent; color: var(--text-secondary);">30 Jours</button>
                                 </div>

@@ -802,7 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let chartTrafficDonut = null;
     let chartDocsConversion = null;
     let lastStatsResponse = null;
-    let selectedTimeframe = 'today';
+    let selectedTimeframe = 'hours24';
 
     function initMetricsCharts() {
         if (typeof Chart === 'undefined') return;
@@ -848,7 +848,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             bodyColor: '#cbd5e1',
                             borderColor: 'rgba(255, 255, 255, 0.1)',
                             borderWidth: 1,
-                            padding: 10
+                            padding: 10,
+                            callbacks: {
+                                title: function(items) {
+                                    const label = items[0]?.label || '';
+                                    return `Créneau : ${label}`;
+                                },
+                                label: function(ctx) {
+                                    const val = ctx.raw || 0;
+                                    return ` Activité : ${val} événement${val > 1 ? 's' : ''}`;
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -1016,18 +1026,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedTimeframe === 'days7' && graphData?.days7) {
             chartActivityTimeline.data.labels = graphData.days7.map(item => item.label);
             chartActivityTimeline.data.datasets[0].data = graphData.days7.map(item => item.volume);
-            chartActivityTimeline.data.datasets[0].label = 'Volume Réseau (7 Derniers Jours)';
+            chartActivityTimeline.data.datasets[0].label = 'Volume d\'Activité (7 Derniers Jours)';
             if (subTitle) subTitle.textContent = 'Activité consolidée de la plateforme sur les 7 derniers jours';
         } else if (selectedTimeframe === 'days30' && graphData?.days30) {
             chartActivityTimeline.data.labels = graphData.days30.map(item => item.label);
             chartActivityTimeline.data.datasets[0].data = graphData.days30.map(item => item.volume);
-            chartActivityTimeline.data.datasets[0].label = 'Volume Réseau (30 Derniers Jours)';
+            chartActivityTimeline.data.datasets[0].label = 'Volume d\'Activité (30 Derniers Jours)';
             if (subTitle) subTitle.textContent = 'Activité consolidée de la plateforme sur les 30 derniers jours';
-        } else if (graphData?.today) {
+        } else if (selectedTimeframe === 'today' && graphData?.today) {
             chartActivityTimeline.data.labels = graphData.today.map(item => item.label);
             chartActivityTimeline.data.datasets[0].data = graphData.today.map(item => item.volume);
-            chartActivityTimeline.data.datasets[0].label = "Volume Réseau Aujourd'hui (Créneaux de 2h)";
-            if (subTitle) subTitle.textContent = "Distribution de l'activité du système aujourd'hui par tranches de 2 heures";
+            chartActivityTimeline.data.datasets[0].label = "Activité Aujourd'hui (jusqu'à maintenant)";
+            if (subTitle) subTitle.textContent = "Distribution de l'activité aujourd'hui de 00h à l'heure courante (Fuseau Paris)";
+        } else if (graphData?.hours24) {
+            chartActivityTimeline.data.labels = graphData.hours24.map(item => item.label);
+            chartActivityTimeline.data.datasets[0].data = graphData.hours24.map(item => item.volume);
+            chartActivityTimeline.data.datasets[0].label = "Flux d'Activité en Direct (24 Dernières Heures)";
+            if (subTitle) subTitle.textContent = "Activité en temps réel heure par heure sur les 24 dernières heures glissantes (Fuseau Paris)";
         }
         chartActivityTimeline.update('none');
     }
@@ -1159,33 +1174,44 @@ document.addEventListener('DOMContentLoaded', () => {
         initMetricsCharts();
 
         updateCounter('metric-total-traffic', stats.totalTraffic || 0);
+        const trafficSubEl = document.getElementById('metric-total-traffic-sub');
+        if (trafficSubEl && stats.distribution) {
+            trafficSubEl.innerText = `${stats.distribution.telegram || 0} Bot • ${stats.distribution.generateDocs || 0} Docs • ${stats.distribution.payments || 0} Paiements`;
+        }
 
         const kpiDocsEl = document.getElementById('metric-kpi-docs');
         if (kpiDocsEl) {
-            kpiDocsEl.innerText = `${gd.totalPreviews || 0} / ${gd.totalGenerations || 0}`;
+            kpiDocsEl.innerText = `${gd.totalPreviews || 0} vues / ${gd.totalGenerations || 0} générés`;
         }
         const kpiConvEl = document.getElementById('metric-kpi-conv');
         if (kpiConvEl) {
-            kpiConvEl.innerText = `Conv. ${(gd.conversionRate || 0).toFixed(1)}% • ${(m.documentRevenue || 0).toFixed(2)} €`;
+            kpiConvEl.innerText = `Conv. ${(gd.conversionRate || 0).toFixed(1)}% • ${(m.documentRevenue || 0).toFixed(2)} € CA`;
         }
 
+        const kpiCaEl = document.getElementById('metric-kpi-ca');
+        if (kpiCaEl) {
+            kpiCaEl.innerText = `${(stats.totalCa || 0).toFixed(2)} €`;
+        }
         const kpiPayEl = document.getElementById('metric-kpi-payments');
         if (kpiPayEl) {
-            kpiPayEl.innerText = `${m.sumupReceived || 0} / ${m.oxapayReceived || 0}`;
+            kpiPayEl.innerText = `${m.sumupReceived || 0} SumUp CB • ${m.oxapayReceived || 0} Crypto`;
         }
         const kpiPayrateEl = document.getElementById('metric-kpi-payrate');
         if (kpiPayrateEl) {
             kpiPayrateEl.innerText = `${(stats.totalCa || 0).toFixed(2)} € CA Global`;
         }
 
-        updateCounter('metric-kpi-commands', m.commandsExecuted || 0);
+        const kpiCmdEl = document.getElementById('metric-kpi-commands');
+        if (kpiCmdEl) {
+            kpiCmdEl.innerText = `${m.commandsExecuted || 0} actions`;
+        }
         const kpiHealthEl = document.getElementById('metric-kpi-health');
         if (kpiHealthEl) {
             if ((m.errorsCount || 0) > 0) {
-                kpiHealthEl.innerText = `${m.errorsCount} Anomalies`;
+                kpiHealthEl.innerText = `⚠️ ${m.errorsCount} Anomalie(s)`;
                 kpiHealthEl.style.color = '#ef4444';
             } else {
-                kpiHealthEl.innerText = '100% Opérationnel';
+                kpiHealthEl.innerText = '✅ 100% Opérationnel';
                 kpiHealthEl.style.color = '#10b981';
             }
         }

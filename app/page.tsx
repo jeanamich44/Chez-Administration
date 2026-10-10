@@ -184,15 +184,12 @@ function AppRouter() {
     <div className="min-h-screen bg-[#060810] text-white flex flex-col justify-between">
       <div className="w-full max-w-lg mx-auto px-3.5 pt-3 pb-8">
         <header className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.06] gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black text-[11px] shrink-0">
-              CR
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-xs sm:text-sm font-black italic tracking-tight text-white flex items-center gap-1.5 truncate">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xs sm:text-sm font-black italic tracking-tight text-white truncate">
+              <span className="inline-block pr-2">
                 {botName ? botName.toUpperCase() : "CHEZ RHEYY"}
-              </h1>
-            </div>
+              </span>
+            </h1>
           </div>
 
           <button

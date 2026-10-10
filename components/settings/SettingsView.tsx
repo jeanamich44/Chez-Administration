@@ -12,6 +12,7 @@ export default function SettingsView() {
   const toast = useToast();
   const [adminOpen, setAdminOpen] = useState(true);
   const [communityOpen, setCommunityOpen] = useState(true);
+  const [imgError, setImgError] = useState(false);
 
   const fullName = user
     ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username || ""
@@ -86,21 +87,32 @@ export default function SettingsView() {
 
   return (
     <div className="space-y-4 pb-24 fade-in">
-      <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-3xl p-5 border border-white/[0.08] flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary to-sky-400 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-primary/20 shrink-0">
-          {initials}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h2 className="text-base font-black text-white truncate">{fullName}</h2>
-          <p className="text-xs text-primary font-bold">{username}</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-[10px] text-white/40 font-mono">ID: {userId}</span>
+      <div className="bg-[#0f121d]/80 backdrop-blur-md rounded-3xl p-5 border border-white/[0.08] flex items-center gap-4.5">
+        {user?.photo_url && !imgError ? (
+          <img
+            src={user.photo_url}
+            alt={fullName}
+            onError={() => setImgError(true)}
+            className="w-16 h-16 rounded-2xl object-cover shadow-xl shadow-primary/20 shrink-0 border border-white/10"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-sky-400 flex items-center justify-center text-slate-950 font-black text-2xl shadow-xl shadow-primary/20 shrink-0">
+            {initials}
+          </div>
+        )}
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <h2 className="text-lg sm:text-xl font-black text-white tracking-tight truncate">{fullName}</h2>
+          <p className="text-sm text-primary font-bold">{username}</p>
+          <div className="flex items-center gap-2 pt-0.5">
+            <span className="text-xs text-white/50 font-mono font-medium">ID: {userId}</span>
             <button
               type="button"
               onClick={handleCopyId}
-              className="p-1 rounded text-white/40 hover:text-white"
+              className="p-1 rounded-md text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+              aria-label="Copier l'identifiant"
             >
-              <Copy size={11} />
+              <Copy size={13} />
             </button>
           </div>
         </div>

@@ -876,15 +876,15 @@ export default function LbpReleveClient({ onBack }: { onBack: () => void }) {
       {/* En-tête de la page */}
       <div className="mb-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/10">
-          <div className="flex items-center gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-900/60 to-slate-950 border border-blue-500/30 flex items-center justify-center p-3 shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-blue-900/60 to-slate-950 border border-blue-500/30 flex items-center justify-center p-2.5 shadow-xl shrink-0 overflow-hidden">
               <img src="/logos/lbp.svg" alt="La Banque Postale" className="w-full h-full object-contain scale-110" />
             </div>
-            <div>
-              <h1 className="text-2xl sm:text-4xl font-black italic text-white tracking-tight">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl sm:text-4xl font-black italic text-white tracking-tight">
                 RELEVÉ DE COMPTE <span className="text-primary">LA BANQUE POSTALE</span>
               </h1>
-              <p className="text-white/50 text-xs font-medium uppercase tracking-wider mt-1">
+              <p className="text-white/50 text-[10px] sm:text-xs font-medium uppercase tracking-wider mt-0.5">
                 Générateur officiel multi-mois • Continuité des soldes • Multi-comptes CCP & Épargne
               </p>
             </div>

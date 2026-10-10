@@ -2797,7 +2797,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderGenerateDocsSettings(gd) {
         currentGenerateDocsData = gd || {};
         const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
-        setVal('setting-gd-is-active', gd.isActive !== false ? 'true' : 'false');
         setVal('setting-gd-flatten-pdf', gd.flattenPdf !== false ? 'true' : 'false');
         setVal('setting-gd-preview-off', gd.previewOff === true ? 'true' : 'false');
         setVal('setting-gd-cooldown-enabled', gd.previewCooldownEnabled !== false ? 'true' : 'false');
@@ -3304,7 +3303,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gdForm) {
         gdForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const isActive = document.getElementById('setting-gd-is-active')?.value === 'true';
             const flattenPdf = document.getElementById('setting-gd-flatten-pdf')?.value === 'true';
             const previewOff = document.getElementById('setting-gd-preview-off')?.value === 'true';
             const previewCooldownEnabled = document.getElementById('setting-gd-cooldown-enabled')?.value === 'true';
@@ -3345,7 +3343,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const payload = {
-                isActive,
                 flattenPdf,
                 previewOff,
                 previewCooldownEnabled,

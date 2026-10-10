@@ -597,15 +597,15 @@ export default function FicheDePaieClient({ onBack }: { onBack: () => void }) {
 
       <div className="mb-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/10">
-          <div className="flex items-center gap-5">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-sky-900/60 to-slate-950 border border-sky-500/30 flex items-center justify-center p-3 shadow-xl">
-              <img src="/logos/fiche_de_paie.svg" alt="Fiche de Paie" className="w-full h-full object-contain" />
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-sky-900/60 to-slate-950 border border-sky-500/30 flex items-center justify-center p-2 shadow-xl shrink-0 overflow-hidden">
+              <img src="/logos/fiche_de_paie.svg" alt="Fiche de Paie" className="w-full h-full object-contain scale-125" />
             </div>
-            <div>
-              <h1 className="text-2xl sm:text-4xl font-black italic text-white tracking-tight">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl sm:text-4xl font-black italic text-white tracking-tight">
                 FICHE DE <span className="text-primary">PAIE</span>
               </h1>
-              <p className="text-white/50 text-xs font-medium uppercase tracking-wider mt-1">
+              <p className="text-white/50 text-[10px] sm:text-xs font-medium uppercase tracking-wider mt-0.5">
                 Bulletin de salaire officiel • Multi-mois (1 à 12 mois) • Cumuls YTD & PAS conformes
               </p>
             </div>

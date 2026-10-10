@@ -11,6 +11,7 @@ interface TelegramUser {
   username?: string;
   language_code?: string;
   admin?: boolean;
+  photo_url?: string;
 }
 
 interface NavigationState {
@@ -155,8 +156,10 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
           setUser((prev) => ({
             id: data.id || prev?.id || 0,
             first_name: data.first_name || prev?.first_name || "",
+            last_name: prev?.last_name,
             username: data.username || prev?.username,
             admin: Boolean(data.admin),
+            photo_url: data.photo_url || prev?.photo_url,
           }));
         }
       }

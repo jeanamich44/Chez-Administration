@@ -3380,12 +3380,21 @@ export default function PdfIssuerClient({
           </button>
         </div>
         <div className="flex items-center gap-4 mb-2">
-          <div className={`px-5 py-3.5 border rounded-2xl backdrop-blur-md flex items-center justify-center overflow-hidden ${headerBg}`}>
-            <img src={logo} alt="" className={`h-8 sm:h-10 w-auto max-w-[140px] object-contain ${logoClass || ""}`} />
+          <div
+            className={`h-14 sm:h-16 px-4 py-2 border rounded-2xl backdrop-blur-md flex items-center justify-center shrink-0 overflow-hidden ${
+              typeof headerBg === "string" && !headerBg.includes("linear-gradient") ? headerBg : ""
+            }`}
+            style={
+              typeof headerBg === "string" && headerBg.includes("linear-gradient")
+                ? { background: headerBg }
+                : undefined
+            }
+          >
+            <img src={logo} alt="" className={`h-full w-auto max-w-[110px] sm:max-w-[130px] object-contain ${logoClass || ""}`} />
           </div>
-          <div>
-            <h1 className="text-2xl sm:text-4xl font-black italic text-white">{title}</h1>
-            <p className="text-xs text-white/40 font-bold tracking-wider uppercase">{subtitle}</p>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-4xl font-black italic text-white leading-tight break-words">{title}</h1>
+            <p className="text-[10px] sm:text-xs text-white/40 font-bold tracking-wider uppercase mt-0.5">{subtitle}</p>
           </div>
         </div>
 
